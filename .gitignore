@@ -2,7 +2,6 @@
 /Projects/incremental_db
 /Projects/output_files
 /Projects/simulation
-*.qsf
 *.qws
 *.rpt
 *.bak
