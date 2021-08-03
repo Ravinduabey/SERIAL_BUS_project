@@ -1,8 +1,8 @@
-module top()(
+module top(
     input logic CLOCK_50,
     input logic [3:0]KEY,
     output logic [17:0]LEDR,
-    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7
         
 );
 
@@ -42,16 +42,18 @@ always_ff @(posedge clk or negedge rstN) begin
     end
 end
 
+//
+//always_comb begin
+//    next_state = current_state;
+//
+//    case (current_state)
+//        master_slave_sel: begin
+//            if ()
+//        end
+//
+//
+//
+//    endcase
+//end
 
-always_comb begin
-    next_state = current_state;
-
-    case (current_state)
-        master_slave_sel: begin
-            if ()
-        end
-
-
-
-    endcase
-end
+endmodule : top
