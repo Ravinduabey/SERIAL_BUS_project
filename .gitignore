@@ -1,7 +1,5 @@
-/Projects/db
-/Projects/incremental_db
-/Projects/output_files
-/Projects/simulation
+/Projects/*
+!/Projects/SERIAL_BUS_project.qpf
 *.qws
 *.rpt
 *.bak
