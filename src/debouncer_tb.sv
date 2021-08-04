@@ -1,11 +1,11 @@
 timeunit 1ns;
-timeprecision 1ps;
+timeprecision 1ns;
 
 module debouncer_tb();
 
 localparam CLK_PERIOD = 20;  //nS
 localparam CLK_FREQ = 50; // MHz
-localparam TIME_DELAY = 500; // mS
+localparam TIME_DELAY = 1; // mS
 localparam MAX_CLK_COUNT = TIME_DELAY * CLK_FREQ * 1000;
 
 logic clk, value_in, value_out;
@@ -20,7 +20,7 @@ initial begin
 end
 
 
-debouncer dut(.*);
+debouncer #(.TIME_DELAY(TIME_DELAY)) dut(.*);
 
 initial begin
 
