@@ -1,5 +1,5 @@
 module master #(
-    parameter ADDRESS_DEPTH = $clog2(4096),
+    parameter ADDRESS_DEPTH = 4096,
     parameter DATA_WIDTH = 16
 )( 
 
@@ -15,7 +15,7 @@ module master #(
         input logic rdWr,                           // read or write: 0 1
         input logic inEx,                           // internal or external
         input logic [DATA_WIDTH-1:0] data,
-        input logic [ADDRESS_DEPTH-1:0] address,
+        input logic [$clog2(ADDRESS_DEPTH)-1:0] address,
         input logic [1:0] slaveId,
         input logic start,
 		  
