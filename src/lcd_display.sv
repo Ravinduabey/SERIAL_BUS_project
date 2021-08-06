@@ -53,11 +53,12 @@ localparam [7:0] D_SHIFT_R 	= 8'b00011100; 	//Execution time = 42us, Display Shi
 //-----------------------------Create the counting mechanisms------------------------------------
 //===============================================================================================
 logic [TIME_REG_WIDTH-1:0] cnt_timer=0; 			//1.64ms, used to delay the STATEmachine during a command execution (SEE above command set)
-logic flag_250ns=0,flag_42us=0,flag_100us=0,flag_1640us=0,flag_4100us=0,flag_15000us=0;
+logic flag_40ns=0, flag_250ns=0, flag_42us=0, flag_100us=0, flag_1640us=0, flag_4100us=0, flag_15000us=0;
 logic flag_rst=1;					//Start with flag RST set. so that the counting has not started
 
 always_ff @(posedge CLK) begin
 	if(flag_rst) begin
+        flag_40ns       <=  1'b0;        //Unlatch the flag
 		flag_250ns	    <=	1'b0;		//Unlatch the flag
 		flag_42us	    <=	1'b0;		//Unlatch the flag
 		flag_100us	    <=	1'b0;		//Unlatch the flag
@@ -67,6 +68,12 @@ always_ff @(posedge CLK) begin
 		cnt_timer	    <=	'0;		
 	end
 	else begin
+        if(cnt_timer>=t_40ns) begin			
+			flag_40ns	<=	1'b1;
+		end
+		else begin			
+			flag_40ns	<=	flag_40ns;
+		end
 		if(cnt_timer>=t_250ns) begin			
 			flag_250ns	<=	1'b1;
 		end
@@ -147,7 +154,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;					
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -185,7 +199,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -223,7 +244,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -261,7 +289,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;					
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -299,7 +334,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -337,7 +379,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -375,7 +424,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -413,7 +469,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -451,7 +514,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -489,7 +559,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -527,7 +604,14 @@ always_ff @(posedge CLK) begin
 				LCD_E				<=	1'b0;						//Disable Bus
 				LCD_DB 			    <=	LCD_DB;					//Maintain Previous Data on the Bus
 				STATE				<=	STATE;				
-				SUBSTATE			<=	1;
+				if(!flag_40ns) begin						//WAIT at least 40ns (required for RS & RW)
+					SUBSTATE		<=	SUBSTATE;				//Maintain current SUBSTATE
+					flag_rst		<=	1'b0; 					//Start or Continue counting									
+				end
+				else begin 				
+					SUBSTATE		<=	SUBSTATE+1'b1;				//Go to next SUBSTATE
+					flag_rst		<=	1'b1; 					//Stop counting					
+				end
 			end			
 			if(SUBSTATE==1)begin				
 				LCD_E				<=	1'b1;						//Enable Bus		
@@ -558,7 +642,7 @@ always_ff @(posedge CLK) begin
 		end
 		//---------------------------------------------------------------------------------------
 		default: begin//----------This is the IDLE STATE, DO NOTHING UNTIL OPER is set-----------
-			LCD_RS	<=		LCD_RS;								//Indicate an instruction is to be sent soon
+			LCD_RS	<=	LCD_RS;								//Indicate an instruction is to be sent soon
 			LCD_RW	<= 	1'b0;									//Indicate a write operation
 			LCD_DB 	<= 	LCD_DB;								//Maintain Data Bus
 			LCD_E	<=	1'b0;									//Disable Bus

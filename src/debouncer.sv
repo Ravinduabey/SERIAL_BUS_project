@@ -19,12 +19,10 @@ always_ff @(posedge clk) begin
         counter <= counter + COUNTER_WIDTH'(1);
     end
     else if (counter > MAX_CLK_COUNT) begin
-        $display("ssssss");
         counter <= '0;
     end
     else if (counter != '0) begin
         counter <= counter + COUNTER_WIDTH'(1);
-        // $display("aaaa");
     end
     else begin
         counter <= '0;
