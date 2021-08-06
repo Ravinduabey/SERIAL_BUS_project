@@ -9,8 +9,17 @@ module top(
 localparam SLAVE_COUNT=3;
 localparam MASTER_COUNT=2;
 localparam DATA_WIDTH = 16;
-logic MASTER_DEPTHS[0:1] = {4096,4096};
-logic SLAVE_DEPTHS[0:2] = {4096,4096,2048};
+logic MASTER_DEPTHS[MASTER_COUNT] = '{4096,4096};   // give each master's depth
+logic SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}; // give each slave's depth
+
+logic MASTER_ADDR_WIDTHS[MASTER_COUNT] = '{$log2(MASTER_DEPTHS[0]), $clog2(MASTER_DEPTHS[1])};  // ***** find a better method ************
+logic SLAVE_ADDR_WIDTHS[SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog2(SLAVE_DEPTHS[1]), $clog2(SLAVE_DEPTHS[2])}
+
+// localparam MASTER_ADDR_WIDTHS[0:MASTER_COUNT] = master_addr_width_calc(MASTER_DEPTHS); //****************
+
+// function int master_addr_width_calc // *******************************************
+
+
 
 logic [3:0]KEY_OUT;
 ///////////// debouncing //////////////
@@ -33,23 +42,35 @@ assign rstN = KEY_OUT[0];
 assign jump_stateN = KEY_OUT[1];
 assign clk = CLOCK_50;
 
-//////////////// MASTER module instantiate
+//////////////// MASTER module instantiate (start) /////////////
 
 logic M_burst[0:MASTER_COUNT-1];
 logic M_rdWr[0:MASTER_COUNT-1];
 logic M_inEx[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_data[0:MASTER_COUNT-1];
 logic [ADDRESS_DEPTH-1:0] M_address[0:MASTER_COUNT-1];
-logic [ADDRESS_DEPTH-1:0] M_slaveId;
+logic [ADDRESS_DEPTH-1:0] M_slaveId[0:MASTER_COUNT];
+logic M_start;
+
+logic M_doneCom = 1'b0,
+logic [DATA_WIDTH-1:0] M_dataOut,
 
 genvar j;
 generate
     for (j=0;j<MASTER_COUNT; j++) begin:MASTER
-        master ( master
-
+        master #(.ADDRESS_DEPTH(MASTER_DEPTHS[j], .DATA_WIDTH(DATA_WIDTH)) master(
+            .clk, rstN, 
+            .burst(M_burst[i]),
+            .rdWr(M_rdWr[i]),                           
+            .inEx(M_inEx[i]),                           
+            .data(M_data[i]),
+            .address(M_address[i]),
+            .slaveId(M_slaveId[i]),
+            .start(M_start)
+        );
     end
 endgenerate
-
+//////////////// MASTER module instantiate (end) /////////////
 
 /////////// states //////////////////
 typedef enum logic [3:0]{
@@ -73,7 +94,7 @@ state_t current_state, next_state;
 
 logic config_masters_done = 0;
 
-/////// state change logic /////////
+/////// state change logic (start) /////////
 
 always_ff @(posedge clk or negedge rstN) begin
     if (~rstN) begin
@@ -183,7 +204,7 @@ always_comb begin
    endcase
 end
 
-
+/////// state change logic (end) /////////
 
 
 
