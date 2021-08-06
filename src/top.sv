@@ -6,23 +6,21 @@ module top(
         
 );
 
-localparam SLAVE_COUNT=3;
-localparam MASTER_COUNT=2;
-localparam DATA_WIDTH = 16;
-logic MASTER_DEPTHS[MASTER_COUNT] = '{4096,4096};   // give each master's depth
-logic SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}; // give each slave's depth
+localparam SLAVE_COUNT=3;  // number of slaves
+localparam MASTER_COUNT=2; // number of masters
+localparam DATA_WIDTH = 16; // width of a data word in slave & master
 
-logic MASTER_ADDR_WIDTHS[MASTER_COUNT] = '{$log2(MASTER_DEPTHS[0]), $clog2(MASTER_DEPTHS[1])};  // ***** find a better method ************
-logic SLAVE_ADDR_WIDTHS[SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog2(SLAVE_DEPTHS[1]), $clog2(SLAVE_DEPTHS[2])}
-
-// localparam MASTER_ADDR_WIDTHS[0:MASTER_COUNT] = master_addr_width_calc(MASTER_DEPTHS); //****************
-
-// function int master_addr_width_calc // *******************************************
+localparam SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}; // give each slave's depth
+localparam SLAVE_ADDR_WIDTHS[SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog2(SLAVE_DEPTHS[1]), $clog2(SLAVE_DEPTHS[2])}
+localparam MASTER_ADDR_WIDTH = SLAVE_ADDR_WIDTHS.max(); // master should be able to write or read all the slave address locations without loss
 
 
 
+localparam MAX_MASTER_WRITE_DEPTH = 16;  // maximum number of addresses of a master that can be externally written
+
+///////////// debouncing (start) //////////////
 logic [3:0]KEY_OUT;
-///////////// debouncing //////////////
+
 localparam TIME_DELAY = 500 // time delay for debouncing in ms
 genvar i = 0;
 generate
@@ -34,27 +32,36 @@ generate
         );
     end
 endgenerate
-////////// debouncing ////////////
+////////// debouncing (end) ////////////
 
-logic rstN, clk, jump_stateN;
+logic rstN, clk, jump_stateN, jump_next_addr;
 
 assign rstN = KEY_OUT[0];
 assign jump_stateN = KEY_OUT[1];
+assign jump_next_addr = KEY_OUT[2];
 assign clk = CLOCK_50;
 
+//////////////// TOP module & MASTER module wires and registers /////////////
+
+logic M_burst, M_burst_next[0:MASTER_COUNT-1];
+logic M_rdWr, M_rdWr_next[0:MASTER_COUNT-1];
+logic M_inEx, M_inEx_next[0:MASTER_COUNT-1];
+logic [DATA_WIDTH-1:0] M_data, M_data_next[0:MASTER_COUNT-1];
+logic [MASTER_ADDR_WIDTH-1:0] M_address, M_address_next[0:MASTER_COUNT-1];
+logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId, M_slaveId_next[0:MASTER_COUNT];
+logic M_start, M_start_next;
+
+logic M_doneCom[0:MASTER_COUNT-1];
+logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
+
+logic [DATA_WIDTH-1:0]M_data_bank[0:MASTER_COUNT-1][0:MAX_MASTER_WRITE_DEPTH]; // used to store values to be written on masters' memories.
+logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_data_bank_addr, next_data_bank_addr; // used to select a location in "M_data_bank"
+logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]data_bank_wr_count, data_bank_wr_count_next[0:MASTER_COUNT-1];  
+
+logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr, slave_first_addr_next[0:MASTER_COUNT-1]; // slave R/W first addr
+logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr, slave_last_addr_next[0:MASTER_COUNT-1]; // slave R/W last addr (when burst R/W)
+
 //////////////// MASTER module instantiate (start) /////////////
-
-logic M_burst[0:MASTER_COUNT-1];
-logic M_rdWr[0:MASTER_COUNT-1];
-logic M_inEx[0:MASTER_COUNT-1];
-logic [DATA_WIDTH-1:0] M_data[0:MASTER_COUNT-1];
-logic [ADDRESS_DEPTH-1:0] M_address[0:MASTER_COUNT-1];
-logic [ADDRESS_DEPTH-1:0] M_slaveId[0:MASTER_COUNT];
-logic M_start;
-
-logic M_doneCom = 1'b0,
-logic [DATA_WIDTH-1:0] M_dataOut,
-
 genvar j;
 generate
     for (j=0;j<MASTER_COUNT; j++) begin:MASTER
@@ -66,7 +73,10 @@ generate
             .data(M_data[i]),
             .address(M_address[i]),
             .slaveId(M_slaveId[i]),
-            .start(M_start)
+            .start(M_start),
+
+            .doneCom(M_doneCom[i]),
+            .dataOut(M_dataOut[i])
         );
     end
 endgenerate
@@ -94,30 +104,75 @@ state_t current_state, next_state;
 
 logic config_masters_done = 0;
 
-/////// state change logic (start) /////////
+
 
 always_ff @(posedge clk or negedge rstN) begin
-    if (~rstN) begin
+    if (!rstN) begin
         current_state <= master_slave_sel;
+
+        /////////// master related variables /////////
+        M_burst     <= '{default:'0};
+        M_rdWr      <= '{default:'0};
+        M_inEx      <= '{default:'0};
+        M_data      <= '{default:'0};
+        M_address   <= '{default:'0}; 
+        M_slaveId   <= '{default:'0}; 
+        M_start     <= 1'b0;
+
+        slave_first_addr <= '{default:'0};  
+        slave_last_addr  <= '{default:'0};
+
     end
     else begin
         current_state <= next_state;
+
+        //////// master related variables ///////////
+        M_burst     <= M_burst_next;
+        M_rdWr      <= M_rdWr_next;
+        M_inEx      <= M_inEx_next;
+        M_data      <= M_data_next;
+        M_address   <= M_address_next; 
+        M_slaveId   <= M_slaveId_next; 
+        M_start     <= M_start_next;
+
+        slave_first_addr <= slave_first_addr_next;
+        slave_last_addr  <= slave_last_addr_next;
+
     end
 end
 
+//////// handle the memory "M_data_bank" //////////////
+always_ff @(posedge clk) begin
+    if (~rstN) begin
+        current_data_bank_addr  <= '0;
+        data_bank_wr_count      <= '{default:'0};
+    end
+    else begin
+        current_data_bank_addr  <= next_data_bank_addr;
+        data_bank_wr_count      <= data_bank_wr_count_next;
 
+        if ((current_state == external_write_M1) | (current_state == external_write_M1_2)) begin
+            M_data_bank[0][current_data_bank_addr] <= SW[DATA_WIDTH-1:0];
+        end
+        else if (current_state == external_write_M2) begin
+            M_data_bank[1][current_data_bank_addr] <= SW[DATA_WIDTH-1:0];
+        end
+    end
+end
+
+/////// state change logic (start) /////////
 always_comb begin
     next_state = current_state;
 
     case (current_state)
         master_slave_sel: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = read_write_sel;
             end
         end
 
         read_write_sel: begin
-            if(~jump_stateN) begin
+            if(!jump_stateN) begin
                 if(SW[1:0] == 2'b00) begin
                     next_state = slave_addr_sel_M1;
                 end
@@ -128,7 +183,7 @@ always_comb begin
         end
 
         external_write_sel: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 case (SW[1:0])
                     2'b00: next_state = slave_addr_sel_M1;
                     2'b01: next_state = external_write_M1;
@@ -139,48 +194,46 @@ always_comb begin
 
                 endcase
             end
-            
-
         end
 
         external_write_M1: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = slave_addr_sel_M1;
             end
         end
 
         external_write_M1_2: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = external_write_M2;
-            end           
+            end       
         end
 
         external_write_M2: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = slave_addr_sel_M1;
             end        
         end
 
         slave_addr_sel_M1: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = slave_addr_sel_M2;
-            end           
+            end         
         end
 
         slave_addr_sel_M2: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = addr_count_sel_M1;
             end           
         end
 
         addr_count_sel_M1: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = addr_count_sel_M2;
             end          
         end
 
         addr_count_sel_M2: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = config_masters;
             end
         end
@@ -192,19 +245,128 @@ always_comb begin
         end
 
         communication_ready: begin
-            if (~jump_stateN) begin
+            if (!jump_stateN) begin
                 next_state = communicating;
             end
         end
 
         communicating: begin
-            if (commu)
+            if (M_doneCom == 2'b11) begin
+                next_state = communication_done;
+            end
         end
 
    endcase
 end
 
 /////// state change logic (end) /////////
+
+/////// logic within the state ///////////
+always_comb begin 
+    
+    M_burst_next     <= M_burst;
+    M_rdWr_next      <= M_rdWr;
+    M_inEx_next      <= M_inEx;
+    M_data_next      <= M_data;
+    M_address_next   <= M_address; 
+    M_slaveId_next   <= M_slaveId; 
+    M_start_next     <= M_start;
+
+    next_data_bank_addr = current_data_bank_addr;
+
+    slave_first_addr_next <= slave_first_addr;
+    slave_last_addr_next  <= slave_last_addr;
+
+    case (current_state) 
+        master_slave_sel: begin
+            for (i=0;i<MASTER_COUNT;i++) begin
+                M_slaveId_next[i] = SW[*(2*i+1) :- 2];
+            end
+        end   
+
+        read_write_sel: begin // do nothing (in this state only the next state selection happens.)
+        end 
+
+        external_write_sel: begin// do nothing (in this state only the next state selection happens.)            
+        end 
+
+        external_write_M1: begin
+            if (!jump_stateN) begin
+                next_data_bank_addr = '0; // reset to 0 for next master value write
+            end
+            else if (!jump_next_addr) begin
+                next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
+                data_bank_wr_count_next[0] = data_bank_wr_count[0] + 1'b1; // count the number of external writes
+            end
+        end 
+
+        external_write_M1_2: begin
+            if (!jump_stateN) begin
+                next_data_bank_addr = '0; // reset to 0 for next master value write
+            end
+            else if (!jump_next_addr) begin
+                next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
+                data_bank_wr_count_next[0] = data_bank_wr_count[0] + 1'b1; // count the number of external writes
+            end
+        end
+
+        external_write_M2: begin
+            if (!jump_stateN) begin
+                next_data_bank_addr = '0; // reset to 0 for next master value write
+            end
+            else if (!jump_next_addr) begin
+                next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
+                data_bank_wr_count_next[1] = data_bank_wr_count[1] + 1'b1; // count the number of external writes
+            end
+        end  
+
+        slave_addr_sel_M1: begin
+            slave_first_addr_next[0] = SW[MASTER_ADDR_WIDTH-1:0];  // slave address width is less than or equal to master address width
+        end
+
+        slave_addr_sel_M2: begin
+            slave_first_addr_next[1] = SW[MASTER_ADDR_WIDTH-1:0]; // slave address width is less than or equal to master address width
+        end 
+         
+        addr_count_sel_M1: begin
+            if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0]) >= SLAVE_DEPTHS[M_slaveId[0]-1]) begin
+                slave_last_addr_next[0] = SLAVE_DEPTHS[M_slaveId[0]-1]; // if given length is too large select untill the last address of the slave
+            end
+            else begin
+                slave_last_addr_next[0] = SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0];
+            end
+            
+        end 
+
+        addr_count_sel_M2: begin
+            if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1]) >= SLAVE_DEPTHS[M_slaveId[1]-1]) begin
+                slave_last_addr_next[1] = SLAVE_DEPTHS[M_slaveId[1]-1]; // if given length is too large select untill the last address of the slave
+            end
+            else begin
+                slave_last_addr_next[1] = SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1];
+            end
+        end 
+
+        config_masters: begin
+            
+        end 
+
+        communication_ready: begin
+            
+        end
+
+        communicating: begin
+            
+        end  
+
+        communication_done: begin
+            
+        end   
+
+
+
+    endcase
+end
 
 
 
