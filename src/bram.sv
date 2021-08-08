@@ -5,7 +5,7 @@ module bram #(
     input   logic                                       clk,
     input   logic                                       wr,
     input   logic   [DATA_WIDTH-1:0]                    data,
-    input   logic   [ADDRESS_WIDTH-1:0]         address,
+    input   logic   [$clog2(MEMORY_DEPTH)-1:0]         address,
     
     output  logic   [DATA_WIDTH-1:0]                    q
 );
