@@ -1,4 +1,5 @@
 module arbiter(
+
   input logic clk,
 	input logic rstn,
 
@@ -8,12 +9,14 @@ module arbiter(
   input logic m1_in,
 	output logic m1_out,
   output logic com_m1 = 0,
+
   //===================//
   //  master 2    //
   //===================// 
   input logic m2_in,
 	output logic m2_out,
   output logic com_m2 = 0,
+  
   //===================//
   //    multiplexers   //
   //===================// 
@@ -110,7 +113,7 @@ always_comb begin : muxController
 end
 
 
-always_ff @(posedge clk or negedge rstn) begin : stateController
+always_ff @(posedge clk or negedge rstn) begin : stateShifter
 
   if (!rstn) begin
     state <= RST;
@@ -125,7 +128,7 @@ always_ff @(posedge clk or negedge rstn) begin : stateController
   end
 end
 
-always_ff @( posedge clk ) begin : stateLogic
+always_ff @( posedge clk ) begin : stateLogicDecoder
   $display("state %s and input_buf_m1 %b and input_buf_m2 %b", state, input_buf_m1, input_buf_m2);
     unique case (state)
 

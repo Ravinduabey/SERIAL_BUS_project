@@ -1,4 +1,5 @@
 module arbiter_tb();
+
 timeunit 1ns;
 timeprecision 1ps;
 
@@ -10,10 +11,12 @@ initial begin
         clk <= ~clk;
     end
 end
+
 // initial begin
 //   $dumpfile("dump.vcd");
 //   $dumpvars(1);
 // end
+
 logic rstn;
 
 logic m1_in;
@@ -25,8 +28,6 @@ logic ready;
 logic m2_in;
 logic m2_out;
 logic com_m2;
-
-
 
 logic addr_select;
 logic MOSI_data_select;
