@@ -2,12 +2,21 @@ module arbiter(
   input logic clk,
 	input logic rstn,
 
+  //===================//
+  //  master 1    //
+  //===================// 
   input logic m1_in,
 	output logic m1_out,
-
+  output logic com_m1 = 0,
+  //===================//
+  //  master 2    //
+  //===================// 
   input logic m2_in,
 	output logic m2_out,
-
+  output logic com_m2 = 0,
+  //===================//
+  //    multiplexers   //
+  //===================// 
 	input logic ready,
 
 	output logic addr_select,
@@ -18,49 +27,74 @@ module arbiter(
 	output logic [1:0] ready_select
 );
 
-typedef enum logic [2:0] {
-    START = 3'b000,
-    ALLOCATION1 = 3'b001,
-    ALLOCATION2 = 3'b010,
-    ACK = 3'b011,
-    COM = 3'b100,
-    OVER = 3'b101,
-    RST = 3'b110
+typedef enum logic [3:0] {
+    RST,
+    START,
+    ALLOCATION1,
+    ALLOCATION2,
+    ACK1,
+    ACK2,
+    COM1,
+    COM2,
+    OVER1,
+    OVER2
 } state_t;
 
 logic [1:0] bus_state = 0;
 state_t state = START;
-
-logic [2:0] input_buf;
 state_t next_state;
-logic request;
-logic [1:0] id;
-logic com = 0;
+
+logic [2:0] input_buf_m1;
+logic request_m1;
+logic [1:0] id_m1;
+// logic com_m1 = 0;
+
+logic [2:0] input_buf_m2;
+logic request_m2;
+logic [1:0] id_m2;
+// logic com_m2 = 0;
 
 always_comb begin : stateMachine
     unique case(state)
 
     START: begin
-        if (request) next_state = ALLOCATION1;
+        if (request_m1 || request_m2) next_state = ALLOCATION1;
         else next_state = START;
     end
 
     ALLOCATION1: next_state = ALLOCATION2;
 
-    ALLOCATION2: next_state = ACK;
-
-    ACK: begin
-      if (!bus_state) next_state = START;
-      else if (com) next_state = COM;
-      else next_state <= ACK;
+    ALLOCATION2: begin
+      if (m1_out) next_state = ACK1;
+      else if (m2_out) next_state = ACK2;
+      else next_state = ALLOCATION2;
     end
 
-    COM: begin 
-      if (!com) next_state = OVER;
-      else next_state = COM; 
+    ACK1: begin
+      if (!bus_state) next_state = START;
+      else if (com_m1) next_state = COM1;
+      else next_state <= ACK1;
+    end
+  
+    ACK2: begin
+      if (!bus_state) next_state = START;
+      else if (com_m2) next_state = COM2;
+      else next_state <= ACK2;
+    end
+
+    COM1: begin 
+      if (!com_m1) next_state = OVER1;
+      else next_state = COM1; 
 	  end
-	 
-    OVER: next_state = START;
+
+    COM2: begin 
+      if (!com_m2) next_state = OVER2;
+      else next_state = COM2; 
+	  end
+
+    OVER1: next_state = START;
+
+    OVER2: next_state = START;
 
     RST: next_state = START;
     endcase   
@@ -73,43 +107,73 @@ end
 
 
 always_ff @(posedge clk or negedge rstn) begin : stateController
+
   if (!rstn) begin
     state <= RST;
+    input_buf_m1 <= 0;
+    input_buf_m2 <= 0;
   end
+
   else begin
     state <= next_state;
-    input_buf <= {input_buf[1:0], m1_in};
+    input_buf_m1 <= {input_buf_m1[1:0], m1_in};
+    input_buf_m2 <= {input_buf_m2[1:0], m2_in};
   end
 end
 
 always_ff @( posedge clk ) begin : stateLogic
-  $display("state %b and input_buf %b", state, input_buf);
+  $display("state %s and input_buf_m1 %b and input_buf_m2 %b", state, input_buf_m1, input_buf_m2);
     unique case (state)
 
     RST: bus_state <= 0;
-    
-    START:
-      if(input_buf == 3'b111) request <= 1; 
 
-    ALLOCATION1 : 
-    id <= input_buf[1:0];
+    START: begin
+      if(input_buf_m1 == 3'b111) request_m1 <= 1; 
+      if(input_buf_m2 == 3'b111) request_m2 <= 1; 
+    end
+
+    ALLOCATION1 : begin
+    id_m1 <= input_buf_m1[1:0];
+    id_m2 <= input_buf_m2[1:0];
+    end
 
     ALLOCATION2 : begin
-    if (!bus_state && request) begin
-      bus_state <= id;  //a comb to control muxes using bus_state
-      m1_out <= 1;
-      request <= 0;
+    if (!bus_state && request_m1) begin
+      bus_state <= id_m1;  //a comb to control muxes using bus_state
+      m1_out <= 1; //clear[new] signal
     end
+    else if (!bus_state && request_m2) begin
+      bus_state <= id_m2;  //a comb to control muxes using bus_state
+      m2_out <= 1; //clear[new] signal 
+    end
+    request_m2 <= 0;
+    request_m1 <= 0;
     end
 
-    ACK : begin
-      if(input_buf == 3'b110) bus_state <= 0; //nak delay is not optimal
-      else if (input_buf == 3'b101) com <= 1; 
+    ACK1 : begin
+      if(input_buf_m1 == 3'b110) bus_state <= 0; //nak delay is not optimal
+      else if (input_buf_m1 == 3'b101) com_m1 <= 1; 
     end
 
-    COM : if(input_buf[1:0] == 2'b01) com <= 0; //delay is not optimal
+    ACK2 : begin
+      if(input_buf_m2 == 3'b110) bus_state <= 0; //nak delay is not optimal
+      else if (input_buf_m2 == 3'b101) com_m2 <= 1; 
+    end
 
-    OVER : m1_out <= 0;
+    COM1 : if(input_buf_m1[1:0] == 2'b01) com_m1 <= 0; //delay is not optimal
+
+    COM2 : if(input_buf_m2[1:0] == 2'b01) com_m2 <= 0; //delay is not optimal
+
+    OVER1 : begin
+      m1_out <= 0;
+      bus_state <= 0;
+    end
+
+    OVER2 : begin 
+      m2_out <= 0;
+      bus_state <= 0;
+    end
+
     endcase 
 end
 endmodule : arbiter
