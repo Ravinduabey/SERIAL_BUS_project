@@ -221,62 +221,89 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 if(doneCom == 1'b0) begin
                     state           <= startCom;
 
-                //     case (communicationState) 
-                //         idleCom:
-                //             if (~arbCont) begin
-                //                 communicationState <= reqCom;
-                //             end
-                //             else begin
-                //                 communicationState <= idleCom;
-                //             end
+                    case (communicationState) 
+                        idleCom:
+                            if (~arbCont) begin
+                                communicationState <= reqCom;
+                            end
+                            else begin
+                                communicationState <= idleCom;
+                            end
 
-                //         reqCom:
-                //             if (arbiterCounnter == 3'd0) begin
-                //                 arbiterCounnter         <= arbiterCounnter + 3'd1;
-                //                 arbSend                 <= arbiterRequest[4];
-                //                 arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
-                //             end
-                //             else if (arbiterCounnter == 3'd5) begin
-                //                 arbiterCounnter <= 3'd0;
-                //                 if (/*arbiter allows com*/) begin
-                //                     communicationState  <= reqAck;
-                //                 end
-                //                 else begin
-                //                     arbiterCounnter     <= 3'd0;
-                //                     arbiterRequest      <= tempArbiterRequest;
-                //                     communicationState  <= reqCom;
-                //                 end
-                //             end
+                        reqCom:
+                            if (arbiterCounnter == 3'd0) begin
+                                arbiterCounnter         <= arbiterCounnter + 3'd1;
+                                arbSend                 <= arbiterRequest[4];
+                                arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
+                            end
+                            else if (arbiterCounnter == 3'd5) begin
+                                arbiterCounnter <= 3'd0;
+                                if (/*arbiter allows com*/) begin
+                                    communicationState  <= reqAck;
+                                end
+                                else begin
+                                    arbiterCounnter     <= 3'd0;
+                                    arbiterRequest      <= tempArbiterRequest;
+                                    communicationState  <= reqCom;
+                                end
+                            end
                         
-                //         reqAck:
-                //             if (arbiterCounnter == 3'd0) begin
-                //                 arbSend             <= 1'b1;
-                //                 arbiterCounnter     <= arbiterCounnter + 3'd1;
-                //                 communicationState  <= reqAck;
-                //             end
-                //             else if (arbiterCounnter == 3'd3) begin
-                //                 arbSend             <= 1'b0;
-                //                 arbiterCounnter     <= 3'd0;
-                //                 communicationState  <= masterCom;
-                //             end
+                        reqAck:
+                            if (arbiterCounnter == 3'd0) begin
+                                arbSend             <= 1'b1;
+                                arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                communicationState  <= reqAck;
+                            end
+                            else if (arbiterCounnter == 3'd3) begin
+                                arbSend             <= 1'b0;
+                                arbiterCounnter     <= 3'd0;
+                                communicationState  <= masterCom;
+                            end
 
-                //         masterCom:
-                //         if (/*something*/) begin
-                //             // arbsend what???
-                //         end
-                //     endcase
-                // end
+                        masterCom:
+                        
+                        if (/*something*/) begin
+                            // arbsend what???
+                            control             <= tempControl[18];
+                            tempControl         <= {tempControl[17:0] ,1'b0};
+                            controlCounter      <= controlCounter + 5'd1;
+
+                            if (controlCounter == 5'd19) begin : startSendOrReceive
+                                /*
+                                add two counters
+                                    burst counts if stopped due to priority issues 
+                                    current bit pointer in the case of the above issue
+                                */
+                                if (tempRdWr == 1 && tempBurst == 0) begin
+                                    wrD         <= dataOut[0];
+                                    dataOut     <= {1'b0,dataOut[DATA_WIDTH-2:0]};
+                                end
+                                else if (tempRdWr == 1 && tempBurst == 1) begin
+                                    /*
+                                    do burst write
+                                    */
+                                end
+                                else if (tempRdWr == 0 && tempBurst == 0) begin
+                                    /*
+                                    single read
+                                    */
+                                end
+                                else if (tempRdWr == 0 && tempBurst == 1) begin
+                                    /*
+                                    burst read
+                                    */
+                                end
+                            end
+                        end
+                        else if (/*arbiter send priority stop*/)begin
+                            communicationState <= masterHold;
+                                                   
+                        end
+
+                    endcase
+                end
             //==========================//
     
-                            control         <= tempControl[18];
-                            tempControl     <= {tempControl[17:0] ,1'b0};
-                            controlCounter  <= controlCounter + 5'd1;
-                            // if (controlCounter == 5'd19) begin : startSendOrReceive
-                            //     // if (tempRdWr == 1) begin
-                            //         // wrD     <= data[0];
-                            //         // data    <= {1'b0,data[DATA_WIDTH-2:0]};
-                            //     // end
-                            // end
             end
             //===========Done===========// 
             //==========================//
