@@ -85,8 +85,8 @@ always_ff @( posedge clk ) begin : stateLogic
     end
 
     ACK : begin
-      if(input_buf[1:0] == 2'b11) bus_state <= 0; //nak cycle delay is not optimal
-      else if (input_buf[1:0] == 2'b10) com <= 1; 
+      if(input_buf == 3'b110) bus_state <= 0; //nak cycle is not optimal
+      else if (input_buf == 3'b101) com <= 1; 
     end
 
     COM : if(input_buf[1:0] == 2'b01) com <= 0; //com state delay is not optimal

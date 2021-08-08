@@ -38,28 +38,30 @@ initial begin
     read <= 1;
     @(posedge clk);
     read <= 0;  
-    #(CLK_PERIOD*3);
+    #(CLK_PERIOD*2);
     @(posedge clk); //ack receive
     read <= 1;
     @(posedge clk);
-    read <= 1;
+    read <= 0;
+    @(posedge clk);
+    read <= 1; 
     @(posedge clk);//com high
-    read <= 0; 
+    read <= 1; 
     @(posedge clk);
-    read <= 0; 
-    @(posedge clk);
-    read <= 0;
+    read <= 1;
     @(posedge clk);//over
+    read <= 0;
     @(posedge clk);
     read <= 1;
     @(posedge clk);
     read <= 1;
     @(posedge clk);
-    read <= 1;  
+    read <= 0;  
     @(posedge clk);
     read <= 0;
     @(posedge clk);
-    read <= 0;
+    read <= 1;
+    #(CLK_PERIOD*2);
   @(posedge clk);
   $stop;
 end
