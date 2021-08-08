@@ -15,7 +15,7 @@ module master #(
         input logic rdWr,                           // read or write: 0 1
         input logic inEx,                           // internal or external
         input logic [DATA_WIDTH-1:0] data,
-        input logic [ADDRESS_WIDTH-1:0] address,
+        input logic [$clog2(MEMORY_DEPTH)-1:0] address,
         input logic [1:0] slaveId,
         input logic start,
 		  
@@ -48,56 +48,30 @@ module master #(
         output logic arbSend
 );
 
+
+
+
 localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
+
+
 
 logic [18:0] tempControl;
 logic wr;
 logic [3:0] fromArbiter;
 
+
+
 // define states for the top module
-typedef enum logic [1:0]{
+typedef enum logic [2:0]{
     idle,
     startConfig,
     startEndConfig, 
-    startCom
+    startCom,
+    done
  } start_;
 
-start_ state, nextstate;
+start_ state,nextstate;
 
-always_ff @(posedge clk or negedge rstN) begin : mainStateMachine
-    if (~rstN) begin 
-        state <= idle;
-    end
-    else begin
-        if (start && state == idle) begin
-            state <= nextstate;
-        end
-        else if (start && state == startConfig)  begin
-            state <= nextstate;
-		end
-        else if (start && state == startEndConfig) begin
-           state <= nextstate;
-       end    
-    end
-    
-end
-
-
-always_comb begin
-    case (state)
-        idle           : nextstate = startConfig;
-        startConfig    : nextstate = startEndConfig;
-        startEndConfig : nextstate = startCom;
-//        startCom       :
-//			  if (doneCom) begin
-//					nextState = done;
-//				end
-//				else
-//					nextState = startCom;
-        
-        default        : nextstate = idle;
-    endcase
-end
 
 
 
@@ -111,18 +85,12 @@ typedef enum logic [2:0]{
     masterHold,
     masterDone,
     masterSplit
-//    done
 } comStates;
 
 comStates comState, comNextState;
 
-//logic [3:0] fromArbiter;
 
-
-logic [2:0] arbGrant;
-logic [2:0] arbPStop;
-logic [2:0] arbSplit;
-
+/* 
 always_ff @(posedge clk or negedge rstN) begin 
     if (~rstN) begin
         comState <= idleCom;
@@ -137,10 +105,10 @@ always_ff @(posedge clk or negedge rstN) begin
         else if (~arbCont && comState == reqAck) begin
             comState <= comNextState;
         end
-        else if (arbPStop == 3'b111 /*stop_priority*/ && comState == masterCom) begin
+        else if (arbPStop == 3'b111 /stop_priority/ && comState == masterCom) begin
             comState <= comNextState;
         end
-        else if (arbSplit == 3'b111 /*stop_split*/ && comState == masterCom) begin
+        else if (arbSplit == 3'b111 /stop_split/ && comState == masterCom) begin
             comState <= comNextState;
         end
 		else if (comState == masterHold) begin
@@ -180,8 +148,19 @@ initial begin
         wr <= ready;
     end
 end
+*/
 
 
+
+
+logic [ADDRESS_WIDTH-1:0] addressInternal;
+logic [ADDRESS_WIDTH-1:0] addressInternalBurtstEnd;
+logic clock_counter;
+logic burstLen;
+//logic [2:0] fromArbiter;
+// logic [2:0] arbGrant;
+// logic [2:0] arbPStop;
+// logic [2:0] arbSplit;
 
 //==========================================//
 //Instantiate the bram for the master module//
@@ -190,15 +169,23 @@ end
 bram #(
     .MEMORY_DEPTH               ( MEMORY_DEPTH ),
     .DATA_WIDTH                  ( DATA_WIDTH )
-    ) dut(
+    ) bram(
         .clk            (clk        ),
         .wr             (wr         ),
-        .address        (address    ),
-        .data           (data     ),
+        .address        (addressInternal    ),
+        .data           (data       ),
         .q              (dataOut    )
 );
 
+logic communicationDone;
 // logic counter = 2'b00;
+initial begin
+    communicationDone <= 0;
+end 
+    
+
+
+
 always_ff @( posedge clk or negedge rstN) begin : topModule
     if (~rstN) begin
         control <= 1'b0;
@@ -206,31 +193,99 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         valid   <= 1'b0;
         last    <= 1'b0;
         doneCom <= 1'b0;
+        state   <= idle;
+        comState <= idleCom;
     end
-    else begin
-        if (state == idle) begin
-            control <= 1'b0;
-            wrD     <= 1'b0;
-            valid   <= 1'b0;
-            last    <= 1'b0;
-            doneCom <= 1'b0;
-        end
-       else if (state == startConfig && ~inEx) begin
-            tempControl <= {3'b111, slaveId, rdWr, burst, address};
-            if (state == startConfig && inEx) begin
-                // counter <= counter + 2'b01;
+    else begin : topStates
+        case (state) 
+            //==========================//
+            //===========IDLE===========// 
+            //==========================//
+            idle:
+                if (start) begin 
+                    state <= startConfig;
+                end
+                else begin
+                    state <= idle;
+                    control <= 1'b0;
+                    wrD     <= 1'b0;
+                    valid   <= 1'b0;
+                    last    <= 1'b0;
+                    doneCom <= 1'b0;                    
+                end
 
-                /*
-                Write the external data from masters zeroth address
-                till all data is received
-                */
-            end
-       end
-       else if (state == startCom) begin
-           /*
-           start communication process
-           */
-       end
+            //==========================//
+            //=======startConfig========// 
+            //==========================//
+            startConfig:
+                if (start) begin
+                    state <= startEndConfig;
+                end
+                else begin
+                    state <= startConfig;
+                    tempControl <= {3'b111, slaveId, rdWr, burst, address};
+                    if (inEx) begin : internalExternalWrite
+                        if (clock_counter == 2'd0) begin
+                            addressInternal <= address;
+                            wr <= 1;
+                        end
+                        else if (clock_counter == 2'd1) begin
+                            addressInternalBurtstEnd <= address;
+                            wr <= 0;
+                        end
+                        else begin
+                            if (clock_counter == 2'd3)begin
+                                burstLen <= addressInternalBurtstEnd - addressInternal;
+                            end
+                        end 
+                        clock_counter <= clock_counter + 2'd1;
+                    end
+                    else begin
+                        addressInternal <= address;
+                    end
+                end
+            
+            //==========================//
+            //======startEndConfig======// 
+            //==========================//
+            startEndConfig:
+                if (start) begin
+                    state <= startCom;
+                end
+                else begin
+                    state <= startEndConfig;
+                end
+
+            startCom:
+                if(doneCom == 1'b0) begin
+                    valid <= 1'b1;
+                    state <= startCom;
+
+                end
+                else begin
+                    state <= done;
+                end
+        
+        endcase
+    //     if (state == idle) begin
+            
+    //     end
+    //    else if (state == startConfig && ~inEx) begin
+    //         tempControl <= {3'b111, slaveId, rdWr, burst, address};
+    //         if (state == startConfig && inEx) begin
+    //             // counter <= counter + 2'b01;
+
+    //             /*
+    //             Write the external data from masters zeroth address
+    //             till all data is received
+    //             */
+    //         end
+    //    end
+    //    else if (state == startCom) begin
+    //        /*
+    //        start communication process
+    //        */
+    //    end
         // else if (state == done) begin
         //     /*
         //     Allow external read for the master
