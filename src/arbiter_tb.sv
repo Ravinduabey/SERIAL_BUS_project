@@ -30,7 +30,7 @@ logic com_m2;
 
 logic addr_select;
 logic MOSI_data_select;
-logic MISO_data_select;
+logic [1:0] MISO_data_select;
 logic valid_select;
 logic last_select;
 logic [1:0] ready_select;
@@ -85,43 +85,43 @@ initial begin
     @(posedge clk);
     m1_in <= 0;
 
-    @(posedge clk);
-    m2_in <= 0; 
-    @(posedge clk); //start 
-    m2_in <= 1; 
-    @(posedge clk);
-    m2_in <= 1;
-    @(posedge clk);
-    m2_in <= 1;  
-    @(posedge clk); //slave id
-    m2_in <= 0;
-    @(posedge clk);
-    m2_in <= 1;
-    @(posedge clk);
-    m2_in <= 0;  
-    #(CLK_PERIOD*2);
-    @(posedge clk); //ack receive
-    m2_in <= 1;
-    @(posedge clk);
-    m2_in <= 0;
-    @(posedge clk);
-    m2_in <= 1; 
-    @(posedge clk);//com high
-    m2_in <= 1; 
-    @(posedge clk);
-    m2_in <= 1;
-    @(posedge clk);//over
-    m2_in <= 0;
-    @(posedge clk);
-    m2_in <= 1;
-    @(posedge clk);
-    m2_in <= 1;
-    @(posedge clk);
-    m2_in <= 0;  
-    @(posedge clk);
-    m2_in <= 0;
-    @(posedge clk);
-    m2_in <= 0;
+    // @(posedge clk);
+    // m2_in <= 0; 
+    // @(posedge clk); //start 
+    // m2_in <= 1; 
+    // @(posedge clk);
+    // m2_in <= 1;
+    // @(posedge clk);
+    // m2_in <= 1;  
+    // @(posedge clk); //slave id
+    // m2_in <= 0;
+    // @(posedge clk);
+    // m2_in <= 1;
+    // @(posedge clk);
+    // m2_in <= 0;  
+    // #(CLK_PERIOD*2);
+    // @(posedge clk); //ack receive
+    // m2_in <= 1;
+    // @(posedge clk);
+    // m2_in <= 0;
+    // @(posedge clk);
+    // m2_in <= 1; 
+    // @(posedge clk);//com high
+    // m2_in <= 1; 
+    // @(posedge clk);
+    // m2_in <= 1;
+    // @(posedge clk);//over
+    // m2_in <= 0;
+    // @(posedge clk);
+    // m2_in <= 1;
+    // @(posedge clk);
+    // m2_in <= 1;
+    // @(posedge clk);
+    // m2_in <= 0;  
+    // @(posedge clk);
+    // m2_in <= 0;
+    // @(posedge clk);
+    // m2_in <= 0;
 
   @(posedge clk);
   $stop;
