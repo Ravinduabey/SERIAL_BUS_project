@@ -49,10 +49,13 @@ logic M_inEx, M_inEx_next[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_data, M_data_next[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address, M_address_next[0:MASTER_COUNT-1];
 logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId, M_slaveId_next[0:MASTER_COUNT];
-logic M_start, M_start_next;
+logic M_start, M_start_next[0:MASTER_COUNT-1];
 
 logic M_doneCom[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
+
+logic M_read_write_sel, M_read_write_sel_next[0:MASTER_COUNT-1];
+logic M_external_write_sel, M_exteral_write_sel_next[0:MASTER_COUNT-1];
 
 logic [DATA_WIDTH-1:0]M_data_bank[0:MASTER_COUNT-1][0:MAX_MASTER_WRITE_DEPTH]; // used to store values to be written on masters' memories.
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_data_bank_addr, next_data_bank_addr; // used to select a location in "M_data_bank"
@@ -73,7 +76,7 @@ generate
             .data(M_data[i]),
             .address(M_address[i]),
             .slaveId(M_slaveId[i]),
-            .start(M_start),
+            .start(M_start[i]),
 
             .doneCom(M_doneCom[i]),
             .dataOut(M_dataOut[i])
@@ -117,7 +120,9 @@ always_ff @(posedge clk or negedge rstN) begin
         M_data      <= '{default:'0};
         M_address   <= '{default:'0}; 
         M_slaveId   <= '{default:'0}; 
-        M_start     <= 1'b0;
+
+        M_read_write_sel        <= '{default: '0};
+        M_external_write_sel    <= '{default: '0};
 
         slave_first_addr <= '{default:'0};  
         slave_last_addr  <= '{default:'0};
@@ -133,7 +138,9 @@ always_ff @(posedge clk or negedge rstN) begin
         M_data      <= M_data_next;
         M_address   <= M_address_next; 
         M_slaveId   <= M_slaveId_next; 
-        M_start     <= M_start_next;
+
+        M_read_write_sel        <= M_read_write_sel_next;
+        M_external_write_sel    <= M_exteral_write_sel_next;
 
         slave_first_addr <= slave_first_addr_next;
         slave_last_addr  <= slave_last_addr_next;
@@ -268,9 +275,10 @@ always_comb begin
     M_rdWr_next      <= M_rdWr;
     M_inEx_next      <= M_inEx;
     M_data_next      <= M_data;
-    M_address_next   <= M_address; 
     M_slaveId_next   <= M_slaveId; 
-    M_start_next     <= M_start;
+
+    M_read_write_sel_next       <= M_read_write_sel;
+    M_exteral_write_sel_next    <= M_external_write_sel;
 
     next_data_bank_addr = current_data_bank_addr;
 
@@ -284,10 +292,12 @@ always_comb begin
             end
         end   
 
-        read_write_sel: begin // do nothing (in this state only the next state selection happens.)
+        read_write_sel: begin 
+            M_read_write_sel <= SW[MASTER_COUNT-1:0];
         end 
 
-        external_write_sel: begin// do nothing (in this state only the next state selection happens.)            
+        external_write_sel: begin
+            M_exteral_write_sel_next <= SW[MASTER_COUNT-1:0];          
         end 
 
         external_write_M1: begin
@@ -329,6 +339,14 @@ always_comb begin
         end 
          
         addr_count_sel_M1: begin
+            // decide burst or not
+            if (Sw[MASTER_ADDR_WIDTH-1:0] == '0) begin
+                M_burst_next[0] = 1'b0;
+            end
+            else begin
+                M_burst_next[0] = 1'b1;
+            end
+            // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0]) >= SLAVE_DEPTHS[M_slaveId[0]-1]) begin
                 slave_last_addr_next[0] = SLAVE_DEPTHS[M_slaveId[0]-1]; // if given length is too large select untill the last address of the slave
             end
@@ -339,6 +357,14 @@ always_comb begin
         end 
 
         addr_count_sel_M2: begin
+            // decide burst or not
+            if (Sw[MASTER_ADDR_WIDTH-1:0] == '0) begin
+                M_burst_next[1] = 1'b0;
+            end
+            else begin
+                M_burst_next[1] = 1'b1;
+            end
+            // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1]) >= SLAVE_DEPTHS[M_slaveId[1]-1]) begin
                 slave_last_addr_next[1] = SLAVE_DEPTHS[M_slaveId[1]-1]; // if given length is too large select untill the last address of the slave
             end
@@ -355,8 +381,7 @@ always_comb begin
             
         end
 
-        communicating: begin
-            
+        communicating: begin // do nothing (in this state only the next state selection happens.)           
         end  
 
         communication_done: begin
@@ -368,6 +393,150 @@ always_comb begin
     endcase
 end
 
+//////////////////// master configuration state related logics /////////////////
+
+localparam CONFIG_CLK_COUNT = 2;
+logic [$clog2(MASTER_COUNT)-1:0]current_config_master, next_config_master;
+logic [$clog2(CONFIG_CLK_COUNT)-1:0]current_config_clk_count, next_config_clk_count;
+logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_config_write_count, next_config_write_count;
+
+typedef enum logic [2:0] {
+    config_ready = 3'd0,
+    config_start = 3'd1,
+    config_middle = 3'd2,
+    config_last = 3'd3,  // last stream of configuration
+    config_done = 3'd4
+} config_sub_state_t;
+
+config_sub_state_t current_config_state, next_config_state;
+
+always_ff @(posedge clk) begin
+    if (~rstN) begin
+        current_config_state        <= config_ready;
+        current_config_master       <= '0;
+        current_config_clk_count    <= '0;
+        current_config_write_count  <= '0;
+
+        M_start <= '{default: '0};
+    end
+    else begin
+        current_config_state        <= next_config_state;
+        current_config_master       <= next_config_master;
+        current_config_clk_count    <= next_config_clk_count;
+        current_config_write_count  <= next_config_write_count;
+
+        M_start <= M_start_next;
+    end
+end
+
+
+//////////////// master config substate change logic //////////////
+
+always_comb begin
+    next_config_state = current_config_state;
+
+    case (current_config_state)
+
+        config_ready: begin
+            if (next_state == config_masters) begin  //***************** double check this ***********
+                next_config_state = config_start;
+            end
+        end
+
+        config_start: begin
+            if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
+                if (M_external_write_sel[current_config_master] == 1'b0) begin
+                    next_config_state = config_last;
+                end
+                else begin
+                    next_config_state = config_middle;
+                end
+            end
+        end
+        
+        config_middle: begin
+            if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
+                if (current_config_write_count == data_bank_wr_count[current_config_master]) begin
+                    next_state = config_last;
+                end
+            end
+        end
+
+        config_last: begin
+            if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
+                if (current_config_master == (MASTER_COUNT-1)) begin
+                    next_config_state = config_done;
+                end
+                else begin
+                    next_config_state = config_start;   // go back to first state to configure the next master
+                end
+            end
+        end
+
+        config_done: begin // do nothing and stay in this state
+        end
+
+        default: next_config_state = config_ready; // **************** not sure ***************************
+    endcase
+end
+
+
+//////// logic within the master config sub states /////////////////////////
+
+always_comb begin
+
+    M_start_next = M_start;
+    next_config_master = current_config_master
+    next_config_clk_count = current_config_clk_count + 1'b1;
+    
+    case (current_config_state)
+
+        config_ready: begin
+            M_start_next = '{default:'0};
+            if (next_config_state == config_start) begin   //***************** double check this ***********               
+                M_start_next[current_config_master] = 1'b1;
+                next_config_clk_count = '0;
+            end             
+        end
+
+        config_start: begin
+            M_start_next[current_config_master] = 1'b1;
+            if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin  // goes to next state 
+                next_config_clk_count = '0;
+                M_start_next[current_config_master] = 1'b0;
+                M_data_next[current_config_master] = M_data_bank[current_config_master]['0];  // useful only when external write
+            end               
+        end
+
+        config_middle: begin
+            M_data_next[current_config_master] = M_data_bank[current_config_master][current_config_write_count];
+            if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
+                next_config_clk_count = '0;
+                next_config_write_count = current_config_write_count + 1'b1;
+                if (next_config_state == config_last) begin
+                    M_start_next[current_config_master] = 1'b1;
+                end
+            end
+        end
+
+        config_last: begin
+            if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
+                next_config_clk_count = '0;
+                M_start_next[current_config_master] = 1'b0;
+            end
+
+        end
+
+        config_done: begin
+            if (~jump_stateN) begin
+                
+            end            
+        end
+
+
+    endcase
+
+end
 
 
 endmodule : top
