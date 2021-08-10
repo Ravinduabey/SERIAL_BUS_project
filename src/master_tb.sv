@@ -44,7 +44,7 @@ timeunit 1ns; timeprecision 1ps;
     
 
   
-    localparam CLOCK_PERIOD = 10;
+    localparam CLOCK_PERIOD = 20;
     initial begin
         clk <= 0;
             forever begin
@@ -97,12 +97,24 @@ timeunit 1ns; timeprecision 1ps;
         //    state == startConfig    //
         //===========================//
         #(CLOCK_PERIOD*2);
-        start <= 1;
+        #17;
+        inEx <=1;
+        data <= 16'd10;
         slaveId <= 2'b01;
         rdWr <= 0;
-        burst <= 0;
+        burst <= 1;
         address <= 12'd13;
+        
+        #3;
+        start <= 1;
+        #(CLOCK_PERIOD);
+        start <= 0;
 
+        
+
+        #17;
+        data <= 16'd14;
+        #3;
         #(CLOCK_PERIOD);
         start <= 0;
 
@@ -111,10 +123,13 @@ timeunit 1ns; timeprecision 1ps;
         //===========================//
         #(CLOCK_PERIOD);
         start <= 1;
+        address <= 12'd16;
+        data <= 16'd17;
 
         #(CLOCK_PERIOD);
         start <= 0;
 
+        data <= 16'd18;
         //============================//
         //     state == startCom      //
         //===========================//
