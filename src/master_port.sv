@@ -78,8 +78,8 @@ always_comb begin : stateMachine
     end
 
     ACK: begin
-      if (com_state <= nak) next_state = OVER;
-      else if (com_state <= com) next_state = COM;
+      if (com_state == nak) next_state = OVER;
+      else if (com_state == com) next_state = COM;
       else next_state = ACK;
     end
 

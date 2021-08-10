@@ -1,5 +1,5 @@
 module mux #(
-    parameter DATA_WIDTH
+    parameter DATA_WIDTH = 2
 ) (
     input logic [DATA_WIDTH-1:0] dina,
     input logic [DATA_WIDTH-1:0] dinb,
@@ -7,31 +7,18 @@ module mux #(
     output logic [DATA_WIDTH-1:0] dout
 ); 
 
-assign dout = dinb ? select : dina;
-    
-endmodule : mux
-
-module demux #(
-    parameter DATA_WIDTH
-) (
-    input logic [DATA_WIDTH-1:0] din,
-    input logic select,
-    output logic [DATA_WIDTH-1:0] douta,
-    output logic [DATA_WIDTH-1:0] doutb
-);
-
-always_comb begin : demultiplexer
+always_comb begin : multiplexer
     unique case (select)
 
     1'b0 : begin
-        douta = din;
-        doutb = 0;
+        dout = dina;
     end
 
     1'b1 : begin
-        doutb = din;
-        douta = 0;
+        dout = dinb;
     end  
-    endcase  
+    endcase     
 end
-endmodule : demux
+    
+endmodule : mux
+

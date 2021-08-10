@@ -40,26 +40,69 @@ arbiter dut (.*);
 
 initial begin
 
+    @(posedge clk);
+    port1_in <= 0; 
+    port0_in <= 0; 
+    @(posedge clk); //start 
+    port1_in <= 1; 
+    port0_in <= 1; 
+    @(posedge clk);
+    port1_in <= 1;
+    port0_in <= 1; 
+    @(posedge clk);
+    port1_in <= 1;  
+    port0_in <= 1; 
+    @(posedge clk); //slave id
+    port1_in <= 0;
+    port0_in <= 1; 
+    @(posedge clk);
+    port1_in <= 1;
+    port0_in <= 0; 
+    @(posedge clk);
+    port1_in <= 0;
+    port0_in <= 0; 
+
+    @(posedge clk);
+    port0_in <= 0;  
+    #(CLK_PERIOD*2);
+    @(posedge clk); //ack receive
+    port0_in <= 1;
+    @(posedge clk);
+    port0_in <= 0;
+    @(posedge clk);
+    port0_in <= 1; 
+    @(posedge clk);//com high
+    port0_in <= 1; 
+    @(posedge clk);
+    port0_in <= 1;
+    @(posedge clk);//over
+    port0_in <= 0;
+    @(posedge clk);
+    port0_in <= 1;
+    @(posedge clk);
+    port0_in <= 1;
+    @(posedge clk);
+    port0_in <= 0;  
+    @(posedge clk);
+    port0_in <= 0;
+    @(posedge clk);
+    port0_in <= 0;
+
+
+//this leads to interrupt transaction. once it is handled this should be tried. 
     // @(posedge clk);
-    // port1_in <= 0; 
     // port0_in <= 0; 
+    // port1_in <= 0;
     // @(posedge clk); //start 
     // port1_in <= 1; 
-    // port0_in <= 1; 
     // @(posedge clk);
     // port1_in <= 1;
-    // port0_in <= 1; 
     // @(posedge clk);
     // port1_in <= 1;  
-    // port0_in <= 1; 
     // @(posedge clk); //slave id
-    // port1_in <= 0;
-    // port0_in <= 1; 
+    // port1_in <= 1;
     // @(posedge clk);
     // port1_in <= 1;
-    // port0_in <= 0; 
-
-
     // @(posedge clk);
     // port1_in <= 0;  
     // #(CLK_PERIOD*2);
@@ -85,96 +128,57 @@ initial begin
     // port1_in <= 0;
     // @(posedge clk);
     // port1_in <= 0;
+    // @(posedge clk);
+    // port1_in <= 0;  
+    // @(posedge clk);
+    // port1_in <= 1;
+    // @(posedge clk);
+    // port1_in <= 1;
 
-    @(posedge clk);
-    port0_in <= 0; 
-    port1_in <= 0;
-    @(posedge clk); //start 
-    port0_in <= 1; 
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 1;  
-    @(posedge clk); //slave id
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 0;  
-    #(CLK_PERIOD*2);
-    @(posedge clk); //ack receive
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 1; 
-    @(posedge clk);//com high
-    port0_in <= 1; 
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);//over
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 0;  
-    @(posedge clk);
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 0;  
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 1;
-
-    @(posedge clk);
-    port0_in <= 0; 
-    port1_in <= 0;
-    @(posedge clk); //start 
-    port0_in <= 1; 
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 1;  
-    @(posedge clk); //slave id
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 0;  
-    #(CLK_PERIOD*2);
-    @(posedge clk); //ack receive
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 1; 
-    @(posedge clk);//com high
-    port0_in <= 1; 
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);//over
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 0;  
-    @(posedge clk);
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 0;
-    @(posedge clk);
-    port0_in <= 0;  
-    @(posedge clk);
-    port0_in <= 1;
-    @(posedge clk);
-    port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 0; 
+    // port1_in <= 0;
+    // @(posedge clk); //start 
+    // port0_in <= 1; 
+    // @(posedge clk);
+    // port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 1;  
+    // @(posedge clk); //slave id
+    // port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 0;  
+    // #(CLK_PERIOD*2);
+    // @(posedge clk); //ack receive
+    // port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 0;
+    // @(posedge clk);
+    // port0_in <= 1; 
+    // @(posedge clk);//com high
+    // port0_in <= 1; 
+    // @(posedge clk);
+    // port0_in <= 1;
+    // @(posedge clk);//over
+    // port0_in <= 0;
+    // @(posedge clk);
+    // port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 0;  
+    // @(posedge clk);
+    // port0_in <= 0;
+    // @(posedge clk);
+    // port0_in <= 0;
+    // @(posedge clk);
+    // port0_in <= 0;  
+    // @(posedge clk);
+    // port0_in <= 1;
+    // @(posedge clk);
+    // port0_in <= 1;
 
   @(posedge clk);
   $stop;

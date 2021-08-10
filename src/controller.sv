@@ -49,17 +49,45 @@ state_t next_state;
 
 logic interrupt = 0;
 
+logic [1:0] com_state;
+logic done;
+logic [1:0] cmd;
 logic cur_master, nxt_master, old_master;
 logic [1:0] cur_slave, nxt_slave, old_slave;
 
-localparam CLEAR = 2'b11;
+localparam WAIT = 2'b00;
 localparam STOP_S = 2'b01;
 localparam STOP_P = 2'b10;
+localparam CLEAR = 2'b11;
 
 localparam end_com = 2'b00;
 localparam nak = 2'b01;
 localparam wait_ack = 2'b10;
 localparam com = 2'b11;
+
+demux #(.DATA_WIDTH(2)) cmd_port_select (
+  .din(cmd),
+  .select(cur_master),
+  .dout0(cmd0),
+  .dout1(cmd1)
+);
+
+mux #(.DATA_WIDTH(2)) com_port_select (
+  .dina(com0_state),
+  .dinb(com1_state),
+  .select(cur_master),
+  .dout(com_state)
+);
+
+
+
+mux #(.DATA_WIDTH(1)) done_port_select (
+  .dina(done0),
+  .dinb(done1),
+  .select(cur_master),
+  .dout(done)
+);
+
 
 
 always_comb begin : stateMachine
@@ -75,13 +103,13 @@ always_comb begin : stateMachine
     ALLOC: next_state = ACK;
 
     ACK: begin
-      if (com0_state == nak) next_state = OVER;
-      else if (com0_state == com) next_state = COM;
+      if (com_state == nak) next_state = OVER;
+      else if (com_state == com) next_state = COM;
       else next_state <= ACK;
     end
 
     COM: begin 
-      if(com0_state == end_com) next_state = OVER;
+      if(com_state == end_com) next_state = OVER;
       else if (interrupt) next_state = DONE;
       else next_state = COM; 
 	  end
@@ -146,18 +174,19 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     end
 
     ALLOC : begin
-        cmd0 <= CLEAR;
+        cmd <= CLEAR;
     end
 
     ACK : begin
-      if(com0_state == nak) bus_state <= 0;  //nak
-      else if (com0_state == com) begin //ack
+      $display("com0 state %b, com state %b", com0_state, com_state);
+      if(com_state == nak) bus_state <= 0;  //nak
+      else if (com_state == com) begin //ack
         bus_state <= {cur_master, cur_slave};  
       end
     end
 
     COM : begin
-      if(com0_state == end_com) begin
+      if(com_state == end_com) begin
         bus_state <= 0;
     /////////////////////////////////////////////////
     /// split and priority need to add in an efficient way////
@@ -168,6 +197,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
       if(interrupt) begin
         interrupt <= 0;
       end
+      cmd <= WAIT;
     end
 
     endcase 
