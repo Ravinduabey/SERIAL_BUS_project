@@ -1,24 +1,34 @@
-module top(
+module top 
+#(
+    parameter SLAVE_COUNT=3,  // number of slaves
+    parameter MASTER_COUNT=2,  // number of masters
+    parameter DATA_WIDTH = 16,   // width of a data word in slave & master
+    parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
+    parameter MAX_MASTER_WRITE_DEPTH = 16  // maximum number of addresses of a master that can be externally written
+
+)
+(
     input logic CLOCK_50,
     input logic [3:0]KEY,
     input logic [17:0]SW,
     output logic [17:0]LEDR,
+    output logic [3:0]LEDG,
     output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7
         
 );
 
-localparam SLAVE_COUNT=3;  // number of slaves
-localparam MASTER_COUNT=2; // number of masters
-localparam DATA_WIDTH = 16; // width of a data word in slave & master
+// localparam SLAVE_COUNT=3;  // number of slaves
+// localparam MASTER_COUNT=2; // number of masters
+// localparam DATA_WIDTH = 16; // width of a data word in slave & master
 
-localparam int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}; // give each slave's depth
+// localparam int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}; // give each slave's depth
 localparam int SLAVE_ADDR_WIDTHS[SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog2(SLAVE_DEPTHS[1]), $clog2(SLAVE_DEPTHS[2])};
 
 localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or read all the slave address locations without loss
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
 
 
-localparam MAX_MASTER_WRITE_DEPTH = 16;  // maximum number of addresses of a master that can be externally written
+
 
 ///////////// debouncing (start) //////////////
 logic [3:0]KEY_OUT;
@@ -316,7 +326,7 @@ always_comb begin
                 
                 config_middle: begin
                     if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
-                        if (current_config_write_count == data_bank_wr_count[current_config_master]-2) begin // the value before last value
+                        if (current_config_write_count == data_bank_wr_count[current_config_master]-1) begin // the value before last value
                             next_config_state = config_last;
                         end
                     end
@@ -376,6 +386,7 @@ always_comb begin
     M_exteral_write_sel_next    = M_external_write_sel;
 
     next_data_bank_addr = current_data_bank_addr;
+    data_bank_wr_count_next = data_bank_wr_count;
 
     slave_first_addr_next = slave_first_addr;
     slave_last_addr_next  = slave_last_addr;
@@ -398,7 +409,7 @@ always_comb begin
 
         read_write_sel: begin 
             for (integer i=0;i<MASTER_COUNT;i=i+1)begin
-                M_read_write_sel[i] = SW[i];
+                M_read_write_sel_next[i] = SW[i];
             end
             
         end 
@@ -560,5 +571,13 @@ always_comb begin
         end   
     endcase
 end
+
+
+
+//////// LEDs control //////
+assign LEDG[0] = (current_state == master_slave_sel)? 1'b1:1'b0; // to indicate initial state
+assign LEDG[1] = (current_state == communication_ready)? 1'b1:1'b0; // to indicate master configuration done. Now communication can be started.
+assign LEDG[2] = (current_state == communication_done)? 1'b1:1'b0; // master slave communication is over
+assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
 
 endmodule : top
