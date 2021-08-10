@@ -60,8 +60,10 @@ logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId_next[0:MASTER_COUNT];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 
-logic [0:0]M_doneCom[0:MASTER_COUNT-1];
+logic M_doneCom[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
+logic [DATA_WIDTH-1:0] M_dataOut_reg[0:MASTER_COUNT-1]; // to keep the values reed from masters
+logic [DATA_WIDTH-1:0] M_dataOut_next[0:MASTER_COUNT-1];
 
 logic M_read_write_sel[0:MASTER_COUNT-1];
 logic M_read_write_sel_next[0:MASTER_COUNT-1];
@@ -163,6 +165,8 @@ always_ff @(posedge clk or negedge rstN) begin
         M_start <= '{default: '0};
         M_data  <= '{default:'0};
 
+        M_dataOut_reg <= '{default: '0};
+
     end
     else begin
         current_state <= next_state;
@@ -188,6 +192,8 @@ always_ff @(posedge clk or negedge rstN) begin
 
         M_start <= M_start_next;
         M_data  <= M_data_next;
+
+        M_dataOut_reg <= M_dataOut_next;
 
     end
 end
@@ -348,14 +354,12 @@ always_comb begin
             end
         end
 
-        communication_done: begin
+        communication_done: begin // stay within this state until reset
             
         end
 
    endcase
 end
-
-/////// state change logic (end) /////////
 
 /////// logic within the state ///////////
 
@@ -375,6 +379,8 @@ always_comb begin
 
     slave_first_addr_next = slave_first_addr;
     slave_last_addr_next  = slave_last_addr;
+
+    M_dataOut_next = M_dataOut_reg;
 
     // config_sub_states related logic
     M_start_next = M_start;
@@ -529,6 +535,7 @@ always_comb begin
 
                 config_done: begin
                     M_start_next = '{default:1'b0};  // keep all start signals at zero until press start push button
+                    M_address_next = '{default: '0}; // set the address bus to zero to read after the communication_done state
                 end
 
             endcase
@@ -544,9 +551,13 @@ always_comb begin
         end  
 
         communication_done: begin
-            
+            M_dataOut_next = M_dataOut; //read both masters same address
+            if (!jump_next_addr) begin
+                for (integer i=0;i<MASTER_COUNT;i=i+1) begin
+                    M_address_next[i] = SW[MASTER_ADDR_WIDTH-1:0];
+                end          
+            end
         end   
-
     endcase
 end
 
