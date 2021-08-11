@@ -46,7 +46,7 @@ state_t next_state;
 
 logic [S_ID_WIDTH:0] input_buf;
 logic request;
-logic old = 0;
+logic old = '0;
 
 ///////////////////////////////
 /// write should be included
@@ -121,7 +121,7 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 
   if (!rstN) begin
     state <= RST;
-    input_buf <= 0;
+    input_buf <= '0;
   end
 
   else begin
@@ -130,27 +130,29 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
   end
 end
 
+initial id <= 0;
+
 always_ff @( posedge clk ) begin : stateLogic
   $display("master state %s and input_buf %b", state, input_buf);
     unique case (state) 
 
     RST : begin
-      request <= 0;
-      id <= 0;
+      request <= '0;
+      id <= '0;
     end
 
     START : if (input_buf[S_ID_WIDTH:S_ID_WIDTH-2] == 3'b111) request <= 1; 
 
     ALLOC1 : begin
       id <= input_buf[S_ID_WIDTH-1:0];
-      request <= 0;
+      request <= '0;
 	 end
 
-    ALLOC2 : if (cmd==CLEAR) id <= 0;
+    ALLOC2 : if (cmd==CLEAR) id <= '0;
 
     ACK : begin
-      done <= 0;
-      old <= 0;
+      done <= '0;
+      old <= '0;
       if (input_buf[2:0] == 3'b110) com_state <= nak; //nak
       else if (input_buf[2:0] == 3'b101) com_state <= com; //ack
       else com_state <= wait_ack; //waiting
@@ -161,9 +163,10 @@ always_ff @( posedge clk ) begin : stateLogic
       else if (cmd==STOP_S) old <= 1;
 	 end
 
-    DONE : if (input_buf[2:0] == 3'b010) done <= 1;
+    DONE : if (input_buf[2:0] == 3'b010) done <= '1;
 
-
+	 //OVER
+	 
     endcase 
 end
 

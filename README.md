@@ -8,11 +8,9 @@
 * thresh_counter.sv - module which lookout for delay in comm.
 
 ## work remaining
+priority module 
 write port
-master port generator - done
-parameterized demux
 split complete algorithm - handle the loop issue
 split complete coding 
-priority selection - ask samare
 request discard technique - master send give up message
 

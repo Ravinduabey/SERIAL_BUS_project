@@ -1,6 +1,7 @@
 module controller #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
+    parameter THRESH = 1000,
     parameter S_ID_WIDTH = $clog2(NO_SLAVES+1), //2
     parameter M_ID_WIDTH = $clog2(NO_MASTERS) //1
 )(
@@ -69,17 +70,23 @@ logic [S_ID_WIDTH-1:0] nxt_slave, old_slave;
 ////////////////////////////////
 ////    internal modules    ////
 ////////////////////////////////
-demux #(.DATA_WIDTH(2)) cmd_port_select (
-  .din(cur_cmd),
-  .select(cur_master),
-  .dout0(cmd[0]),
-  .dout1(cmd[1])
-);
+// demux #(.DATA_WIDTH(2)) cmd_port_select (
+//   .din(cur_cmd),
+//   .select(cur_master),
+//   .dout0(cmd[0]),
+//   .dout1(cmd[1])
+// );
+
+always_comb begin 
+    cmd = '{NO_MASTERS{'0}};
+    cmd[cur_master] = cur_cmd; 
+end
+
 assign cur_com_state = com_state[cur_master];
 
 assign cur_done = done[cur_master];
 
-thresh_counter #(.THRESH(1000)) thresh_cnt (.*);
+thresh_counter #(.THRESH(THRESH)) thresh_cnt (.*);
 
 ////////////////////////
 //// external muxes ////
@@ -182,6 +189,8 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     /// split and priority need to add in an efficient way////
     end
 
+	 //DONE
+	 
     OVER : begin
       if(interrupt) begin
         interrupt <= 0;
