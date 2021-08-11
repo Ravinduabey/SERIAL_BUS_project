@@ -9,9 +9,10 @@
 
 ## work remaining
 write port
-master port generator 
-parameterized mux
-split complete algorithm - done
+master port generator - done
+parameterized demux
+split complete algorithm - handle the loop issue
 split complete coding 
 priority selection - ask samare
 request discard technique - master send give up message
+

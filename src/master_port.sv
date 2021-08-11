@@ -1,26 +1,26 @@
 module master_port # (
-  NO_SLAVES = 3
+  parameter NO_SLAVES = 3,
+  parameter S_ID_WIDTH = $clog2(NO_SLAVES+1)
 )
 (
     input logic clk,
     input logic rstN,
 
   //===================//
-  //       master      //
+  //       with master //
   //===================// 
     input logic port_in,
     output logic port_out,
 
   //===================//
-  //    controller     //
+  //   with controller //
   //===================// 
     input logic [1:0] cmd,
-    output logic [$clog2(NO_SLAVES+1)-1:0] id,
+    output logic [S_ID_WIDTH-1:0] id,
     output logic [1:0] com_state,
     output logic done
 );
 
-localparam N = $clog2(NO_SLAVES+1);
 localparam CLEAR = 2'b11;
 localparam STOP_S = 2'b01;
 localparam STOP_P = 2'b10;
@@ -44,7 +44,7 @@ typedef enum logic [2:0] {
 state_t state = START;
 state_t next_state;
 
-logic [N:0] input_buf;
+logic [S_ID_WIDTH:0] input_buf;
 logic request;
 logic old = 0;
 
@@ -126,7 +126,7 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 
   else begin
     state <= next_state;
-    input_buf <= {input_buf[N-1:0], port_in};
+    input_buf <= {input_buf[S_ID_WIDTH-1:0], port_in};
   end
 end
 
@@ -139,10 +139,10 @@ always_ff @( posedge clk ) begin : stateLogic
       id <= 0;
     end
 
-    START : if (input_buf[N:N-2] == 3'b111) request <= 1; 
+    START : if (input_buf[S_ID_WIDTH:S_ID_WIDTH-2] == 3'b111) request <= 1; 
 
     ALLOC1 : begin
-      id <= input_buf[N-1:0];
+      id <= input_buf[S_ID_WIDTH-1:0];
       request <= 0;
 	 end
 
