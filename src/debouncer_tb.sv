@@ -32,6 +32,8 @@ initial begin
     @(posedge clk);
     value_in <= 1'b0;
 
+    #(CLK_PERIOD*10); // keep the button pressed for some time extent
+
     @(posedge clk);
     value_in <= 1'b1;
 

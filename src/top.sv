@@ -28,10 +28,15 @@ localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or 
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
 
 
+logic rstN, clk, jump_stateN, jump_next_addr;
+logic [3:0]KEY_OUT;
 
+assign rstN = KEY_OUT[0];
+assign jump_stateN = KEY_OUT[1];
+assign jump_next_addr = KEY_OUT[2];
+assign clk = CLOCK_50;
 
 ///////////// debouncing (start) //////////////
-logic [3:0]KEY_OUT;
 
 localparam TIME_DELAY = 500; // time delay for debouncing in ms
 genvar i;
@@ -45,13 +50,6 @@ generate
     end
 endgenerate
 ////////// debouncing (end) ////////////
-
-logic rstN, clk, jump_stateN, jump_next_addr;
-
-assign rstN = KEY_OUT[0];
-assign jump_stateN = KEY_OUT[1];
-assign jump_next_addr = KEY_OUT[2];
-assign clk = CLOCK_50;
 
 //////////////// TOP module & MASTER module wires and registers /////////////
 
@@ -241,12 +239,13 @@ always_comb begin
 
         read_write_sel: begin
             if(!jump_stateN) begin
-                if(SW[1:0] == 2'b00) begin
-                    next_state = slave_addr_sel_M1;
-                end
-                else begin
-                    next_state = external_write_sel;
-                end
+                // if(SW[1:0] == 2'b00) begin
+                //     next_state = slave_addr_sel_M1;
+                // end
+                // else begin
+                //     next_state = external_write_sel;
+                // end
+                next_state = external_write_sel;  // always check whether need to externally write to master or not 
             end
         end
 

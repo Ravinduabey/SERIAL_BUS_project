@@ -29,9 +29,11 @@ typedef enum logic{
 //////// set the following parameters first before run the simulation ////////
 localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
 localparam logic master_RW[0:1] = '{write,read};
-localparam logic external_write[0:1] = '{1'b0, 1'b0};
+localparam logic external_write[0:1] = '{1'b1, 1'b1};
 localparam int   external_write_count[0:1] = '{10,10};
-localparam int   slave_address_count[0:1] = '{10,15};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{2,3};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_address_count[0:1] = '{10,15};
+localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr = 3;
 
 
 
@@ -52,12 +54,14 @@ logic [3:0]LEDG;
 logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7;
 
 logic rstN, jump_stateN, jump_next_addr;
+logic communication_ready, communication_done;
 
 assign CLOCK_50 = clk;
 assign KEY[0] = rstN;
 assign KEY[1] = jump_stateN;
 assign KEY[2] = jump_next_addr;
 assign communication_ready = LEDG[1];
+assign communication_done  = LEDG[2];
 
 top #(.SLAVE_COUNT(SLAVE_COUNT), .MASTER_COUNT(MASTER_COUNT), .DATA_WIDTH(DATA_WIDTH), 
     .SLAVE_DEPTHS(SLAVE_DEPTHS), .MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH))dut(.*);  // instantiate the top module
@@ -87,6 +91,50 @@ initial begin
     #(CLK_PERIOD*10);
     @(posedge clk);
     external_write_select(external_write[0], external_write[1]);
+
+    @(posedge clk);
+    if (external_write[0]==1'b1) begin
+        #(CLK_PERIOD*10);
+        master_external_write(external_write_count[0]);
+    end
+
+    @(posedge clk);
+    if (external_write[1]==1'b1) begin
+        #(CLK_PERIOD*10);
+        master_external_write(external_write_count[1]);
+    end
+
+    #(CLK_PERIOD*10);
+    @(posedge clk);
+    set_slave_start_address(slave_start_address[0]);
+
+    #(CLK_PERIOD*10);
+    @(posedge clk);
+    set_slave_start_address(slave_start_address[1]);
+
+    #(CLK_PERIOD*10);
+    @(posedge clk);
+    set_slave_address_count(slave_address_count[0]);
+
+    #(CLK_PERIOD*10);
+    @(posedge clk);
+    set_slave_address_count(slave_address_count[1]); 
+
+    ///////// after the end of above state automatically goes to master configuration state //////////
+    
+    wait(communication_ready);  // wait untill configuration is done 
+
+    #(CLK_PERIOD*10);
+    @(posedge clk);
+    start_communication();
+
+    // wait(communication_done);
+
+    // #(CLK_PERIOD*10);
+    // @(posedge clk);
+    // get_data_from_masters(master_read_addr);
+
+    #(CLK_PERIOD*10);
 
     $stop;
 
@@ -198,7 +246,7 @@ task automatic set_slave_start_address(logic [MASTER_ADDR_WIDTH-1:0]address);
     #(CLK_PERIOD*10); // wait some time before next KEY press / SW change 
 endtask
 
-task automatic set_slave_address_count(logic master, logic [MASTER_ADDR_WIDTH-1:0]count);
+task automatic set_slave_address_count(logic [MASTER_ADDR_WIDTH-1:0]count);
     @(posedge clk);
     SW[MASTER_ADDR_WIDTH-1:0] = count; // set the switches
 
@@ -216,7 +264,6 @@ task automatic set_slave_address_count(logic master, logic [MASTER_ADDR_WIDTH-1:
 endtask
 
 task automatic start_communication();
-    wait(communication_ready);
     #(CLK_PERIOD*10);
    
     @(posedge clk);
