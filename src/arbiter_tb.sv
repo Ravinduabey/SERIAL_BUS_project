@@ -27,14 +27,14 @@ logic port1_out;
 
 logic [2:0] bus_state;
 
-// logic ready;
+logic ready;
 
-// logic addr_select;
-// logic MOSI_data_select;
-// logic [1:0] MISO_data_select;
-// logic valid_select;
-// logic last_select;
-// logic [1:0] ready_select;
+logic addr_select;
+logic MOSI_data_select;
+logic [1:0] MISO_data_select;
+logic valid_select;
+logic last_select;
+logic [1:0] ready_select;
 
 arbiter dut (.*);
 

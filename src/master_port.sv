@@ -1,5 +1,6 @@
-// Code your design here
-module master_port
+module master_port # (
+  NO_SLAVES = 3
+)
 (
     input logic clk,
     input logic rstN,
@@ -14,15 +15,12 @@ module master_port
   //    controller     //
   //===================// 
     input logic [1:0] cmd,
-    output logic [1:0] id,
+    output logic [$clog2(NO_SLAVES+1)-1:0] id,
     output logic [1:0] com_state,
     output logic done
 );
 
-logic [2:0] input_buf;
-logic request;
-logic old = 0;
-
+localparam N = $clog2(NO_SLAVES+1);
 localparam CLEAR = 2'b11;
 localparam STOP_S = 2'b01;
 localparam STOP_P = 2'b10;
@@ -45,6 +43,10 @@ typedef enum logic [2:0] {
 
 state_t state = START;
 state_t next_state;
+
+logic [N:0] input_buf;
+logic request;
+logic old = 0;
 
 ///////////////////////////////
 /// write should be included
@@ -124,7 +126,7 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 
   else begin
     state <= next_state;
-    input_buf <= {input_buf[1:0], port_in};
+    input_buf <= {input_buf[N-1:0], port_in};
   end
 end
 
@@ -137,10 +139,10 @@ always_ff @( posedge clk ) begin : stateLogic
       id <= 0;
     end
 
-    START : if (input_buf[2:0] == 3'b111) request <= 1; 
+    START : if (input_buf[N:N-2] == 3'b111) request <= 1; 
 
     ALLOC1 : begin
-      id <= input_buf[1:0];
+      id <= input_buf[N-1:0];
       request <= 0;
 	 end
 
@@ -160,6 +162,7 @@ always_ff @( posedge clk ) begin : stateLogic
 	 end
 
     DONE : if (input_buf[2:0] == 3'b010) done <= 1;
+
 
     endcase 
 end

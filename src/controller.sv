@@ -22,15 +22,15 @@ module controller(
   //===================//
   //    multiplexers   //
   //===================// 
-	//input logic ready,
+	input logic ready,
 
-  output logic [2:0] bus_state = 0
-	// output logic addr_select,
-	// output logic MOSI_data_select,
-	// output logic [1:0] MISO_data_select,
-	// output logic valid_select,
-	// output logic last_select,
-	// output logic [1:0] ready_select
+  output logic [2:0] bus_state = 0,
+	output logic addr_select,
+	output logic MOSI_data_select,
+	output logic [1:0] MISO_data_select,
+	output logic valid_select,
+	output logic last_select,
+	output logic [1:0] ready_select
 );
 
 typedef enum logic [3:0] {
@@ -50,7 +50,7 @@ state_t next_state;
 logic interrupt = 0;
 
 logic [1:0] com_state;
-logic done;
+logic done, thresh;
 logic [1:0] cmd;
 logic cur_master, nxt_master, old_master;
 logic [1:0] cur_slave, nxt_slave, old_slave;
@@ -65,6 +65,9 @@ localparam nak = 2'b01;
 localparam wait_ack = 2'b10;
 localparam com = 2'b11;
 
+////////////////////////////////
+////    internal modules    ////
+////////////////////////////////
 demux #(.DATA_WIDTH(2)) cmd_port_select (
   .din(cmd),
   .select(cur_master),
@@ -79,8 +82,6 @@ mux #(.DATA_WIDTH(2)) com_port_select (
   .dout(com_state)
 );
 
-
-
 mux #(.DATA_WIDTH(1)) done_port_select (
   .dina(done0),
   .dinb(done1),
@@ -88,7 +89,7 @@ mux #(.DATA_WIDTH(1)) done_port_select (
   .dout(done)
 );
 
-
+thresh_counter #(.THRESH(100)) thresh_cnt (.*);
 
 always_comb begin : stateMachine
     unique case(state)
@@ -123,21 +124,18 @@ always_comb begin : stateMachine
 
     endcase   
 end
-//////////////////////////
-// external muxes 
-/////////////////////////
-// always_comb begin : muxController
-//   addr_select = bus_state[3];
-// 	MOSI_data_select = bus_state[3];
-// 	valid_select = bus_state[3];
-// 	last_select = bus_state[3];
-//   MISO_data_select = bus_state[1:0];
-// 	ready_select = bus_state[1:0];
-// end
 
-////////////////////////////////
-//// internal muxes
-////////////////////////////////
+////////////////////////
+//// external muxes ////
+///////////////////////
+always_comb begin : muxController
+  addr_select = bus_state[2];
+	MOSI_data_select = bus_state[2];
+	valid_select = bus_state[2];
+	last_select = bus_state[2];
+  MISO_data_select = bus_state[1:0];
+	ready_select = bus_state[1:0];
+end
 
 always_ff @(posedge clk or negedge rstN) begin : stateShifter
 
@@ -186,11 +184,9 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     end
 
     COM : begin
-      if(com_state == end_com) begin
-        bus_state <= 0;
-    /////////////////////////////////////////////////
+      if(com_state == end_com) bus_state <= 0;
+      /////////////////////////////////////////////////
     /// split and priority need to add in an efficient way////
-      end 
     end
 
     OVER : begin

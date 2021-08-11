@@ -14,18 +14,18 @@ module arbiter(
   //===================// 
   input logic port1_in,
   output logic port1_out,
-  output logic [2:0] bus_state
+  output logic [2:0] bus_state,
   //===================//
   //    multiplexers   //
   //===================// 
-	// input logic ready,
+	input logic ready,
 
-	// output logic addr_select,
-	// output logic MOSI_data_select,
-	// output logic [1:0] MISO_data_select,
-	// output logic valid_select,
-	// output logic last_select,
-	// output logic [1:0] ready_select
+	output logic addr_select,
+	output logic MOSI_data_select,
+	output logic [1:0] MISO_data_select,
+	output logic valid_select,
+	output logic last_select,
+	output logic [1:0] ready_select
 );
 
   logic [1:0] id0;
@@ -38,7 +38,7 @@ module arbiter(
   logic done1;
   logic [1:0] cmd1;
 
-master_port master0 (
+master_port #(.NO_SLAVES(3)) master0 (
   .clk(clk),
   .rstN(rstN),
   .port_in(port0_in),
@@ -49,7 +49,7 @@ master_port master0 (
   .done(done0)
 );
 
-master_port master1 (
+master_port #(.NO_SLAVES(3)) master1 (
   .clk(clk),
   .rstN(rstN),
   .port_in(port1_in),
