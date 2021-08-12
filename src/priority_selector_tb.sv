@@ -28,7 +28,7 @@ logic [M_ID_WIDTH-1:0] master_out;
 logic [S_ID_WIDTH-1:0] slave_out;
 logic [S_ID_WIDTH-1:0] slave_id [NO_MASTERS-1:0];
 
-localparam START = 3'b00;
+localparam NRML = 3'b00;
 localparam SPLIT = 3'b01;
 localparam PRIORITY = 3'b10;
 
@@ -37,7 +37,7 @@ priority_selector dut(.*);
 initial begin
     rstN = 1;
     @(posedge clk);
-    state = START;
+    state = NRML;
     slave_id[0] = 3'b0;
     slave_id[1] = 3'b101;
     slave_id[2] = 3'b100;

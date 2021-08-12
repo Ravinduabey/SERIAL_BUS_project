@@ -10,7 +10,7 @@ module thresh_counter #(
 logic [$clog2(THRESH)-1:0] counter;
 
 always_comb begin : threshold_detector
-    if(counter == THRESH) thresh = '1;
+    if(counter > THRESH) thresh = '1;
     else thresh = '0;
 end
 

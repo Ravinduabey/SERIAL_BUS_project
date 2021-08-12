@@ -58,25 +58,24 @@ state_t next_state;
 
 logic interrupt = '0;
 
+localparam NRML = 2'b00;
+localparam SPLIT = 2'b01;
+localparam PRIORITY = 2'b10;
+logic [1:0] priority_state = NRML;
+logic request;
+
 logic [1:0] cur_com_state;
 logic cur_done, thresh;
 logic [1:0] cur_cmd;
 
 logic [M_ID_WIDTH-1:0] cur_master = '0;
-logic [M_ID_WIDTH-1:0] nxt_master, old_master;
+logic [M_ID_WIDTH-1:0] nxt_master, old_master, master_out;
 logic [S_ID_WIDTH-1:0] cur_slave = '0;
-logic [S_ID_WIDTH-1:0] nxt_slave, old_slave;
+logic [S_ID_WIDTH-1:0] nxt_slave, old_slave, slave_out;
 
 ////////////////////////////////
 ////    internal modules    ////
 ////////////////////////////////
-// demux #(.DATA_WIDTH(2)) cmd_port_select (
-//   .din(cur_cmd),
-//   .select(cur_master),
-//   .dout0(cmd[0]),
-//   .dout1(cmd[1])
-// );
-
 always_comb begin 
     cmd = '{NO_MASTERS{'0}};
     cmd[cur_master] = cur_cmd; 
@@ -86,8 +85,20 @@ assign cur_com_state = com_state[cur_master];
 
 assign cur_done = done[cur_master];
 
-thresh_counter #(.THRESH(THRESH)) thresh_cnt (.*);
+thresh_counter #(.THRESH(THRESH)) thresh_detector (.*);
 
+priority_selector #(
+  .NO_MASTERS(NO_MASTERS),
+  .NO_SLAVES(NO_SLAVES)
+  ) master_selector (
+    .state(priority_state),
+    .master_in(cur_master),
+    .slave_in(cur_slave),
+    .slave_id(id),
+    .master_out(master_out),
+    .slave_out(slave_out),
+    .request(request)
+); 
 ////////////////////////
 //// external muxes ////
 ///////////////////////
@@ -107,7 +118,7 @@ always_comb begin : stateMachine
     RST: next_state = START;
 
     START: begin
-        if(id[0] || id[1]) next_state = ALLOC;
+        if(request) next_state = ALLOC;
         else next_state = START;
     end
 
@@ -158,16 +169,9 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     end
 
     START : begin
-      //there should be an efficient way to do this
-      if(id[0] || id[1]) begin
-        if (id[0]) begin
-          cur_master <= '0;
-          cur_slave <= id[0];
-        end
-      else if (id[1]) begin
-          cur_master <= '1;
-          cur_slave <= id[1];
-        end
+      if (request) begin
+        cur_master <= master_out;
+        cur_slave <= slave_out;
       end
     end
 
@@ -176,7 +180,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     end
 
     ACK : begin
-      $display("com0 state %b, com state %b", com_state[0], com_state[1]);
+      // $display("com0 state %b, com state %b", com_state[0], com_state[1]);
       if(cur_com_state == nak) bus_state <= '0;  //nak
       else if (cur_com_state == com) begin //ack
         bus_state <= {cur_master, cur_slave};  
@@ -185,6 +189,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
     COM : begin
       if(cur_com_state == end_com) bus_state <= 0;
+      else if ()
       /////////////////////////////////////////////////
     /// split and priority need to add in an efficient way////
     end

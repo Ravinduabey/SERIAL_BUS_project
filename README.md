@@ -8,7 +8,7 @@
 * thresh_counter.sv - module which lookout for delay in comm.
 
 ## work remaining
-priority module 
+priority module - adds a cycle delay
 write port
 split complete algorithm - handle the loop issue
 split complete coding 

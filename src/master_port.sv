@@ -130,8 +130,6 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
   end
 end
 
-initial id <= 0;
-
 always_ff @( posedge clk ) begin : stateLogic
   $display("master state %s and input_buf %b", state, input_buf);
     unique case (state) 
@@ -141,14 +139,23 @@ always_ff @( posedge clk ) begin : stateLogic
       id <= '0;
     end
 
-    START : if (input_buf[S_ID_WIDTH:S_ID_WIDTH-2] == 3'b111) request <= 1; 
+    START : begin
+      if (input_buf[S_ID_WIDTH:S_ID_WIDTH-2] == 3'b111) request <= '1; 
+      else id <= '0;
+    end
+    
 
     ALLOC1 : begin
       id <= input_buf[S_ID_WIDTH-1:0];
       request <= '0;
 	 end
 
-    ALLOC2 : if (cmd==CLEAR) id <= '0;
+    ALLOC2 : begin
+      if (cmd==CLEAR) id <= '0; 
+      ///////////////////////////////////////
+      // master should stop at one point trying to connect
+      // because in split if the master wasn't given the chance it will wait indefinitely
+    end
 
     ACK : begin
       done <= '0;
