@@ -63,7 +63,7 @@ logic [1:0]                 clock_counter, i;
 
 logic [2:0]                 fromArbiter;
 logic [2:0]                 arbGrant;
-logic [2:0]                 arbiterCounnter;
+logic [3:0]                 arbiterCounnter;
 
 
 logic [4:0]                 controlCounter;
@@ -137,6 +137,7 @@ logic communicationDone;
 always_ff @( posedge clk or negedge rstN) begin : topModule
     if (~rstN) begin
         addresstemp         <= 0;
+        fromArbiter         <= 0;
         control             <= 1'b0;
         wrD                 <= 1'b0;
         valid               <= 1'b0;
@@ -165,9 +166,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     arbiterRequest              <= {3'b111, slaveId};
                     tempArbiterRequest          <= {3'b111, slaveId};
                     tempRdWr                    <= rdWr;
+                    dataInternal                <= data;
+                    addressInternal             <= addresstemp;
+                    
                 end
                 else begin
                     addresstemp         <= 0;
+                    fromArbiter         <= 0;
                     control             <= 1'b0;
                     wrD                 <= 1'b0;
                     valid               <= 1'b0;
@@ -190,6 +195,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     addressInternalBurtstEnd    <= address;
                     wr                          <= 1;
                     dataInternal                <= data;
+                    addressInternal             <= addresstemp;
                 end
                 else begin
                     // state               <= startConfig;
@@ -201,25 +207,35 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     
     
                     if (inEx) begin : internalExternalWrite
-                        if (clock_counter < 2'd2) begin
-                            if (tempBurst == 1) begin
-                                addressInternal             <= addresstemp;
-                                addresstemp                 <= addresstemp + 1;
-                                wr                          <= 1;
+                        if (tempBurst == 1) begin
                                 dataInternal                <= data;
+                                addressInternal             <= addresstemp;
+                            if (clock_counter < 2'd1) begin
+                                wr                          <= 1;
+                                addresstemp                 <= addresstemp + 1;
+                                clock_counter               <= clock_counter + 2'd1;
+                            end
+
+                            else begin
+                                wr                          <= 0;
+                                clock_counter               <= 2'd0;
+                            end
+                        end
+                        else begin
+                            addressInternal             <= addresstemp;
+                            dataInternal                <= data;
+                            clock_counter               <= clock_counter + 2'd1;
+                            if (clock_counter < 2'd1) begin
+                                wr                          <= 1;
                                 clock_counter               <= clock_counter + 2'd1;
                             end
                             else begin
-                                addressInternal             <= addresstemp;
-                                wr                          <= 1;
-                                dataInternal                <= data;
-                                clock_counter               <= clock_counter + 2'd1;
+                                wr                          <= 0;
+                                clock_counter               <= 2'd0;
                             end
                         end
-                        else if (clock_counter == 2'd2) begin
-                            wr                          <= 0;
-                            clock_counter               <= 2'd0;
-                        end
+                            // else begin
+                            // end
                     end
                     // else begin
                         // addressInternal <= address;
@@ -248,31 +264,35 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //=========startCom=========// 
             //==========================//
             startCom:
-                if(doneCom == 1'b0) begin
+                if(doneCom == 1'b0) begin : start_internal_communication
                     state           <= startCom;
 
                     case (communicationState) 
                         idleCom:
                             if (~arbCont) begin
                                 communicationState <= reqCom;
+                                arbiterCounnter    <= 0;
                             end
                             // else begin
                             //     communicationState <= idleCom;
                             // end
 
                         reqCom:
-                            if (arbiterCounnter < 3'd5) begin
+                            if (arbiterCounnter < 3'd6) begin
                                 arbiterCounnter         <= arbiterCounnter + 3'd1;
                                 arbSend                 <= arbiterRequest[4];
                                 arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
+                                fromArbiter[2:1]    <= fromArbiter[1:0];
+                                fromArbiter[0]      <= arbCont;
                             end
-                            else if (arbiterCounnter >= 3'd5) begin
+                            else if (arbiterCounnter >= 3'd6) begin
                                 arbiterCounnter         <= arbiterCounnter + 3'd1;
-                                fromArbiter[i]          <= arbCont;
-                                i                       <= i + 1;
+                                // fromArbiter             <= {fromArbiter[2:1], arbCont};
+                                fromArbiter[2:1]    <= fromArbiter[1:0];
+                                fromArbiter[0]      <= arbCont;
                                 if (fromArbiter == 3'b111) begin
                                     arbiterCounnter     <= 3'd0;
-                                    i                   <= 0;
+                                    arbSend             <= 1'b1;
                                     communicationState  <= reqAck;
                                 end
                                 else begin
@@ -283,12 +303,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                         
                         reqAck:
-                            if (arbiterCounnter == 3'd0) begin
+                            if (arbiterCounnter < 3'd2) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 communicationState  <= reqAck;
                             end
-                            else if (arbiterCounnter == 3'd3) begin
+                            else if (arbiterCounnter == 3'd2) begin
                                 arbSend             <= 1'b0;
                                 arbiterCounnter     <= 3'd0;
                                 fromArbiter         <= 3'b000;
@@ -303,6 +323,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             tempControl         <= {tempControl[17:0] ,1'b0};
                             controlCounter      <= controlCounter + 5'd1;
 
+                            // fromArbiter             <= {fromArbiter[2:1], arbCont};
                             fromArbiter[2:1]    <= fromArbiter[1:0];
                             fromArbiter[0]      <= arbCont;
                             
