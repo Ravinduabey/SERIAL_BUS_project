@@ -75,6 +75,15 @@ timeunit 1ns; timeprecision 1ps;
         .arbSend(arbSend)
     );
 
+    task automatic top_burst_write;
+        output [DATA_WIDTH -1 : 0] data;
+        begin
+            #17;
+            data = $random;
+            #3;
+            #CLOCK_PERIOD;
+        end
+    endtask
     
 
     initial begin
@@ -115,6 +124,13 @@ timeunit 1ns; timeprecision 1ps;
         #17;
         data <= 16'd14;
         #3;
+        top_burst_write(.data(data));
+        top_burst_write(.data(data));
+        top_burst_write(.data(data));
+        top_burst_write(.data(data));
+        top_burst_write(.data(data));
+        top_burst_write(.data(data));
+        
         #(CLOCK_PERIOD);
         start <= 0;
 
@@ -123,23 +139,32 @@ timeunit 1ns; timeprecision 1ps;
         //===========================//
         #(CLOCK_PERIOD);
         start <= 1;
+        // last data
         address <= 12'd16;
         data <= 16'd17;
 
         #(CLOCK_PERIOD);
         start <= 0;
 
+        // send data to check whether the master module save this data
         data <= 16'd18;
+
         //============================//
         //     state == startCom      //
         //===========================//
         #(CLOCK_PERIOD);
         start <= 1;
-        
+        arbCont <=0;
         #(CLOCK_PERIOD);
         start <= 0;
         slaveId <= 2'b10;
         rdWr <= 1;
+
+        // wait for arbiter request
+        #(CLOCK_PERIOD*6);
+        arbCont <= 1;
+        #(CLOCK_PERIOD*3);
+        arbCont <= 0;
 
         #(CLOCK_PERIOD*20);
         rstN <=1;
@@ -152,4 +177,4 @@ timeunit 1ns; timeprecision 1ps;
         $stop;
     end
 
-endmodule
+endmodule: master_tb
