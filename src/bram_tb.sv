@@ -9,16 +9,16 @@ module bram_tb();
         forever #(CLK_PRERIOD/2) clk <= ~clk;
     end
 
-    localparam ADDRESS_DEPTH = 4096;
+    localparam MEMORY_DEPTH = 4096;
     localparam DATA_WIDTH = 16 ;
     
-    logic [$clog2(ADDRESS_DEPTH)-1:0]   address;
+    logic [$clog2(MEMORY_DEPTH)-1:0]   address;
     logic [DATA_WIDTH-1:0]              data;
     logic                               wr;
     logic [DATA_WIDTH-1:0]              q;
 
 bram #(
-    .ADDRESS_DEPTH               ( ADDRESS_DEPTH ),
+    .MEMORY_DEPTH               ( MEMORY_DEPTH ),
     .DATA_WIDTH                  ( DATA_WIDTH )
 ) dut(
     .clk            (clk        ),
