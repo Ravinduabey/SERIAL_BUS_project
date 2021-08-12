@@ -55,34 +55,35 @@ logic old = '0;
 always_comb begin : stateMachine
     unique case(state)
 
-    RST: next_state = START;
+    RST: next_state = START; //send 00
 
-    START: begin
+    START: begin //send 00
         if (request) next_state = ALLOC1;
         else next_state = START;
     end
 
-    ALLOC1: next_state = ALLOC2;
+    ALLOC1: next_state = ALLOC2; //send 00
 
     ALLOC2: begin 
       if (cmd==CLEAR && old) begin //split
-        //send 1011
+        //send 10
         next_state = ACK;
       end
       else if (cmd==CLEAR) begin 
-        //send 1111
+        //send 11
         next_state = ACK;
       end
       else begin
-        //send 0000
+        //send 00
         next_state = ALLOC2;
       end
     end
 
+    //send 00
     ACK: begin
-      if (com_state == nak) next_state = OVER;
+      if (com_state == nak) next_state = OVER; //send 00
       else if (com_state == com) next_state = COM;
-      else next_state = ACK;
+      else next_state = ACK; //send 11
     end
 
     COM: begin 

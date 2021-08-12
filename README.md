@@ -2,15 +2,13 @@
 ## modules
 * arbiter.sv - top module of the arbiter
 * controller.sv - module which control the bus 
-* master_port.sv - module which connects with each master
-* demux.sv - 1 to 2 demultiplexer
-* mux.sv - 2 to 1 multiplexer
+* master_port.sv - an intermediate module which connects each master to controller
 * thresh_counter.sv - module which lookout for delay in comm.
+* priority selector.sv - module which updates controller about master requests 
 
 ## work remaining
-priority module - adds a cycle delay
-write port
-split complete algorithm - handle the loop issue
+split complete algorithm - handle the loop issue 
 split complete coding 
+write port
+commenting
 request discard technique - master send give up message
-

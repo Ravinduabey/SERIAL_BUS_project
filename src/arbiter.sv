@@ -50,6 +50,25 @@ module arbiter #(
     end
 endgenerate
 
-controller control_unit (.*);
+controller #(
+  .NO_MASTERS(NO_MASTERS),
+  .NO_SLAVES(NO_SLAVES),
+  .THRESH(THRESH)
+)control_unit(
+  .clk(clk),
+  .rstN(rstN),
+  .id(id),
+  .com_state(com_state),
+  .done(done),
+  .cmd(cmd),
+  .ready(ready),
+  .addr_select(addr_select),
+  .MOSI_data_select(MOSI_data_select),
+  .valid_select(valid_select),
+  .last_select(last_select),
+  .MISO_data_select(MISO_data_select),
+  .ready_select(ready_select),
+  .bus_state(bus_state)
+);
 
 endmodule : arbiter

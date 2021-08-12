@@ -1,15 +1,16 @@
 module priority_selector #(
-    parameter NO_MASTERS = 3,
-    parameter NO_SLAVES = 5,
+    parameter NO_MASTERS = 2,
+    parameter NO_SLAVES = 3,
     parameter S_ID_WIDTH = $clog2(NO_SLAVES+1),
     parameter M_ID_WIDTH = $clog2(NO_MASTERS)
 ) (
     
     // input clk,
     // input rstN,
-    input [1:0] state,
+    input logic state,
     input logic [M_ID_WIDTH-1:0] master_in,
     input logic [S_ID_WIDTH-1:0] slave_in,
+    input logic thresh,
     // input logic [M_ID_WIDTH-1:0] cur_master,
     // input logic [S_ID_WIDTH-1:0] cur_slave,
 
@@ -50,7 +51,7 @@ always_comb begin
 
     unique case (state)
 
-    2'b00 : begin
+    1'b0 : begin
     for (i = 0; i<NO_MASTERS; i++) begin
         if (slave_id[i] != '0) begin
             master_out = M_ID_WIDTH'(i);
@@ -60,24 +61,26 @@ always_comb begin
     end
     end
 
-    2'b01 : begin
-    for (i = 0; i<NO_MASTERS; i++) begin
-        if ((slave_id[i] != '0) && (slave_id[i] != slave_in) ) begin
-            master_out = M_ID_WIDTH'(i);
-            slave_out = slave_id[i];
-            break;
+    1'b1 : begin
+        if (thresh) begin //split
+            for (i = 0; i<NO_MASTERS; i++) begin
+                if ((slave_id[i] != '0) && (slave_id[i] != slave_in) ) begin
+                    master_out = M_ID_WIDTH'(i);
+                    slave_out = slave_id[i];
+                    break;
+                end
+            end 
         end
-    end 
-    end
+        else begin //priority
+            for (i = 0; i<NO_MASTERS; i++) begin
+                if ((slave_id[i] != '0) && (i < master_in) ) begin
+                    master_out = M_ID_WIDTH'(i);
+                    slave_out = slave_id[i];
+                    break;
+                end
+            end            
+        end
 
-    2'b10 : begin
-    for (i = 0; i<NO_MASTERS; i++) begin
-        if ((slave_id[i] != '0) && (i < master_in) ) begin
-            master_out = M_ID_WIDTH'(i);
-            slave_out = slave_id[i];
-            break;
-        end
-    end
     end
 endcase
 end  

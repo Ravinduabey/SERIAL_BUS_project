@@ -7,7 +7,7 @@ module controller #(
 )(
 
   input logic clk,
-	input logic rstN,
+  input logic rstN,
 
   //===================//
   //      masters      //
@@ -27,7 +27,7 @@ module controller #(
 	output logic [M_ID_WIDTH-1:0] MOSI_data_select,
 	output logic [M_ID_WIDTH-1:0] valid_select,
 	output logic [M_ID_WIDTH-1:0] last_select,
-  output logic [S_ID_WIDTH-1:0] MISO_data_select,
+   output logic [S_ID_WIDTH-1:0] MISO_data_select,
 	output logic [S_ID_WIDTH-1:0] ready_select,
 
   output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0
@@ -56,12 +56,11 @@ typedef enum logic [2:0] {
 state_t state = START;
 state_t next_state;
 
-logic interrupt = '0;
+logic intr = '0;
 
-localparam NRML = 2'b00;
-localparam SPLIT = 2'b01;
-localparam PRIORITY = 2'b10;
-logic [1:0] priority_state = NRML;
+localparam NRML = 1'b0;
+localparam STOP = 1'b1;
+logic priority_state = NRML;
 logic request;
 
 logic [1:0] cur_com_state;
@@ -69,9 +68,9 @@ logic cur_done, thresh;
 logic [1:0] cur_cmd;
 
 logic [M_ID_WIDTH-1:0] cur_master = '0;
-logic [M_ID_WIDTH-1:0] nxt_master, old_master, master_out;
+logic [M_ID_WIDTH-1:0] next_master, old_master, master_out;
 logic [S_ID_WIDTH-1:0] cur_slave = '0;
-logic [S_ID_WIDTH-1:0] nxt_slave, old_slave, slave_out;
+logic [S_ID_WIDTH-1:0] next_slave, old_slave, slave_out;
 
 ////////////////////////////////
 ////    internal modules    ////
@@ -94,6 +93,7 @@ priority_selector #(
     .state(priority_state),
     .master_in(cur_master),
     .slave_in(cur_slave),
+    .thresh(thresh),
     .slave_id(id),
     .master_out(master_out),
     .slave_out(slave_out),
@@ -132,14 +132,17 @@ always_comb begin : stateMachine
 
     COM: begin 
       if(cur_com_state == end_com) next_state = OVER;
-      else if (interrupt) next_state = DONE;
+      else if (intr) next_state = DONE;
       else next_state = COM; 
 	  end
 
-    //DONE: 
+    DONE: begin
+      if (cur_done) next_state = ALLOC;
+      else next_state = DONE;
+    end 
 
     OVER: begin
-      if(interrupt) next_state = ALLOC;
+      if(intr) next_state = ALLOC;
       else next_state = START;
 	 end
 
@@ -163,9 +166,10 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
     RST : begin 
       bus_state <= '0;
-      interrupt <= '0;
+      intr <= '0;
       cur_slave <= '0;
       cur_master <= '0;
+      priority_state <= NRML;
     end
 
     START : begin
@@ -183,26 +187,44 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
       // $display("com0 state %b, com state %b", com_state[0], com_state[1]);
       if(cur_com_state == nak) bus_state <= '0;  //nak
       else if (cur_com_state == com) begin //ack
-        bus_state <= {cur_master, cur_slave};  
+        bus_state <= {cur_master, cur_slave}; 
+        priority_state = STOP; 
       end
     end
 
     COM : begin
       if(cur_com_state == end_com) bus_state <= 0;
-      else if ()
-      /////////////////////////////////////////////////
-    /// split and priority need to add in an efficient way////
-    end
-
-	 //DONE
-	 
-    OVER : begin
-      if(interrupt) begin
-        interrupt <= 0;
+      else if(request && !intr && (cur_master != master_out)) begin
+          next_master <= master_out;
+          next_slave <= slave_out;
+          old_master <= cur_master;
+          old_slave <= cur_slave;
+          intr <= '1;
+          if (thresh) cur_cmd <= STOP_S;
+          else cur_cmd <= STOP_P;
       end
-      cur_cmd <= WAIT;
     end
 
+	 DONE : begin
+     if (cur_done) begin
+       cur_master <= next_master;
+       cur_slave <= next_slave;
+     end
+   end
+	 
+    
+   OVER : begin
+      // add priority_state = NRML;
+      if(intr) begin
+        intr <= 0;
+        cur_master <= old_master;
+        cur_slave <= old_slave;
+      end
+      else begin
+        priority_state <= NRML;
+        cur_cmd <= WAIT;
+      end  
+    end
     endcase 
 end
 
