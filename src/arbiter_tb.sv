@@ -62,42 +62,42 @@ initial begin
     //////////////////////////////////////////////////
     //// high priority master interrupts the comm. ///
     //////////////////////////////////////////////////    
-    master_request(port_in[1], 2'b01);
-    #(CLK_PERIOD*2);
-    master_sendack_startcom(port_in[1]);
-    #(CLK_PERIOD*2);
-    master_request(port_in[0], 2'b01);
-    #(CLK_PERIOD*4);
-    master_hold_com(port_in[1]);
-    #(CLK_PERIOD*2);
-    master_sendack_startcom(port_in[0]);
-    #(CLK_PERIOD*4);
-    master_end_comm(port_in[0]);
-    #(CLK_PERIOD*2);
-    master_sendack_startcom(port_in[1]);
-    #(CLK_PERIOD*4);
-    master_end_comm(port_in[1]);
-    #(CLK_PERIOD*3);
+    // master_request(port_in[1], 2'b01);
+    // #(CLK_PERIOD*2);
+    // master_sendack_startcom(port_in[1]);
+    // #(CLK_PERIOD*2);
+    // master_request(port_in[0], 2'b01);
+    // #(CLK_PERIOD*4);
+    // master_hold_com(port_in[1]);
+    // #(CLK_PERIOD*2);
+    // master_sendack_startcom(port_in[0]);
+    // #(CLK_PERIOD*4);
+    // master_end_comm(port_in[0]);
+    // #(CLK_PERIOD*2);
+    // master_sendack_startcom(port_in[1]);
+    // #(CLK_PERIOD*4);
+    // master_end_comm(port_in[1]);
+    // #(CLK_PERIOD*3);
 
     //////////////////////////////////////////////////
     //  split transaction due to a delayed slave   ///
     //////////////////////////////////////////////////    
-    master_request(port_in[0], 2'b01);
-    #(CLK_PERIOD*2);
-    master_sendack_startcom(port_in[0]);
-    #(CLK_PERIOD*2);
-    master_request(port_in[1], 2'b11);
-    #(CLK_PERIOD*4);
-    master_hold_com(port_in[0]);
-    #(CLK_PERIOD*2);
-    master_sendack_startcom(port_in[1]);
-    #(CLK_PERIOD*4);
-    master_end_comm(port_in[1]);
-    #(CLK_PERIOD*2);
-    master_sendack_startcom(port_in[0]);
-    #(CLK_PERIOD*4);
-    master_end_comm(port_in[0]);
-    #(CLK_PERIOD*3);
+    // master_request(port_in[0], 2'b01);
+    // #(CLK_PERIOD*2);
+    // master_sendack_startcom(port_in[0]);
+    // #(CLK_PERIOD*2);
+    // master_request(port_in[1], 2'b11);
+    // #(CLK_PERIOD*4);
+    // master_hold_com(port_in[0]);
+    // #(CLK_PERIOD*2);
+    // master_sendack_startcom(port_in[1]);
+    // #(CLK_PERIOD*4);
+    // master_end_comm(port_in[1]);
+    // #(CLK_PERIOD*2);
+    // master_sendack_startcom(port_in[0]);
+    // #(CLK_PERIOD*4);
+    // master_end_comm(port_in[0]);
+    // #(CLK_PERIOD*3);
 
     @(posedge clk);
     $stop;

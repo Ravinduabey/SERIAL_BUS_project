@@ -131,7 +131,7 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
   end
 end
 
-always_ff @( posedge clk ) begin : stateLogic
+always_ff @( posedge clk ) begin : stateLogicDecoder
   $display("master state %s and input_buf %b", state, input_buf);
     unique case (state) 
 
@@ -153,9 +153,6 @@ always_ff @( posedge clk ) begin : stateLogic
 
     ALLOC2 : begin
       if (cmd==CLEAR) id <= '0; 
-      ///////////////////////////////////////
-      // master should stop at one point trying to connect
-      // because in split if the master wasn't given the chance it will wait indefinitely
     end
 
     ACK : begin
@@ -178,4 +175,4 @@ always_ff @( posedge clk ) begin : stateLogic
     endcase 
 end
 
-endmodule
+endmodule : master_port

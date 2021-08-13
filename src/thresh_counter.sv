@@ -7,14 +7,14 @@ module thresh_counter #(
     output logic thresh
 );
 
-logic [$clog2(THRESH)-1:0] counter = '0;
+logic [31:0] counter = '0;
 
 always_comb begin : threshold_detector
     if(counter > THRESH) thresh = '1;
     else thresh = '0;
 end
 
-always_ff @( posedge clk or negedge rstN ) begin
+always_ff @( posedge clk or negedge rstN ) begin : counterReg
     if (!rstN) counter <= '0;
     else begin
         if (ready) counter <= '0;
@@ -23,4 +23,4 @@ always_ff @( posedge clk or negedge rstN ) begin
     
 end
     
-endmodule
+endmodule : thresh_counter

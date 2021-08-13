@@ -5,15 +5,10 @@ module priority_selector #(
     parameter M_ID_WIDTH = $clog2(NO_MASTERS)
 ) (
     
-    // input clk,
-    // input rstN,
     input logic state,
     input logic [M_ID_WIDTH-1:0] master_in,
     input logic [S_ID_WIDTH-1:0] slave_in,
     input logic thresh,
-    // input logic [M_ID_WIDTH-1:0] cur_master,
-    // input logic [S_ID_WIDTH-1:0] cur_slave,
-
     input logic [S_ID_WIDTH-1:0] slave_id [NO_MASTERS-1:0],
 
     output logic [M_ID_WIDTH-1:0] master_out,
@@ -21,21 +16,8 @@ module priority_selector #(
     output logic request
 );
 
-// logic [M_ID_WIDTH-1:0] cur_master, next_master;
-// logic [S_ID_WIDTH-1:0] cur_slave, next_slave;
 int i, j;
-// always_ff @(posedge clk or negedge rstN ) begin
-//     $display("master %b slave %b", master_out, slave_out);
-//     if (!rstN) begin
-//         cur_master <= '0; 
-//         cur_slave <= '0;
-//     end
-//     else begin 
-//         cur_slave <= next_slave;
-//         cur_master <= next_master;  
-//     end  
-// end
-always_comb begin 
+always_comb begin : requestCheck
 	 request = 0;
     for (j = 0; j<NO_MASTERS; j++) begin
         if (slave_id[j] != '0) begin
@@ -45,7 +27,7 @@ always_comb begin
     end
 end
 
-always_comb begin
+always_comb begin : masterSlaveSelector
     master_out = master_in;
     slave_out = slave_in;
 
@@ -84,7 +66,4 @@ always_comb begin
     end
 endcase
 end  
-
-// assign master_out = master_out;
-// assign slave_out = slave_out;
-endmodule
+endmodule : priority_selector

@@ -37,7 +37,9 @@ module arbiter #(
   genvar i;
   generate
     for (i = '0; i< NO_MASTERS; i = i+1) begin : master
-    master_port #(.NO_SLAVES(NO_SLAVES)) master_interconnector (
+    master_port #(
+      .NO_SLAVES(NO_SLAVES)
+      ) master_interconnector (
       .clk(clk),
       .rstN(rstN),
       .port_in(port_in[i]),
@@ -54,7 +56,7 @@ controller #(
   .NO_MASTERS(NO_MASTERS),
   .NO_SLAVES(NO_SLAVES),
   .THRESH(THRESH)
-)control_unit(
+  )control_unit(
   .clk(clk),
   .rstN(rstN),
   .id(id),

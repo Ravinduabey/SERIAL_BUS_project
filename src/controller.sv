@@ -27,7 +27,7 @@ module controller #(
 	output logic [M_ID_WIDTH-1:0] MOSI_data_select,
 	output logic [M_ID_WIDTH-1:0] valid_select,
 	output logic [M_ID_WIDTH-1:0] last_select,
-   output logic [S_ID_WIDTH-1:0] MISO_data_select,
+  output logic [S_ID_WIDTH-1:0] MISO_data_select,
 	output logic [S_ID_WIDTH-1:0] ready_select,
 
   output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0
@@ -100,6 +100,7 @@ priority_selector #(
     .slave_out(slave_out),
     .request(request)
 ); 
+
 ////////////////////////
 //// external muxes ////
 ///////////////////////
