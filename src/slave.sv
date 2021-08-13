@@ -23,15 +23,15 @@ module slave #(
 );
     localparam ADDR_WIDTH   = $clog2(ADDR_DEPTH);
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
-    localparam CON = 5+ADDR_WIDTH+SLAVEID-1;
+    localparam CON = 3 + ADDR_WIDTH + 2 + SLAVEID;
 
     //logic [$clog2(ADDR_WIDTH)+]control_size = 5;
 
 
     logic [SLAVEID-1:0] reg_slave_ID;
 
-    logic [2:0] state;
-    logic [2:0] next_state;
+    logic [3:0] state;
+    logic [3:0] next_state;
 
     logic [CON           :0] config_buffer;
     logic [$clog2(CON)-1 :0] config_counter;
@@ -52,20 +52,18 @@ module slave #(
 	logic [ADDR_WIDTH-1:0] addr_reg;
 
     
-    localparam IDLE = 4'd0;
-    localparam CONFIG = 4'd1;
-    localparam CONFIG2 = 4'd2;
-    localparam READ = 4'd3;
-    localparam READ2 = 4'd4;
-    localparam READB = 4'd5;
-    localparam WRITE = 4'd6;
-    localparam WRITEB = 4'd7;
-    localparam WRITEB2 = 4'd8;
+    localparam IDLE     = 4'b0000;
+    localparam CONFIG   = 4'b0001;
+    localparam CONFIG2  = 4'b0010;
+    localparam READ     = 4'b0011;
+    localparam READ2    = 4'b0100;
+    localparam READB    = 4'b0101;
+    localparam WRITE    = 4'b0110;
+    localparam WRITE2   = 4'b0111;
+    localparam WRITEB   = 4'b1000;
 
     initial begin
-        state <= IDLE;
-        next_state <= IDLE;
-        //config_counter <= 0;
+        config_counter <= 0;
         rD_counter <= 0;
         wD_counter <= 0;
         //temp_control <= 0;
@@ -76,6 +74,7 @@ module slave #(
     end
 
     always @(posedge clk or negedge resetn) begin
+        state <= next_state;
         if (!resetn) begin
             config_buffer <= 0;
             rD_buffer <= 0;
@@ -84,30 +83,42 @@ module slave #(
             ready <= 1;
         end
         else begin
-            state<=next_state;
             case (state)
                 IDLE : begin 
                     if (control == 1) begin
-                        config_buffer[0] <= temp_control;
+                        config_counter   <= config_counter + 1; 
+                        config_buffer    <= config_buffer << 1;
+                        config_buffer[0] <= temp_control;                        
                         next_state <= CONFIG;                   
                     end
                 end
                 CONFIG : begin
-                    config_buffer <= config_buffer << 1;
-                    config_buffer[0] <= temp_control;
-                    config_counter <= config_counter + 1;                    
-                    if (config_counter < CON-2) begin
-                        next_state <= CONFIG;
+                    if (config_counter < CON && next_state != CONFIG2) begin
+                        config_counter   <= config_counter + 1;                                        
+                        config_buffer    <= config_buffer << 1;
+                        config_buffer[0] <= temp_control;
+                        next_state       <= CONFIG;
                     end
+                    else if (config_counter <CON) begin
+                        config_buffer    <= config_buffer << 1;
+                        config_buffer[0] <= temp_control;
+                    end 
                     else begin
                         config_counter <= 0;
                         ready <= 0;
                         next_state <= CONFIG2;
                     end
+                    // if (config_counter >= CON-2) begin
+                    //     config_counter <= 0;
+                    //     ready <= 0;
+                    //     next_state  <= CONFIG2;
+                    // end
+                    // else next_state <= CONFIG;
                 end
                 CONFIG2 : begin
+                    next_state <= CONFIG2;
                     //                  start                       slaveid
-                    if (config_buffer[CON:CON-2]==3'b111 && config_buffer[CON-3:CON-3-SLAVEID]==reg_slave_ID) begin
+                    if (config_buffer[CON:CON-3]==3'b111 && config_buffer[CON-3:CON-3-SLAVEID]==reg_slave_ID) begin
                         address <= config_buffer[ADDR_WIDTH-1:0];
                         if (config_buffer[CON-3-SLAVEID-1]==0) begin     //read
                             rD_buffer <= ram[address];
@@ -116,6 +127,9 @@ module slave #(
                         else begin                          //write
                             next_state <= WRITE;
                         end
+                    end
+                    else begin
+                        next_state <= READ;
                     end
                 end 
                 READ : begin

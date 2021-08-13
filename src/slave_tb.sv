@@ -41,8 +41,6 @@ module slave_tb ();
         @(posedge clk);
         control <= 1;
         @(posedge clk);
-        control <= 1;
-        @(posedge clk);
         control <= 0;
         @(posedge clk);
         control <= 1;
