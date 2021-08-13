@@ -57,6 +57,7 @@ state_t state = START;
 state_t next_state;
 
 logic intr = '0;
+logic intr_route = '0;
 
 localparam NRML = 1'b0;
 localparam STOP = 1'b1;
@@ -132,7 +133,7 @@ always_comb begin : stateMachine
 
     COM: begin 
       if(cur_com_state == end_com) next_state = OVER;
-      else if (intr) next_state = DONE;
+      else if (intr && !intr_route) next_state = DONE;
       else next_state = COM; 
 	  end
 
@@ -169,6 +170,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
       intr <= '0;
       cur_slave <= '0;
       cur_master <= '0;
+      intr_route <= '0;
       priority_state <= NRML;
     end
 
@@ -193,13 +195,14 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     end
 
     COM : begin
-      if(cur_com_state == end_com) bus_state <= 0;
+      if(cur_com_state == end_com) bus_state <= '0;
       else if(request && !intr && (cur_master != master_out)) begin
           next_master <= master_out;
           next_slave <= slave_out;
           old_master <= cur_master;
           old_slave <= cur_slave;
           intr <= '1;
+          bus_state <= '0;
           if (thresh) cur_cmd <= STOP_S;
           else cur_cmd <= STOP_P;
       end
@@ -207,6 +210,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
 	 DONE : begin
      if (cur_done) begin
+       intr_route <= '1;
        cur_master <= next_master;
        cur_slave <= next_slave;
      end
@@ -214,9 +218,9 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 	 
     
    OVER : begin
-      // add priority_state = NRML;
       if(intr) begin
-        intr <= 0;
+        intr <= '0;
+        intr_route <= '0;
         cur_master <= old_master;
         cur_slave <= old_slave;
       end

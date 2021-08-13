@@ -7,8 +7,6 @@
 * priority selector.sv - module which updates controller about master requests 
 
 ## work remaining
-split complete algorithm - handle the loop issue 
-split complete coding 
 write port
 commenting
 request discard technique - master send give up message

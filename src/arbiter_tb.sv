@@ -42,34 +42,68 @@ initial begin
 
     rstN <= 1'b1;
 
-    master_request(port_in[1]);
+    //////////////////////////////////////////////////
+    //// two masters communicate one after another ///
+    //////////////////////////////////////////////////
+    master_request(port_in[1], 2'b10);
+    #(CLK_PERIOD*2);
     master_sendack_startcom(port_in[1]);
+    #(CLK_PERIOD*2);
     master_end_comm(port_in[1]);
+    #(CLK_PERIOD*3);
 
-    master_request(port_in[0]);
+    master_request(port_in[0], 2'b11);
+    #(CLK_PERIOD*2);
     master_sendack_startcom(port_in[0]);
+    #(CLK_PERIOD*2);
     master_end_comm(port_in[0]);
-    
-    // master_request(port_in[1]);
-    // #(CLK_PERIOD*2);
-    // master_sendack_startcom(port_in[1]);
-    // master_request(port_in[0]);
-    // #(CLK_PERIOD*4);
-    // master_hold_com(port_in[1]);
-    // master_sendack_startcom(port_in[0]);
-    // #(CLK_PERIOD*4);
-    // master_end_comm(port_in[0]);
-    // #(CLK_PERIOD*2);
-    // master_sendack_startcom(port_in[1]);
-    // #(CLK_PERIOD*4);
-    // master_end_comm(port_in[1]);
-    // #(CLK_PERIOD*3);
+    #(CLK_PERIOD*3);
+
+    //////////////////////////////////////////////////
+    //// high priority master interrupts the comm. ///
+    //////////////////////////////////////////////////    
+    master_request(port_in[1], 2'b01);
+    #(CLK_PERIOD*2);
+    master_sendack_startcom(port_in[1]);
+    #(CLK_PERIOD*2);
+    master_request(port_in[0], 2'b01);
+    #(CLK_PERIOD*4);
+    master_hold_com(port_in[1]);
+    #(CLK_PERIOD*2);
+    master_sendack_startcom(port_in[0]);
+    #(CLK_PERIOD*4);
+    master_end_comm(port_in[0]);
+    #(CLK_PERIOD*2);
+    master_sendack_startcom(port_in[1]);
+    #(CLK_PERIOD*4);
+    master_end_comm(port_in[1]);
+    #(CLK_PERIOD*3);
+
+    //////////////////////////////////////////////////
+    //  split transaction due to a delayed slave   ///
+    //////////////////////////////////////////////////    
+    master_request(port_in[0], 2'b01);
+    #(CLK_PERIOD*2);
+    master_sendack_startcom(port_in[0]);
+    #(CLK_PERIOD*2);
+    master_request(port_in[1], 2'b11);
+    #(CLK_PERIOD*4);
+    master_hold_com(port_in[0]);
+    #(CLK_PERIOD*2);
+    master_sendack_startcom(port_in[1]);
+    #(CLK_PERIOD*4);
+    master_end_comm(port_in[1]);
+    #(CLK_PERIOD*2);
+    master_sendack_startcom(port_in[0]);
+    #(CLK_PERIOD*4);
+    master_end_comm(port_in[0]);
+    #(CLK_PERIOD*3);
 
     @(posedge clk);
     $stop;
 end
 
-task automatic master_request(ref logic port);
+task automatic master_request(ref logic port, input logic [1:0] i);
     @(posedge clk);
     port = 0;
     @(posedge clk); //start 
@@ -79,15 +113,15 @@ task automatic master_request(ref logic port);
     @(posedge clk);
     port = 1;  
     @(posedge clk); //slave id
-    port = 1;
+    port = i[1];
     @(posedge clk);
-    port = 0;
+    port = i[0];
     @(posedge clk); //low
     port = 0;  
 endtask
 
 task automatic master_sendack_startcom(ref logic port);
-    @(posedge clk); //ack 
+    @(posedge clk); //ack send
     port = 1;
     @(posedge clk);
     port = 0;
