@@ -75,13 +75,49 @@ timeunit 1ns; timeprecision 1ps;
         .arbSend(arbSend)
     );
 
-    task automatic top_burst_write;
-        output [DATA_WIDTH -1 : 0] data;
+    task automatic top_burst_write(
+        output [DATA_WIDTH -1 : 0] data
+    );
+       
         begin
             #17;
             data = $random;
             #3;
             #CLOCK_PERIOD;
+        end
+    endtask
+    
+    task automatic master_control();
+        begin
+            #(CLOCK_PERIOD*19);
+        end
+    endtask
+
+    task automatic single_read(
+        output ready,
+        output rD 
+    );
+        begin
+            ready   = 0;
+            #(CLOCK_PERIOD*5);
+            ready   = 1;
+            rD      = 1;
+            #(CLOCK_PERIOD);
+            rD      = 1;
+            #(CLOCK_PERIOD);
+            rD      = 1;
+            #(CLOCK_PERIOD);
+            rD      = 1;
+            #(CLOCK_PERIOD);
+            rD      = 1;
+            #(CLOCK_PERIOD);
+            rD      = 1;
+            #(CLOCK_PERIOD);
+            rD      = 0;
+            #(CLOCK_PERIOD);
+            rD      = 1;
+            #(CLOCK_PERIOD);
+            rD      = 0;
         end
     endtask
     
@@ -158,7 +194,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         start <= 0;
         slaveId <= 2'b10;
-        rdWr <= 1;
+        rdWr <= 0;
 
         // wait for arbiter request
         #(CLOCK_PERIOD*6);
@@ -166,7 +202,35 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD*3);
         arbCont <= 0;
 
-        #(CLOCK_PERIOD*20);
+        //-- master will send the control signal for 19 clock_cycles--//
+        master_control();
+
+        //=======single read==========//
+        // ready   <= 0;
+        rD      <= 0;
+        // single_read(.ready(ready), .rD(rD));
+        ready   = 0;
+        #(CLOCK_PERIOD*5);
+        ready   = 1;
+        rD      = 1;
+        #(CLOCK_PERIOD);
+        rD      = 1;
+        #(CLOCK_PERIOD);
+        rD      = 1;
+        #(CLOCK_PERIOD);
+        rD      = 1;
+        #(CLOCK_PERIOD);
+        rD      = 1;
+        #(CLOCK_PERIOD);
+        rD      = 1;
+        #(CLOCK_PERIOD);
+        rD      = 0;
+        #(CLOCK_PERIOD);
+        rD      = 1;
+        #(CLOCK_PERIOD);
+        rD      = 0;
+
+        #(CLOCK_PERIOD*30);
         rstN <=1;
 
         #(CLOCK_PERIOD);
