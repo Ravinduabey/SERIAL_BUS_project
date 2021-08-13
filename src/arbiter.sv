@@ -1,7 +1,10 @@
+/*
+    the top module of the arbiter which connects all the master ports with the central controller
+*/ 
 module arbiter #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
-    parameter THRESH = 1000,
+    parameter THRESH = 1000, 
     parameter S_ID_WIDTH = $clog2(NO_SLAVES+1),
     parameter M_ID_WIDTH = $clog2(NO_MASTERS)
 )(
@@ -9,12 +12,11 @@ module arbiter #(
   input logic clk,
   input logic rstN,
   
-  //===================//
-  //  masters         //
-  //===================// 
+  //============//
+  //  masters   //
+  //============// 
   input logic port_in [NO_MASTERS-1:0],
   output logic port_out [NO_MASTERS-1:0],
-  output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state,
 
   //===================//
   //    multiplexers   //
@@ -29,11 +31,17 @@ module arbiter #(
 	output logic [S_ID_WIDTH-1:0] ready_select
 );
 
+  //===============================================//
+  //    wires between master ports and controller  //
+  //===============================================// 
   logic [S_ID_WIDTH-1:0] id [NO_MASTERS-1:0];
   logic [1:0] com_state [NO_MASTERS-1:0];
   logic done [NO_MASTERS-1:0];
   logic [1:0] cmd [NO_MASTERS-1:0];
 
+  //=============================//
+  //    master ports generator   //
+  //=============================// 
   genvar i;
   generate
     for (i = '0; i< NO_MASTERS; i = i+1) begin : master
@@ -52,6 +60,9 @@ module arbiter #(
     end
 endgenerate
 
+  //===================//
+  //    controller     //
+  //===================// 
 controller #(
   .NO_MASTERS(NO_MASTERS),
   .NO_SLAVES(NO_SLAVES),
@@ -69,8 +80,7 @@ controller #(
   .valid_select(valid_select),
   .last_select(last_select),
   .MISO_data_select(MISO_data_select),
-  .ready_select(ready_select),
-  .bus_state(bus_state)
+  .ready_select(ready_select)
 );
 
 endmodule : arbiter

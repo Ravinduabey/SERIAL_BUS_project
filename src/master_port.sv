@@ -1,3 +1,6 @@
+/*
+    this intermediate module will connect each master with the controller. inside the arbiter this port will be communicating with controller. only essential commands are send to the controller. rest is taken care by the port
+*/
 module master_port # (
   parameter NO_SLAVES = 3,
   parameter S_ID_WIDTH = $clog2(NO_SLAVES+1)
@@ -6,9 +9,9 @@ module master_port # (
     input logic clk,
     input logic rstN,
 
-  //===================//
-  //       with master //
-  //===================// 
+  //=============//
+  // with master //
+  //=============// 
     input logic port_in,
     output logic port_out,
 
@@ -21,10 +24,16 @@ module master_port # (
     output logic done
 );
 
+  //=========================================//
+  //   commands received from the controller //
+  //=========================================// 
 localparam CLEAR = 2'b11;
 localparam STOP_S = 2'b01;
 localparam STOP_P = 2'b10;
 
+  //=============================================//
+  //   com state commands send to the controller //
+  //=============================================// 
 localparam end_com = 2'b00;
 localparam nak = 2'b01;
 localparam wait_ack = 2'b10;
@@ -44,13 +53,13 @@ typedef enum logic [2:0] {
 state_t state = START;
 state_t next_state;
 
-logic [S_ID_WIDTH:0] input_buf;
+logic [S_ID_WIDTH:0] input_buf; //master in shift buffer
 logic request;
 logic old = '0;
 
 ///////////////////////////////
-/// write should be included
-//////////////////////////////
+/// write should be included //
+///////////////////////////////
 
 always_comb begin : stateMachine
     unique case(state)
@@ -117,7 +126,6 @@ always_comb begin : stateMachine
     endcase   
 end
 
-
 always_ff @(posedge clk or negedge rstN) begin : stateShifter
 
   if (!rstN) begin
@@ -132,7 +140,7 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 end
 
 always_ff @( posedge clk ) begin : stateLogicDecoder
-  $display("master state %s and input_buf %b", state, input_buf);
+  // $display("master state %s and input_buf %b", state, input_buf);
     unique case (state) 
 
     RST : begin
@@ -165,7 +173,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
     COM : begin
       if (input_buf[1:0] == 2'b01) com_state <= end_com; //over
-      else if (cmd==STOP_S) old <= 1;
+      else if (cmd==STOP_S) old <= 1; //stop[split]
 	 end
 
     DONE : if (input_buf[2:0] == 3'b010) done <= '1;

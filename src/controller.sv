@@ -1,3 +1,6 @@
+/*
+    this module is the central arbiter controller module who controls the bus depending on the requests comes from any number of masters. 
+*/
 module controller #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
@@ -9,18 +12,18 @@ module controller #(
   input logic clk,
   input logic rstN,
 
-  //===================//
-  //      masters      //
-  //===================// 
+  //==========//
+  //  master  //
+  //==========// 
 
   input logic [S_ID_WIDTH-1:0] id [NO_MASTERS-1:0],
   input logic [1:0] com_state [NO_MASTERS-1:0],
   input logic done [NO_MASTERS-1:0],
   output logic [1:0] cmd [NO_MASTERS-1:0],
   
-  //===================//
-  //    multiplexers   //
-  //===================// 
+  //================================//
+  //    external bus multiplexers   //
+  //================================// 
 	input logic ready,
 
 	output logic [M_ID_WIDTH-1:0] addr_select,
@@ -28,16 +31,20 @@ module controller #(
 	output logic [M_ID_WIDTH-1:0] valid_select,
 	output logic [M_ID_WIDTH-1:0] last_select,
   output logic [S_ID_WIDTH-1:0] MISO_data_select,
-	output logic [S_ID_WIDTH-1:0] ready_select,
-
-  output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0
+	output logic [S_ID_WIDTH-1:0] ready_select
 );
 
+  //===========================================//
+  //commands given to the selected master port //
+  //===========================================// 
 localparam WAIT = 2'b00;
 localparam STOP_S = 2'b01;
 localparam STOP_P = 2'b10;
 localparam CLEAR = 2'b11;
 
+  //==========================================================//
+  //com state commands received from the selected master port //
+  //==========================================================// 
 localparam end_com = 2'b00;
 localparam nak = 2'b01;
 localparam wait_ack = 2'b10;
@@ -56,36 +63,27 @@ typedef enum logic [2:0] {
 state_t state = START;
 state_t next_state;
 
+//this register is used for external multiplexer selection input
+logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0;
+
+//these registers trigger when interrupts occur
 logic intr = '0;
 logic intr_route = '0;
 
+
+  ////////////////////////////////
+  //      internal modules      //
+  ////////////////////////////////
 localparam NRML = 1'b0;
 localparam STOP = 1'b1;
 logic priority_state = NRML;
 logic request;
 
-logic [1:0] cur_com_state;
-logic cur_done, thresh;
-logic [1:0] cur_cmd;
-
+//cur_master will select the master port with whom the controller communicates at a given time
 logic [M_ID_WIDTH-1:0] cur_master = '0;
 logic [M_ID_WIDTH-1:0] next_master, old_master, master_out;
 logic [S_ID_WIDTH-1:0] cur_slave = '0;
 logic [S_ID_WIDTH-1:0] next_slave, old_slave, slave_out;
-
-////////////////////////////////
-////    internal modules    ////
-////////////////////////////////
-always_comb begin 
-    cmd = '{NO_MASTERS{'0}};
-    cmd[cur_master] = cur_cmd; 
-end
-
-assign cur_com_state = com_state[cur_master];
-
-assign cur_done = done[cur_master];
-
-thresh_counter #(.THRESH(THRESH)) thresh_detector (.*);
 
 priority_selector #(
   .NO_MASTERS(NO_MASTERS),
@@ -101,18 +99,43 @@ priority_selector #(
     .request(request)
 ); 
 
-////////////////////////
-//// external muxes ////
-///////////////////////
+logic thresh;
+thresh_counter #(.THRESH(THRESH)) thresh_detector (.*);
+
+
+  ////////////////////////////////
+  //    internal mux/demux      //
+  ////////////////////////////////
+
+//demux
+logic [1:0] cur_cmd;
+always_comb begin 
+    cmd = '{NO_MASTERS{'0}};
+    cmd[cur_master] = cur_cmd; 
+end
+
+//mux
+logic [1:0] cur_com_state;
+assign cur_com_state = com_state[cur_master];
+
+//mux
+logic cur_done;
+assign cur_done = done[cur_master];
+
+
+////////////////////////////////
+//   external mux selection   //
+////////////////////////////////
 
 always_comb begin : muxController
-  addr_select = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	MOSI_data_select = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	valid_select = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	last_select = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-  MISO_data_select = bus_state[S_ID_WIDTH-1:0];
-	ready_select = bus_state[S_ID_WIDTH-1:0];
+  addr_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+	MOSI_data_select  = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+	valid_select      = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+	last_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+  MISO_data_select  = bus_state [S_ID_WIDTH-1:0];
+	ready_select      = bus_state [S_ID_WIDTH-1:0];
 end
+
 
 always_comb begin : stateMachine
     unique case(state)
@@ -197,7 +220,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
     COM : begin
       if(cur_com_state == end_com) bus_state <= '0;
-      else if(request && !intr && (cur_master != master_out)) begin
+      else if(request && !intr && (cur_master != master_out)) begin //interrupt
           next_master <= master_out;
           next_slave <= slave_out;
           old_master <= cur_master;

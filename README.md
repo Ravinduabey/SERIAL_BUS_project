@@ -9,4 +9,3 @@
 ## work remaining
 write port
 commenting
-request discard technique - master send give up message
