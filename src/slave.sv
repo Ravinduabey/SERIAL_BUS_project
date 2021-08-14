@@ -76,18 +76,17 @@ module slave #(
 
     // state_ state, next_state;
 
-    initial begin
-        check <= 0;
-        address <= 0;
-        config_counter <= 0;
-        rD_counter <= 0;
-        wD_counter <= 0;
-        //temp_control <= 0;
-        ready <= 1;
-        config_buffer <= 0;
-        rD_buffer <= 0;
-        wD_buffer <= 0;
-    end
+    // initial begin
+    //     check <= 0;
+    //     address <= 0;
+    //     config_counter <= 0;
+    //     rD_counter <= 0;
+    //     wD_counter <= 0;
+    //     //temp_control <= 0;
+    //     ready <= 1;
+    //     rD_buffer <= 0;
+    //     wD_buffer <= 0;
+    // end
 
     always_ff @( posedge clk or negedge resetn ) begin : slaveStateMachine
         state <= next_state;
