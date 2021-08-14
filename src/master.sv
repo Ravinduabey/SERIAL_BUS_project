@@ -387,16 +387,25 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     checkState:
                                         if (tempRdWr == 1) begin
                                             if (burstLen == 0) begin
-                                                internalComState <= burstWrite;
-                                                addressInternal  <= 0; //addressInternalBurtstBegin;
+                                                internalComState <= singleWrite;
+                                                addressInternal  <= addressInternalBurtstBegin;
                                                 valid            <= 0;
                                                 wr               <= 0;
                                             end
                                             else begin
-                                                internalComState <= singleWrite;
-                                                addressInternal  <= 0; //addressInternalBurtstBegin;
-                                                valid            <= 0;
+                                                addressInternal  <= addressInternalBurtstBegin;
                                                 wr               <= 0;
+                                                if (~valid)begin
+                                                    if (i < 2)begin
+                                                        i = i +1;
+                                                    end
+                                                    else begin
+                                                        tempReadData                <= internalDataOut;
+                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                        i                           <= 0; 
+                                                        internalComState            <= burstWrite;
+                                                    end
+                                                end
                                             end
                                         end
                                         else begin
@@ -471,8 +480,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             else begin
                                                 tempReadData    <= internalDataOut;
                                                 i               <= 0;
-                                                valid           <= 1;
-                                                
+                                                valid           <= 1;                                                
                                             end
                                         end
                                         else begin
@@ -485,6 +493,45 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 communicationState <= over;
                                             end
                                         end 
+                                    
+                                    burstWrite:
+                                        if(burstLen > 0) begin
+                                            if (i < DATA_WIDTH) begin
+                                                wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                i                   <= i + 1;
+                                                valid               <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH) begin
+                                                i                           <= 0;
+                                                burstLen                    <= burstLen -1 ;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                tempReadData                <= internalDataOut;
+                                                valid                       <= 0;
+                                            end
+                                        end
+                                        else if (burstLen == 1) begin
+                                            if (i < DATA_WIDTH-1) begin
+                                                wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                i                   <= i + 1;
+                                                valid               <= 1;
+                                                last                <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH-1) begin
+                                                i                           <= 0;
+                                                wrD                         <= tempReadData[DATA_WIDTH-1-i];
+                                                burstLen                    <= burstLen -1 ;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                tempReadData                <= internalDataOut;
+                                                valid                       <= 1;
+                                                last                        <= 1;
+                                            end
+                                        end
+                                        else begin
+                                            valid               <= 0;
+                                            communicationState  <= over;
+                                        end
                                     endcase   
                                     /*
                                     add two counters
