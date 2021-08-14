@@ -132,9 +132,6 @@ module slave #(
                             else        next_state <= CONFIG2;
                         end
                     end
-                    // else begin
-                    //     next_state <= READ;
-                    // end
                 end 
                 READ : begin
                     rD_temp         <= rD_buffer[0];
@@ -166,7 +163,7 @@ module slave #(
                     end
                 end
                 WRITE: begin
-                    if (wD_counter < DATA_WIDTH+2) begin
+                    if (wD_counter < DATA_WIDTH) begin
                         wD_counter <= wD_counter + 1;
                         wD_buffer <= wD_buffer << 1;
                         wD_buffer[0] <= wD_temp;
