@@ -58,58 +58,92 @@ logic request;
 logic old = '0;
 
 ///////////////////////////////
-/// write should be included //
+/// master write module      //
 ///////////////////////////////
+localparam WIDTH = 3;
+logic [WIDTH-1:0] write_val;
+logic write;
+
+write_buffer # (.WIDTH(WIDTH))
+master_write(
+  .clk(clk),
+  .rstN(rstN),
+  .din(write_val),
+  .load(write),
+  .dout(port_out)
+);
+
 
 always_comb begin : stateMachine
+
+    write_val = '0;
+    write = '0;
     unique case(state)
 
-    RST: next_state = START; //send 00
+    RST: begin
+      next_state = START; 
+      //send 0
+      write = '1;
+    end
 
-    START: begin //send 00
-        if (request) next_state = ALLOC1;
+    START: begin 
+        if (request) begin
+          next_state = ALLOC1;
+          //send 0
+          write = '1;
+        end
         else next_state = START;
     end
 
-    ALLOC1: next_state = ALLOC2; //send 00
+    ALLOC1: next_state = ALLOC2; 
 
     ALLOC2: begin 
       if (cmd==CLEAR && old) begin //split
-        //send 10
+        //send 100
+        write_val = 3'b001;
+        write = '1;
         next_state = ACK;
       end
       else if (cmd==CLEAR) begin 
-        //send 11
+        //send 110
+        write_val = 3'b011;
+        write = '1;
         next_state = ACK;
       end
       else begin
-        //send 00
         next_state = ALLOC2;
       end
     end
 
-    //send 00
     ACK: begin
-      if (com_state == nak) next_state = OVER; //send 00
-      else if (com_state == com) next_state = COM;
-      else next_state = ACK; //send 11
+      if (com_state == nak) next_state = OVER; 
+      else if (com_state == com) begin
+        next_state = COM; 
+        //send 111
+        write_val = 3'b111;
+        write = 1;
+      end
+      else next_state = ACK; 
     end
 
     COM: begin 
       if (cmd==STOP_S) begin
-        //send 0100  
+        //send 000  
+        write = '1;
         next_state = DONE;
       end
       else if (cmd==STOP_P) begin
-        //send 0000
+        //send 010
+        write_val = 3'b010;
+        write = '1;
         next_state = DONE;
       end
-      else if (com_state == end_com) begin ///check possible errors
-        //send 0000
+      else if (com_state == end_com) begin
+        //send 000
+        write = '1;
         next_state = OVER;
       end
       else begin
-        //send 1111
         next_state = COM;
       end
 	  end
@@ -120,7 +154,6 @@ always_comb begin : stateMachine
     end
 	 
     OVER: begin
-      //send 0000
       next_state = START;
     end
     endcase   
@@ -178,7 +211,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
     DONE : if (input_buf[2:0] == 3'b010) done <= '1;
 
-	 //OVER
+	  OVER : id <= '0;
 	 
     endcase 
 end

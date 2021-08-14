@@ -74,6 +74,11 @@ logic intr_route = '0;
   ////////////////////////////////
   //      internal modules      //
   ////////////////////////////////
+
+logic thresh;
+thresh_counter #(.THRESH(THRESH)) thresh_detector (.*);
+
+
 localparam NRML = 1'b0;
 localparam STOP = 1'b1;
 logic priority_state = NRML;
@@ -98,9 +103,6 @@ priority_selector #(
     .slave_out(slave_out),
     .request(request)
 ); 
-
-logic thresh;
-thresh_counter #(.THRESH(THRESH)) thresh_detector (.*);
 
 
   ////////////////////////////////
