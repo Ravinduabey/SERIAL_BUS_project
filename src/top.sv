@@ -41,13 +41,13 @@ assign clk = CLOCK_50;
 ///////////// debouncing (start) //////////////
 
 localparam TIME_DELAY = 500; // time delay for debouncing in ms
-genvar i;
+genvar ii;
 generate
-    for (i=0;i<4;i=i+1) begin: debouncing
+    for (ii=0;ii<4;ii=ii+1) begin: debouncing
         debouncer #(.TIME_DELAY(TIME_DELAY)) debouncer(
             .clk(clk),
-            .value_in(KEY[i]),
-            .value_out(KEY_OUT[i])
+            .value_in(KEY[ii]),
+            .value_out(KEY_OUT[ii])
         );
     end
 endgenerate
@@ -403,21 +403,21 @@ always_comb begin
     case (current_state) 
         master_slave_sel: begin
 
-            for (integer i=0;i<MASTER_COUNT;i=i+1) begin 
-                M_slaveId_next[i] = SW[2*i+1 -:2];
+            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin 
+                M_slaveId_next[ii] = SW[2*ii+1 -:2];
             end
         end   
 
         read_write_sel: begin 
-            for (integer i=0;i<MASTER_COUNT;i=i+1)begin
-                M_read_write_sel_next[i] = SW[i];
+            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1)begin
+                M_read_write_sel_next[ii] = SW[ii];
             end
             
         end 
 
         external_write_sel: begin
-            for (integer i=0;i<MASTER_COUNT;i=i+1) begin
-                M_exteral_write_sel_next[i] = SW[i];
+            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
+                M_exteral_write_sel_next[ii] = SW[ii];
             end
                       
         end 
@@ -565,8 +565,8 @@ always_comb begin
         communication_done: begin
             M_dataOut_next = M_dataOut; //read both masters same address
             if (!jump_next_addr) begin
-                for (integer i=0;i<MASTER_COUNT;i=i+1) begin
-                    M_address_next[i] = SW[MASTER_ADDR_WIDTH-1:0];
+                for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
+                    M_address_next[ii] = SW[MASTER_ADDR_WIDTH-1:0];
                 end          
             end
         end   
@@ -576,6 +576,7 @@ end
 //////// LEDs control //////
 assign LEDG[0] = (current_state == master_slave_sel)? 1'b1:1'b0; // to indicate initial state
 assign LEDG[1] = (current_state == communication_ready)? 1'b1:1'b0; // to indicate master configuration done. Now communication can be started.
+assign LEDG[3] = (current_state == communicating)? 1'b1:1'b0; // master slave communicating
 assign LEDG[2] = (current_state == communication_done)? 1'b1:1'b0; // master slave communication is over
 assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
 
@@ -600,11 +601,12 @@ always_ff @(posedge clk) begin
         line_1 <= '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
         line_2 <= '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
         new_data <= 1'b0;
-        current_new_data_state <= 1'b0;
+        current_new_data_state <= waiting;
     end
     else begin
         line_1 <= line_1_next;
         line_2 <= line_2_next;
+        new_data <= new_data_next;
         current_new_data_state <= next_new_data_state;
     end
 end
@@ -629,19 +631,19 @@ always_comb begin
         end
 
         external_write_sel: begin
-            line_1_next = '{E,x,t,e,r,n,a,l, space, w,r,i,t,e,question_mark};
+            line_1_next = '{E,x,t,e,r,n,a,l, space, w,r,i,t,e,question_mark, space};
         end
 
         external_write_M1: begin
-            line_1_next = '{E,x,t,dot, w,r,i,t,e, space, M,num_1, space,space,space};
+            line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_1, space,space,space};
         end
 
         external_write_M1_2: begin
-            line_1_next = '{E,x,t,dot, w,r,i,t,e, space, M,num_1, space,space,space};
+            line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_1, space,space,space};
         end
 
         external_write_M2: begin
-            line_1_next = '{E,x,t,dot, w,r,i,t,e, space, M,num_2, space,space,space};
+            line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_2, space,space,space};
         end
 
         slave_addr_sel_M1: begin
@@ -681,7 +683,7 @@ always_comb begin
 end
 
 always_comb begin
-    next_new_data = current_new_data;
+    new_data_next = new_data;
     next_new_data_state = current_new_data_state;
 
     case (current_new_data_state) 
@@ -689,12 +691,14 @@ always_comb begin
             new_data_next = 1'b0;
             if (current_state != next_state) begin
                 next_new_data_state = new_data_signal_sending;
-            end
+            end 
+            else if (!rstN)
         end 
 
         new_data_signal_sending: begin
             if (LCD_ready) begin
                 new_data_next = 1'b1;
+                next_new_data_state = waiting;
             end
         end
     endcase

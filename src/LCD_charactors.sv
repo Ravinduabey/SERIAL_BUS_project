@@ -1,4 +1,4 @@
-package charactors;
+package LCD_charactors;
 
 typedef enum logic[7:0]{
     // numbers
