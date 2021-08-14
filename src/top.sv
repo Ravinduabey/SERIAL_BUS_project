@@ -1,4 +1,4 @@
-module top 
+module top import LCD_charactors::*;
 #(
     parameter SLAVE_COUNT=3,  // number of slaves
     parameter MASTER_COUNT=2,  // number of masters
@@ -13,7 +13,9 @@ module top
     input logic [17:0]SW,
     output logic [17:0]LEDR,
     output logic [3:0]LEDG,
-    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7
+    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+    output logic [7:0]LCD_DATA,
+    output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON
         
 );
 
@@ -571,12 +573,135 @@ always_comb begin
     endcase
 end
 
-
-
 //////// LEDs control //////
 assign LEDG[0] = (current_state == master_slave_sel)? 1'b1:1'b0; // to indicate initial state
 assign LEDG[1] = (current_state == communication_ready)? 1'b1:1'b0; // to indicate master configuration done. Now communication can be started.
 assign LEDG[2] = (current_state == communication_done)? 1'b1:1'b0; // master slave communication is over
 assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
+
+
+//////// LCD control //////////////
+
+logic new_data, new_data_next, LCD_ready;
+charactor_t line_1[0:15];
+charactor_t line_2[0:15];
+charactor_t line_1_next[0:15];
+charactor_t line_2_next[0:15];
+
+typedef enum logic {
+    waiting = 1'b0,
+    new_data_signal_sending = 1'b1
+} new_data_state_t;
+
+new_data_state_t current_new_data_state, next_new_data_state;
+
+always_ff @(posedge clk) begin
+    if (!rstN) begin
+        line_1 <= '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
+        line_2 <= '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
+        new_data <= 1'b0;
+        current_new_data_state <= 1'b0;
+    end
+    else begin
+        line_1 <= line_1_next;
+        line_2 <= line_2_next;
+        current_new_data_state <= next_new_data_state;
+    end
+end
+
+always_comb begin
+    line_1_next = line_1;
+    line_2_next = '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
+
+    case (current_state) 
+
+        master_slave_sel: begin
+            line_1_next = '{M,a,s,t,e,r, space, s,l,a,v,e, space, s,e,l};
+            // case (SW[3:0])
+            //     4'b0000: line_2_next = '{M,underscore,num_1, right_arrow, n,o ,space,space,M,underscore,num_2, right_arrow, n,o, space,space};
+            //     4'b
+            // endcase
+            
+        end
+
+        read_write_sel: begin
+            line_1_next = '{R,e,a,d, space, w,r,i,t,e, space, s,e,l ,space,space};
+        end
+
+        external_write_sel: begin
+            line_1_next = '{E,x,t,e,r,n,a,l, space, w,r,i,t,e,question_mark};
+        end
+
+        external_write_M1: begin
+            line_1_next = '{E,x,t,dot, w,r,i,t,e, space, M,num_1, space,space,space};
+        end
+
+        external_write_M1_2: begin
+            line_1_next = '{E,x,t,dot, w,r,i,t,e, space, M,num_1, space,space,space};
+        end
+
+        external_write_M2: begin
+            line_1_next = '{E,x,t,dot, w,r,i,t,e, space, M,num_2, space,space,space};
+        end
+
+        slave_addr_sel_M1: begin
+            line_1_next = '{M,num_1, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
+        end
+
+        slave_addr_sel_M2: begin
+            line_1_next = '{M,num_2, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
+        end
+
+        addr_count_sel_M1: begin
+            line_1_next = '{M,num_1, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
+        end
+
+        addr_count_sel_M2: begin
+            line_1_next = '{M,num_2, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
+        end
+
+        config_masters: begin
+            line_1_next = '{C,o,n,f,i,g,u,r,e, space, m,a,s,t,e,r};
+        end
+
+        communication_ready: begin
+            line_1_next = '{C,o,m,dot, space, r,e,a,d,y, space,space,space,space,space,space};
+        end
+
+        communicating: begin
+            line_1_next = '{C,o,m,m,u,n,i,c,a,t,i,n,g, dot,dot,dot};
+        end
+
+        communication_done: begin
+            line_1_next = '{M,s,t,r,dot, space, a,d,d,r,dot, space, num_0,num_0,num_0, space};
+        end
+
+
+    endcase
+end
+
+always_comb begin
+    next_new_data = current_new_data;
+    next_new_data_state = current_new_data_state;
+
+    case (current_new_data_state) 
+        waiting: begin
+            new_data_next = 1'b0;
+            if (current_state != next_state) begin
+                next_new_data_state = new_data_signal_sending;
+            end
+        end 
+
+        new_data_signal_sending: begin
+            if (LCD_ready) begin
+                new_data_next = 1'b1;
+            end
+        end
+    endcase
+end
+
+LCD_TOP LCD_TOP(.clk, .rstN, .new_data, .line_1, .line_2, .ready(LCD_ready), 
+                .LCD_DATA, .LCD_RW, .LCD_EN, .LCD_RS, .LCD_BLON, .LCD_ON);
+
 
 endmodule : top
