@@ -59,7 +59,7 @@ localparam CONTROL_LEN = 7 + ADDRESS_WIDTH;
 logic                       wr;
 logic                       tempRdWr;
 logic                       tempBurst;
-integer 				    j;
+integer 				    j, k;
 
 logic [1:0]                 clock_counter;
 
@@ -67,8 +67,7 @@ logic [1:0]                 fromArbiter;
 logic [2:0]                 arbGrant;
 logic [3:0]                 arbiterCounnter;
 
-
-logic [4:0]                 controlCounter, i;
+logic [4:0]                 controlCounter;
 logic [4:0]                 arbiterRequest, tempArbiterRequest;
 
 logic [CONTROL_LEN-1:0]     tempControl;
@@ -79,6 +78,7 @@ logic [ADDRESS_WIDTH-1:0]   addressInternalBurtstBegin, addressInternalBurtstEnd
 logic [DATA_WIDTH-1:0]      dataInternal, internalDataOut, tempReadData;
 logic [ADDRESS_WIDTH-1:0]   address_counter;
 
+logic [$clog2(DATA_WIDTH):0] i;
 // define states for the top module
 typedef enum logic [2:0]{
     idle,
@@ -160,6 +160,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         arbiterCounnter     <= 3'd0;
         address_counter     <= 0;
         j                   <= 0;
+        k                   <= 0;
         state               <= idle;
         communicationState  <= idleCom;
         internalComState    <= checkState;
@@ -198,6 +199,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     arbiterCounnter     <= 3'd0;
                     address_counter     <= 0;
                     j                   <= 0;
+                    k                   <= 0;
                     state               <= idle;
                     communicationState  <= idleCom;
                     internalComState    <= checkState;
@@ -266,7 +268,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 else begin
                     state            <= startEndConfig;
                     wr               <= 0;
-                    burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin;
+                    burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin + 1;
                     if(burstLen == 0)begin
                         tempControl[12] <= 0;
                     end
@@ -387,10 +389,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         end
                                         else begin
                                             if (burstLen == 0) begin
-                                                internalComState <= burstRead;
+                                                internalComState <= singleRead;
+                                                valid            <= 1;
                                             end
                                             else begin
-                                                internalComState <= singleRead;
+                                                internalComState <= burstRead;
+                                                valid            <= 1;
                                             end
                                         end
 
@@ -416,16 +420,32 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     burstRead:
                                         if (ready) begin
                                             if(burstLen > 0) begin
-                                                burstLen <= burstLen - 1;
-                                                for (j = 0; j < 7; j = j + 1) begin
-                                                    tempReadData[j]  <= rD;
-                                                end 
-                                                dataInternal        <= tempReadData;
-                                                addressInternal     <= addressInternalBurtstBegin;
-                                                wr                  <= 1;
+                                                if (i < DATA_WIDTH) begin
+                                                    tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                    i               <= i + 1;
+                                                    wr              <= 0;
+                                                    valid           <= 1;
+                                                end
+                                                else if (i == DATA_WIDTH) begin
+                                                    tempReadData[i] <= rD;
+                                                    dataInternal        <= tempReadData;
+                                                    addressInternal     <= addressInternalBurtstBegin;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                    wr                  <= 1;
+                                                    i                   <= 0; 
+                                                    valid               <= 0;
+                                                    burstLen <= burstLen - 1;   
+                                                end
+                                                // else if (i > DATA_WIDTH) begin
+                                                //     i <= 0;
+                                                //     wr <=0;
+                                                //     tempReadData <= 0;
+                                                //     addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                //     burstLen <= burstLen - 1;
+                                                // end
                                             end
                                             else begin
-                                                wr <=0;
+                                                wr <= 0;
                                                 communicationState <= over;
                                             end
 
