@@ -1,10 +1,11 @@
-module mux_2to3 (
-    input  master, slave
-    output master1, master2,
-    input  slave1, slave2, slave3
+module mux_3to2 (
+    input  [2:0] master, slave,
+    input  slave1, slave2, slave3,
+    output logic master1, master2
+
 );
 
-always @(*) begin
+always_latch begin : decoder
     case (master)
         2'b01: begin
             case (slave)
@@ -24,6 +25,7 @@ always @(*) begin
         end
         default: master1 <= slave1;
     endcase
-end
+end 
+    
     
 endmodule

@@ -25,15 +25,9 @@ module slave #(
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
     localparam CON = 3 + ADDR_WIDTH + 2 + SLAVEID-1;
     localparam START = 3'b111;
-    
-
-    //logic [$clog2(ADDR_WIDTH)+]control_size = 5;
 
 
     logic [SLAVEID-1:0] reg_slave_ID;
-
-    logic [3:0] state;
-    logic [3:0] next_state;
 
     logic [CON           :0] config_buffer;
     logic [$clog2(CON)-1 :0] config_counter;
@@ -55,6 +49,9 @@ module slave #(
 
     logic check;
 
+    logic [3:0] state;
+    logic [3:0] next_state;
+
     localparam IDLE     = 4'b0000;
     localparam CONFIG   = 4'b0001;
     localparam CONFIG2  = 4'b0010;
@@ -64,6 +61,20 @@ module slave #(
     localparam WRITE    = 4'b0110;
     localparam WRITE2   = 4'b0111;
     localparam WRITEB   = 4'b1000;
+
+    // typedef enum logic [3:0] { 
+    //    IDLE,
+    //    CONFIG,
+    //    CONFIG2,
+    //    READ,
+    //    READ2,
+    //    READB,
+    //    WRITE,
+    //    WRITE2,
+    //    WRITEB 
+    // } state_;
+
+    // state_ state, next_state;
 
     initial begin
         check <= 0;
@@ -78,7 +89,7 @@ module slave #(
         wD_buffer <= 0;
     end
 
-    always @(posedge clk or negedge resetn) begin
+    always_ff @( posedge clk or negedge resetn ) begin : slaveStateMachine
         state <= next_state;
         if (!resetn) begin
             config_buffer <= 0;

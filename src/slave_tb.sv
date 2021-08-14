@@ -143,15 +143,7 @@ timeunit 1ns; timeprecision 1ps;
         control <= 1;
         @(posedge clk);
         control <= 0;
-        valid <= 1;
-        if (ready) begin
-            @(posedge clk);
-            wD <= 1;
-            #(CLOCK_PERIOD*5);
-            @(posedge clk);
-            wD <= 0;
-            #(CLOCK_PERIOD*3);
-        end
+            
 
     end
 

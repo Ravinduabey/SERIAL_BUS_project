@@ -1,6 +1,6 @@
 module bus_interconnect (
-    input [2:0] master, 
-    input [2:0] slave,
+    input  [2:0] master, 
+    input  [2:0] slave,
 
     input       m1_valid, m1_last, m1_wD,
     output      m1_ready, m1_rD,
@@ -21,5 +21,7 @@ mux_2to3 wD    (.master(master), .slave(slave), .master1(m1_wD)   , .master2(m2_
 
 mux_3to2 ready (.master(master), .slave(slave), .master1(m1_ready), .master2(m2_ready), .slave1(s1_ready), .slave2(s2_ready), .slave3(s3_ready));
 mux_3to2 rD    (.master(master), .slave(slave), .master1(m1_rD)   , .master2(m2_rD)   , .slave1(s1_rD)   , .slave2(s2_rD)   , .slave3(s3_rD));
+
+
 endmodule
     
