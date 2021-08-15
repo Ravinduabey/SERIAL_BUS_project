@@ -66,11 +66,14 @@ timeunit 1ns; timeprecision 1ps;
         .address(address),
         .slaveId(slaveId),
         .start(start),
+        .doneCom(doneCom),
+        .dataOut(dataOut),
         .rD(rD),
         .ready(ready),
         .control(control),
         .wrD(wrD),
         .valid(valid),
+        .last(last),
         .arbCont(arbCont),
         .arbSend(arbSend)
     );
@@ -130,11 +133,11 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD*2);
         #17;
         inEx <=1;
-        data <= 16'd10;
+        data <= 16'd32778;
         slaveId <= 2'b01;
         rdWr <= 0;
         burst <= 1;
-        address <= 12'd13;
+        address <= 12'd0;
         
         #3;
         start <= 1;
@@ -162,7 +165,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         start <= 1;
         // last data
-        address <= 12'd16;
+        address <= 12'd3;
         data <= 16'd17;
 
         #(CLOCK_PERIOD);
@@ -183,7 +186,10 @@ timeunit 1ns; timeprecision 1ps;
         rdWr <= 0;
 
         // wait for arbiter request
-        #(CLOCK_PERIOD*6);
+        #(CLOCK_PERIOD*5);
+
+        arbCont <= 0;
+        #(CLOCK_PERIOD*5);
         arbCont <= 1;
         #(CLOCK_PERIOD*2);
         arbCont <= 0;
@@ -199,6 +205,7 @@ timeunit 1ns; timeprecision 1ps;
         ready   = 0;
         #(CLOCK_PERIOD*5);
 
+        // #(CLOCK_PERIOD)
         // 1st data
         ready   = 1;
         rD      = 0; //1
@@ -255,8 +262,10 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);    
         rD      = 1;    //10
         #(CLOCK_PERIOD);
+        arbCont  = 1;
         rD      = 1;    //11
         #(CLOCK_PERIOD);
+        arbCont  = 0;
         rD      = 0;   //12
         #(CLOCK_PERIOD);
         rD      = 0;    //13
@@ -268,6 +277,15 @@ timeunit 1ns; timeprecision 1ps;
         rD      = 0;    //16
         #(CLOCK_PERIOD*2);
 
+
+        #(CLOCK_PERIOD*10);
+        arbCont  = 1;
+        #(CLOCK_PERIOD);
+        arbCont  = 1;
+        #(CLOCK_PERIOD);
+        arbCont  = 0;
+        rD      <=1;
+        #(CLOCK_PERIOD*22)
 
         // 3rd data
         rD      = 0; //1
@@ -290,8 +308,10 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);    
         rD      = 1;    //10
         #(CLOCK_PERIOD);
+        arbCont = 1;
         rD      = 1;    //11
         #(CLOCK_PERIOD);
+        arbCont = 0;
         rD      = 0;   //12
         #(CLOCK_PERIOD);
         rD      = 0;    //13
@@ -302,6 +322,15 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         rD      = 0;    //16
         #(CLOCK_PERIOD*2);
+
+        #(CLOCK_PERIOD*10);
+        arbCont  = 1;
+        #(CLOCK_PERIOD);
+        arbCont  = 1;
+        #(CLOCK_PERIOD);
+        arbCont  = 0;
+        rD      <=1;
+        #(CLOCK_PERIOD*22)
 
         //4th data
 
@@ -331,13 +360,24 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         rD      = 0;    //13
         #(CLOCK_PERIOD);
+        arbCont = 1;
         rD      = 1;    //14
         #(CLOCK_PERIOD);
+        arbCont = 0;
         rD      = 1;    //15
         #(CLOCK_PERIOD);
         rD      = 1;    //16
         #(CLOCK_PERIOD*2);
 
+
+        #(CLOCK_PERIOD*10);
+        arbCont  = 1;
+        #(CLOCK_PERIOD);
+        arbCont  = 1;
+        #(CLOCK_PERIOD);
+        arbCont  = 0;
+        rD      <=1;
+        #(CLOCK_PERIOD*22)
         // 5th data
         rD      = 0; //1
         #(CLOCK_PERIOD);
@@ -370,10 +410,10 @@ timeunit 1ns; timeprecision 1ps;
         rD      = 0;    //15
         #(CLOCK_PERIOD);
         rD      = 0;    //16
-        #(CLOCK_PERIOD*3);
+        #(CLOCK_PERIOD*2);
 
 
-        #(CLOCK_PERIOD*20);
+        #(CLOCK_PERIOD*200);
         rstN <=1;
 
         #(CLOCK_PERIOD);
