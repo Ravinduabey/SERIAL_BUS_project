@@ -1,4 +1,4 @@
-module top import LCD_charactors::*;
+module top import details::*;
 #(
     parameter SLAVE_COUNT=3,  // number of slaves
     parameter MASTER_COUNT=2,  // number of masters
@@ -117,25 +117,7 @@ generate
 endgenerate
 //////////////// MASTER module instantiate (end) /////////////
 
-/////////// main states //////////////////
-typedef enum logic [3:0]{
-    master_slave_sel    = 4'd0,     // state - 0
-    read_write_sel      = 4'd1,     // state - 1
-    external_write_sel  = 4'd2,     // state - 1.5 
-    external_write_M1   = 4'd3,     // state - 1.51
-    external_write_M1_2 = 4'd4,     // state - 1.52
-    external_write_M2   = 4'd5,     // state - 1.53
-    slave_addr_sel_M1   = 4'd6,     // state - 2
-    slave_addr_sel_M2   = 4'd7,     // state - 3
-    addr_count_sel_M1   = 4'd8,     // state - 4
-    addr_count_sel_M2   = 4'd9,     // state - 5
-    config_masters      = 4'd10,    // state - 6    
-    communication_ready = 4'd11,    // state - 6.5 
-    communicating       = 4'd12,    // state - 7
-    communication_done  = 4'd13     // state - 8
-} state_t;
-
-state_t current_state, next_state;
+main_state_t current_state, next_state;
 
 //////////////////// master configuration state related logics /////////////////
 typedef enum logic [2:0] {
@@ -588,6 +570,8 @@ charactor_t line_1[0:15];
 charactor_t line_2[0:15];
 charactor_t line_1_next[0:15];
 charactor_t line_2_next[0:15];
+logic LCD_first_time_show, LCD_first_time_show_next;
+logic [17:0]current_SW,current_SW_2, next_SW;
 
 typedef enum logic {
     waiting = 1'b0,
@@ -602,12 +586,18 @@ always_ff @(posedge clk) begin
         line_2 <= '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
         new_data <= 1'b0;
         current_new_data_state <= waiting;
+        LCD_first_time_show <= 1'b0;
+        current_SW <= '0;
+        current_SW_2 <='0;
     end
     else begin
         line_1 <= line_1_next;
         line_2 <= line_2_next;
         new_data <= new_data_next;
         current_new_data_state <= next_new_data_state;
+        LCD_first_time_show <= LCD_first_time_show_next;
+        current_SW <= next_SW;
+        current_SW_2 <= current_SW; // shifting
     end
 end
 
@@ -619,19 +609,18 @@ always_comb begin
 
         master_slave_sel: begin
             line_1_next = '{M,a,s,t,e,r, space, s,l,a,v,e, space, s,e,l};
-            // case (SW[3:0])
-            //     4'b0000: line_2_next = '{M,underscore,num_1, right_arrow, n,o ,space,space,M,underscore,num_2, right_arrow, n,o, space,space};
-            //     4'b
-            // endcase
+            line_2_next = '{M,num_1, space, right_arrow, space, S,get_slave_num(SW[1:0]),space,space,M,num_2, space, right_arrow, space, S,get_slave_num(SW[3:2])};
             
         end
 
         read_write_sel: begin
             line_1_next = '{R,e,a,d, space, w,r,i,t,e, space, s,e,l ,space,space};
+            line_2_next = '{M,num_1, space, dash, space, get_operation(SW[0]), space,space, M,num_2, space, dash, space, get_operation(SW[1]), space,space};
         end
 
         external_write_sel: begin
             line_1_next = '{E,x,t,e,r,n,a,l, space, w,r,i,t,e,question_mark, space};
+            line_2_next = '{M,num_1, space, dash, space, get_decision(SW[0]), space,space, M,num_2, space, right_arrow, space, get_decision(SW[1]), space,space};
         end
 
         external_write_M1: begin
@@ -682,17 +671,30 @@ always_comb begin
     endcase
 end
 
+// set new_data signal to the LCD_module after reset, when state change, when swich changed, jump to next address (external write)
 always_comb begin
     new_data_next = new_data;
     next_new_data_state = current_new_data_state;
+    LCD_first_time_show_next = LCD_first_time_show;
+    next_SW = SW[17:0];
 
     case (current_new_data_state) 
         waiting: begin
             new_data_next = 1'b0;
+
             if (current_state != next_state) begin
                 next_new_data_state = new_data_signal_sending;
             end 
-            else if (!rstN)
+            else if (current_SW != current_SW_2) begin
+                next_new_data_state = new_data_signal_sending;
+            end
+            else if (current_data_bank_addr != next_data_bank_addr) begin
+                next_new_data_state = new_data_signal_sending;
+            end
+            else if (!LCD_first_time_show) begin
+                next_new_data_state = new_data_signal_sending;
+                LCD_first_time_show_next = 1'b1;
+            end
         end 
 
         new_data_signal_sending: begin
@@ -707,5 +709,39 @@ end
 LCD_TOP LCD_TOP(.clk, .rstN, .new_data, .line_1, .line_2, .ready(LCD_ready), 
                 .LCD_DATA, .LCD_RW, .LCD_EN, .LCD_RS, .LCD_BLON, .LCD_ON);
 
+
+function automatic charactor_t get_slave_num(input logic[1:0]value_in);
+    charactor_t slave_num;
+    case (value_in)
+        2'b00: slave_num = underscore;
+        2'b01: slave_num = num_1;
+        2'b10: slave_num = num_2;
+        2'b11: slave_num = num_3;
+    endcase
+
+    return slave_num;
+endfunction
+
+function automatic charactor_t get_operation(input logic value_in);
+    charactor_t operation;
+    case (value_in)
+        1'b0: operation = R;
+        1'b1: operation = W;
+    endcase
+
+    return operation;
+
+endfunction
+
+function automatic charactor_t get_decision(input logic value_in);
+    charactor_t decision;
+    case(value_in)
+        1'b0: decision = n;
+        1'b1: decision = y;
+    endcase
+
+    return decision;
+
+endfunction
 
 endmodule : top

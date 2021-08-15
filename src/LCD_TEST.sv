@@ -1,4 +1,4 @@
-module LCD_TEST import LCD_charactors::*;
+module LCD_TEST import details::charactor_t;
 (
     input logic CLOCK_50,
     input logic [0:0]KEY,

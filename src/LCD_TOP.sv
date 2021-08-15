@@ -1,4 +1,4 @@
-module	LCD_TOP import LCD_charactors::*;
+module	LCD_TOP import  details::charactor_t;
 (//	Host Side
 input logic clk, rstN,new_data,
 input charactor_t line_1[0:15],
