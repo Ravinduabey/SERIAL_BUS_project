@@ -286,7 +286,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             startCom:
                 if(doneCom == 1'b0) begin : start_internal_communication
                     state           <= startCom;
-
+                    fromArbiter[1]      <= fromArbiter[0];
+                    fromArbiter[0]       <= arbCont;
                     case (communicationState) 
                         idleCom:
                             if (~arbCont) begin
@@ -305,14 +306,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
                                 // fromArbiter[2:1]        <= fromArbiter[1:0];
                                 // fromArbiter[0]          <= arbCont;
-                                fromArbiter[1]          <= fromArbiter[0];
-                                fromArbiter[0]          <= arbCont;
+                                // fromArbiter[1]          <= fromArbiter[0];
+                                // fromArbiter[0]          <= arbCont;
                             end
                             else if (arbiterCounnter >= 3'd6) begin
                                 // arbiterCounnter         <= arbiterCounnter + 3'd1;
                                 // fromArbiter             <= {fromArbiter[2:1], arbCont};
-                                fromArbiter[1]          <= fromArbiter[0];
-                                fromArbiter[0]          <= arbCont;
+                                // fromArbiter[1]          <= fromArbiter[0];
+                                // fromArbiter[0]          <= arbCont;
                                 if (fromArbiter == 2'd11) begin
                                     arbiterCounnter     <= 3'd0;
                                     arbSend             <= 1'b1;
@@ -330,8 +331,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 communicationState  <= reqAck;
-                                fromArbiter[1]      <= fromArbiter[0];
-                                fromArbiter[0]      <= arbCont;
+                                // fromArbiter[1]      <= fromArbiter[0];
+                                // fromArbiter[0]      <= arbCont;
                             end
                             else if (arbiterCounnter == 3'd2) begin
                                 arbSend             <= 1'b1;
@@ -340,31 +341,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 tempControl         <= {tempControl[17:0] ,1'b0};
                                 controlCounter      <= controlCounter + 5'd1;
                                 communicationState  <= masterCom;
-                                fromArbiter[1]      <= fromArbiter[0];
-                                fromArbiter[0]      <= arbCont;
+                                // fromArbiter[1]      <= fromArbiter[0];
+                                // fromArbiter[0]      <= arbCont;
                             end
 
                         masterCom:
-                            // case (internalComState) 
-                            // controlSignal: 
-                            //     if  (arbsend = 1) begin
-                            //             if (tempRdWr == 0 && burstLen == 0) begin
-                            //                 internalComState <= singleRead;
-                            //             end
-                            //             else if (tempRdWr == 0 && burstLen > 0) begin
-                            //                 internalComState <= burstRead;
-                            //             end
-                            //             else if (tempRdWr == 1 && burstLen == 0) begin
-                            //                 internalComState <= singleWrite;
-                            //             end
-                            //             else if (tempRdWr == 1 && burstLen > 0) begin
-                            //                 internalComState <= burstWrite;
-                            //             end
-                            //     end
-                            //     else begin
-                                    
-                            //     end
-                            // endcase
+                           
                             if (arbCont == 0 || fromArbiter == 2'b01) begin
                                 // arbsend what???
                                 if (controlCounter < CONTROL_LEN) begin
@@ -372,12 +354,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     tempControl         <= {tempControl[17:0] ,1'b0};
                                     controlCounter      <= controlCounter + 5'd1;
 
-                                    fromArbiter[1]      <= fromArbiter[0];
-                                    fromArbiter[0]       <= arbCont;
+                                    
                                 end  
                                 else if (controlCounter == CONTROL_LEN) begin : startSendOrReceive
                                     controlCounter      <= controlCounter;
                                     control             <= 0;
+                                    
 
                                     //=======================//
                                     //=====Read or Write=====//
@@ -675,7 +657,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         else masterAckownledgement
                         */
                         
-                        masterSplit: communicationState <= idleCom;
+                        masterSplit: communicationState <= masterCom;
 
 
                         over: 
