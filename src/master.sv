@@ -285,9 +285,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //==========================//
             startCom:
                 if(doneCom == 1'b0) begin : start_internal_communication
-                    state           <= startCom;
+                    state               <= startCom;
                     fromArbiter[1]      <= fromArbiter[0];
-                    fromArbiter[0]       <= arbCont;
+                    fromArbiter[0]      <= arbCont;
                     case (communicationState) 
                         idleCom:
                             if (~arbCont) begin
@@ -347,7 +347,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                         masterCom:
                            
-                            if (arbCont == 0 || fromArbiter == 2'b01) begin
+                            if (fromArbiter == 2'b00 || fromArbiter == 2'b01) begin
                                 // arbsend what???
                                 if (controlCounter < CONTROL_LEN) begin
                                     control             <= tempControl[18];
@@ -364,10 +364,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     //=======================//
                                     //=====Read or Write=====//
                                     //=======================//
-                                    unique case(internalComState)
+                                    case(internalComState)
 
                                     checkState:
-                                        if (tempRdWr == 1) begin
+                                        if (tempRdWr == 1 && (arbCont == 0 || fromArbiter == 2'd1)) begin
                                             if (burstLen == 0) begin
                                                 internalComState <= singleWrite;
                                                 addressInternal  <= addressInternalBurtstBegin;
@@ -390,7 +390,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 end
                                             end
                                         end
-                                        else begin
+                                        else if (tempRdWr == 0 && (arbCont == 0 || fromArbiter == 2'd1)) begin
                                             if (burstLen == 0) begin
                                                 internalComState <= singleRead;
                                                 valid            <= 1;
@@ -517,8 +517,138 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     endcase 
                                 end
                             end
+
+
                             else if (fromArbiter == 2'b10)begin: priorityStop
-                                communicationState <= masterHold;                                
+                                communicationState <= masterHold;
+
+                                if (burstLen == 0) begin
+                                    if (tempRdWr == 0) begin
+                                        if (ready) begin
+                                            if (i < 4'd8) begin
+                                                tempReadData[i] <= rD;
+                                                i               <= i + 4'd1;
+                                            end
+                                            if (i == 4'd8) begin
+                                            dataInternal        <= tempReadData;
+                                            addressInternal     <= addressInternalBurtstBegin;
+                                            wr                  <= 1;
+                                            i                   <= i + 4'd1;    
+                                            end
+                                            if (i > 4'd8) begin
+                                                i <= 4'd0;
+                                                wr <=0;
+                                                communicationState <= over;
+                                            end
+                                        end
+                                    end
+                                    else begin
+                                        if (~valid)begin
+                                            if (i < 1)begin
+                                                i = i +1;
+                                            end
+                                            else begin
+                                                tempReadData    <= internalDataOut;
+                                                i               <= 0;
+                                                valid           <= 1;                                                
+                                            end
+                                        end
+                                        else begin
+                                            if (i < DATA_WIDTH) begin
+                                                wrD     <= tempReadData[DATA_WIDTH-1-i];
+                                                i       <= i + 1;
+                                            end
+                                            else begin
+                                                valid   <= 0;
+                                                communicationState <= over;
+                                            end
+                                        end 
+                                    end
+                                end
+                                else begin
+                                    if (tempRdWr == 0)begin 
+                                        if (ready) begin    
+                                            if(burstLen > 1) begin
+                                                if (i < DATA_WIDTH) begin
+                                                    tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                    i               <= i + 1;
+                                                    wr              <= 0;
+                                                    valid           <= 1;
+                                                end
+                                                else if (i == DATA_WIDTH) begin
+                                                    tempReadData[i]             <= rD;
+                                                    dataInternal                <= tempReadData;
+                                                    addressInternal             <= addressInternalBurtstBegin;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                    wr                  <= 1;
+                                                    i                   <= 0;
+                                                    burstLen            <= burstLen - 1;
+                                                    communicationState  <= masterDone;   
+                                                end
+                                            end
+                                            else if (burstLen == 1)begin
+                                                if (i < DATA_WIDTH) begin
+                                                        tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                        i               <= i + 1;
+                                                        wr              <= 0;
+                                                        valid           <= 1;
+                                                    end
+                                                    else if (i == DATA_WIDTH) begin
+                                                        tempReadData[i]             <= rD;
+                                                        dataInternal                <= tempReadData;
+                                                        addressInternal             <= addressInternalBurtstBegin;
+                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                        wr                  <= 1;
+                                                        i                   <= 0; 
+                                                        valid               <= 0;
+                                                        burstLen            <= burstLen - 1;
+                                                        communicationState  <= over;
+                                                    end
+                                            end
+                                        end
+                                    end
+
+                                    else begin: burstWriteMode
+                                        if(burstLen > 1) begin
+                                            if (i < DATA_WIDTH) begin
+                                                wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                i                   <= i + 1;
+                                                valid               <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH) begin
+                                                i                           <= 0;
+                                                burstLen                    <= burstLen -1 ;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                tempReadData                <= internalDataOut;
+                                                valid                       <= 0;
+                                                communicationState          <= masterDone;
+                                            end
+                                        end
+                                        else if (burstLen == 1) begin
+                                            if (i < DATA_WIDTH-1) begin
+                                                wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                i                   <= i + 1;
+                                                valid               <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH-1) begin
+                                                i                           <= 0;
+                                                wrD                         <= tempReadData[DATA_WIDTH-1-i];
+                                                burstLen                    <= burstLen -1 ;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                tempReadData                <= internalDataOut;
+                                                valid                       <= 1;
+                                                last                        <= 1;
+                                                communicationState          <= over;
+                                            end
+                                        end
+                                    end: burstWriteMode
+                                end
+
+
+
+
                             end
                             else if (fromArbiter == 2'b11)begin: splitStop
                                 communicationState <= masterSplit;                                
@@ -526,6 +656,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             
 
                         masterHold:
+
                             if (burstLen == 0) begin: singleMode
                                 if (tempRdWr == 0) begin
                                     if (ready) begin
@@ -585,8 +716,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 addressInternal             <= addressInternalBurtstBegin;
                                                 addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
                                                 wr                  <= 1;
-                                                i                   <= 0; 
-                                                valid               <= 0;
+                                                i                   <= 0;
                                                 burstLen            <= burstLen - 1;
                                                 communicationState  <= masterDone;   
                                             end
@@ -651,7 +781,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 end: burstWriteMode
                             end
 
-                        masterDone: communicationState <= idleCom;
+                        masterDone: begin
+                            communicationState <= idleCom;
+                            wr                 <= 0;
+                            valid               <=0;
+                        end 
                         /*
                         if arbiter needs to set everything from scratch: masteridle
                         else masterAckownledgement
