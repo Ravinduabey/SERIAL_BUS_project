@@ -1,6 +1,7 @@
 module bram #(
     parameter MEMORY_DEPTH = 4092,
-    parameter DATA_WIDTH = 16
+    parameter DATA_WIDTH = 16,
+	parameter MEM_INIT_FILE = ""
 )(
     input   logic                                       clk,
     input   logic                                       wr,
@@ -13,6 +14,13 @@ module bram #(
     logic [DATA_WIDTH-1:0] ram[MEMORY_DEPTH-1:0];
 	localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
 	
+
+	initial begin
+	if (MEM_INIT_FILE != "") begin
+		$readmemh(MEM_INIT_FILE, ram);
+	end
+	end
+
 	logic [ADDRESS_WIDTH-1:0] addr_reg;
 	always @ (posedge clk)
 	begin
@@ -25,4 +33,4 @@ module bram #(
 
 	assign q = ram[addr_reg];       // Read data
 
-endmodule
+endmodule: bram
