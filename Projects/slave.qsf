@@ -18,14 +18,14 @@
 #
 # Quartus Prime
 # Version 18.1.0 Build 625 09/12/2018 SJ Lite Edition
-# Date created = 14:17:38  August 03, 2021
+# Date created = 11:41:33  August 12, 2021
 #
 # -------------------------------------------------------------------------- #
 #
 # Notes:
 #
 # 1) The default values for assignments are stored in the file:
-#		master_assignment_defaults.qdf
+#		slave_assignment_defaults.qdf
 #    If this file doesn't exist, see file:
 #		assignment_defaults.qdf
 #
@@ -37,34 +37,23 @@
 
 
 set_global_assignment -name FAMILY "Cyclone IV E"
-set_global_assignment -name DEVICE EP4CE115F29C7
-set_global_assignment -name TOP_LEVEL_ENTITY master
+set_global_assignment -name DEVICE auto
+set_global_assignment -name TOP_LEVEL_ENTITY slave
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION 18.1.0
-set_global_assignment -name PROJECT_CREATION_TIME_DATE "14:17:38  AUGUST 03, 2021"
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "11:41:32  AUGUST 12, 2021"
 set_global_assignment -name LAST_QUARTUS_VERSION "18.1.0 Lite Edition"
+set_global_assignment -name SYSTEMVERILOG_FILE ../src/slave.sv
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
-set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
-set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
-set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 1
-set_global_assignment -name NOMINAL_CORE_SUPPLY_VOLTAGE 1.2V
-set_global_assignment -name EDA_SIMULATION_TOOL "ModelSim-Altera (Verilog)"
+set_global_assignment -name EDA_SIMULATION_TOOL "QuestaSim (SystemVerilog)"
 set_global_assignment -name EDA_TIME_SCALE "1 ps" -section_id eda_simulation
-set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "VERILOG HDL" -section_id eda_simulation
-set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
-set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
-set_global_assignment -name SYSTEMVERILOG_FILE ../src/bram.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../src/master.sv
-set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
-set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH master_tb -section_id eda_simulation
-set_global_assignment -name EDA_TEST_BENCH_NAME bram_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id bram_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME bram_tb -section_id bram_tb
-set_global_assignment -name EDA_TEST_BENCH_NAME master_tb -section_id eda_simulation
-set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id master_tb
-set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME master_tb -section_id master_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../src/bram_tb.sv -section_id bram_tb
-set_global_assignment -name EDA_TEST_BENCH_FILE ../src/master_tb.sv -section_id master_tb
+set_global_assignment -name EDA_OUTPUT_DATA_FORMAT "SYSTEMVERILOG HDL" -section_id eda_simulation
 set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
 set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
 set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
+set_global_assignment -name EDA_TEST_BENCH_ENABLE_STATUS TEST_BENCH_MODE -section_id eda_simulation
+set_global_assignment -name EDA_NATIVELINK_SIMULATION_TEST_BENCH slave_tb -section_id eda_simulation
+set_global_assignment -name EDA_TEST_BENCH_NAME slave_tb -section_id eda_simulation
+set_global_assignment -name EDA_DESIGN_INSTANCE_NAME NA -section_id slave_tb
+set_global_assignment -name EDA_TEST_BENCH_MODULE_NAME slave_tb -section_id slave_tb
+set_global_assignment -name EDA_TEST_BENCH_FILE ../src/slave_tb.sv -section_id slave_tb
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
