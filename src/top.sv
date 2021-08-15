@@ -97,21 +97,21 @@ logic [$clog2(CONFIG_CLK_COUNT)-1:0]current_config_clk_count, next_config_clk_co
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_config_write_count, next_config_write_count;
 
 //////////////// MASTER module instantiate (start) /////////////
-genvar j;
+genvar jj;
 generate
-    for (j=0;j<MASTER_COUNT; j=j+1) begin:MASTER
+    for (jj=0;jj<MASTER_COUNT; jj=jj+1) begin:MASTER
         master #(.ADDRESS_DEPTH(MASTER_DEPTH), .DATA_WIDTH(DATA_WIDTH)) master(
             .clk, .rstN, 
-            .burst(M_burst[j]),
-            .rdWr(M_rdWr[j]),                           
-            .inEx(M_inEx[j]),                           
-            .data(M_data[j]),
-            .address(M_address[j]),
-            .slaveId(M_slaveId[j]),
-            .start(M_start[j]),
+            .burst(M_burst[jj]), // used to tell whether external write is a burst or not
+            .rdWr(M_rdWr[jj]),                           
+            .inEx(M_inEx[jj]),                           
+            .data(M_data[jj]),
+            .address(M_address[jj]),
+            .slaveId(M_slaveId[jj]),
+            .start(M_start[jj]),
 
-            .doneCom(M_doneCom[j]),
-            .dataOut(M_dataOut[j])
+            .doneCom(M_doneCom[jj]),
+            .dataOut(M_dataOut[jj])
         );
     end
 endgenerate
@@ -413,6 +413,7 @@ always_comb begin
                 next_data_bank_addr = '0; // reset to 0 for next master value write
             end
             else if (!jump_next_addr) begin
+                M_burst_next[0] = 1'b1; // externally write more than 1 address
                 next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
                 data_bank_wr_count_next[0] = data_bank_wr_count[0] + 1'b1; // count the number of external writes
             end
@@ -423,6 +424,7 @@ always_comb begin
                 next_data_bank_addr = '0; // reset to 0 for next master value write
             end
             else if (!jump_next_addr) begin
+                M_burst_next[0] = 1'b1; // externally write more than 1 address
                 next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
                 data_bank_wr_count_next[0] = data_bank_wr_count[0] + 1'b1; // count the number of external writes
             end
@@ -433,6 +435,7 @@ always_comb begin
                 next_data_bank_addr = '0; // reset to 0 for next master value write
             end
             else if (!jump_next_addr) begin
+                M_burst_next[1] = 1'b1; // externally write more than 1 address
                 next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
                 data_bank_wr_count_next[1] = data_bank_wr_count[1] + 1'b1; // count the number of external writes
             end
@@ -447,13 +450,6 @@ always_comb begin
         end 
          
         addr_count_sel_M1: begin
-            // decide burst or not
-            if (SW[MASTER_ADDR_WIDTH-1:0] == '0) begin
-                M_burst_next[0] = 1'b0;
-            end
-            else begin
-                M_burst_next[0] = 1'b1;
-            end
             // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0]) >= SLAVE_DEPTHS[M_slaveId[0]-1]) begin
                 slave_last_addr_next[0] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[0]-1'b1]); // if given length is too large select untill the last address of the slave
@@ -465,13 +461,6 @@ always_comb begin
         end 
 
         addr_count_sel_M2: begin
-            // decide burst or not
-            if (SW[MASTER_ADDR_WIDTH-1:0] == '0) begin
-                M_burst_next[1] = 1'b0;
-            end
-            else begin
-                M_burst_next[1] = 1'b1;
-            end
             // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1]) >= SLAVE_DEPTHS[M_slaveId[1]-1]) begin
                 slave_last_addr_next[1] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[1]-1'b1]); // if given length is too large select untill the last address of the slave
@@ -629,30 +618,37 @@ always_comb begin
 
         external_write_M1: begin
             line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_1, space,space,space};
+            line_2_next = '{A,d,d,r,dash,get_number(current_data_bank_addr), space, V,a,l,dash,get_number(SW[15:12]),get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
         external_write_M1_2: begin
             line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_1, space,space,space};
+            line_2_next = '{A,d,d,r,dash,get_number(current_data_bank_addr), space, V,a,l,dash,get_number(SW[15:12]),get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
         external_write_M2: begin
             line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_2, space,space,space};
+            line_2_next = '{A,d,d,r,dash,get_number(current_data_bank_addr), space, V,a,l,dash,get_number(SW[15:12]),get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
         slave_addr_sel_M1: begin
             line_1_next = '{M,num_1, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
+            line_2_next = '{S,t,a,r,t, space, a,d,d,r,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
         slave_addr_sel_M2: begin
             line_1_next = '{M,num_2, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
+            line_2_next = '{S,t,a,r,t, space, a,d,d,r,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
         addr_count_sel_M1: begin
             line_1_next = '{M,num_1, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
+            line_2_next = '{C,o,u,n,t,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space,space,space,space,space,space};
         end
 
         addr_count_sel_M2: begin
             line_1_next = '{M,num_2, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
+            line_2_next = '{C,o,u,n,t,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space,space,space,space,space,space};
         end
 
         config_masters: begin
@@ -668,7 +664,8 @@ always_comb begin
         end
 
         communication_done: begin
-            line_1_next = '{M,s,t,r,dot, space, a,d,d,r,dot, space, num_0,num_0,num_0, space};
+            line_1_next = '{M,s,t,r,dot, space, a,d,d,r,dot, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
+            line_2_next = '{M,num_1,dash, get_number(M_dataOut[0][15:12]),get_number(M_dataOut[0][11:8]),get_number(M_dataOut[0][7:4]),get_number(M_dataOut[0][3:0]), space, M,num_2,dash, get_number(M_dataOut[1][15:12]),get_number(M_dataOut[1][11:8]),get_number(M_dataOut[1][7:4]),get_number(M_dataOut[1][3:0]), space};
         end
 
 
@@ -745,6 +742,18 @@ function automatic charactor_t get_decision(input logic value_in);
     endcase
 
     return decision;
+
+endfunction
+
+function automatic charactor_t get_number(input logic[3:0] value_in);
+    charactor_t number;
+    if (value_in < 10)begin
+        number = charactor_t'({4'b0011, value_in});
+    end
+    else begin
+        number = charactor_t'({4'b0100, (value_in-4'd9)});
+    end
+    return number;
 
 endfunction
 
