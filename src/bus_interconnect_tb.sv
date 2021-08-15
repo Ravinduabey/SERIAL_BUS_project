@@ -15,18 +15,18 @@ module bus_interconnect_tb ();
     logic   s3_ready, s3_rD;
 
     bus_interconnect dut (
-        master, slave, 
-        m1_valid, m1_last, m1_wD,
-        m1_ready, m1_rD;
-        m2_valid, m2_last, m2_wD;
-        m2_ready, m2_rD;
+        .master(master), .slave(slave), 
+        .m1_valid(m1_valid), .m1_last(m1_last), .m1_wD(m1_wD),
+        .m1_ready(m1_ready), .m1_rD(m1_rD),
+        .m2_valid(m2_valid), .m2_last(m2_last), .m2_wD(m2_wD),
+        .m2_ready(m2_ready), .m2_rD(m2_rD),
 
-        s1_valid, s1_last, s1_wD;
-        s1_ready, s1_rD;
-        s2_valid, s2_last, s2_wD;
-        s2_ready, s2_rD;
-        s3_valid, s3_last, s3_wD;
-        s3_ready, s3_rD;
+        .s1_valid(s1_valid), .s1_last(s1_last), .s1_wD(s1_wD),
+        .s1_ready(s1_ready), .s1_rD(s1_rD),
+        .s2_valid(s2_valid), .s2_last(s2_last), .s2_wD(s2_wD),
+        .s2_ready(s2_ready), .s2_rD(s2_rD),
+        .s3_valid(s3_valid), .s3_last(s3_last), .s3_wD(s3_wD),
+        .s3_ready(s3_ready), .s3_rD(s3_rD)
     );
 
     initial begin
@@ -34,7 +34,7 @@ module bus_interconnect_tb ();
         slave  <= 2'b10;
         m1_valid <= 1;
         m1_last <= 0;
-        m1_control <= 1;
+        m1_wD <= 1;
         master <= 2'b10;
 
     end
