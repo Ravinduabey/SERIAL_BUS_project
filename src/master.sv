@@ -828,7 +828,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 wr                          <= 1;
                                                 i                           <= 0;
                                                 burstLen                    <= burstLen - 1;
-                                                communicationState          <= masterDone;   
                                             end
                                         end
                                         else if (burstLen == 1)begin
