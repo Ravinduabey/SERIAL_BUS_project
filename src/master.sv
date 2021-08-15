@@ -799,6 +799,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 last            <= 0;
                                 valid           <= 0;
                                 doneCom         <= 1;
+                                wr              <= 0;
                                 dataOut         <= dataInternal;
                                 addressInternal <= address;
                             end
@@ -812,7 +813,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 else begin
                     state <= done;
                 end
-        
+            done: 
+                begin
+                    addressInternal <= address;
+                    dataOut         <= internalDataOut;    
+                end
         endcase
         end
     //     if (state == idle) begin
