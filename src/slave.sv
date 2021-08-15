@@ -43,7 +43,7 @@ module slave #(
     logic                      wD_temp;
 
     // logic [DATA_WIDTH-1   :0]  burst_reg;
-    
+
     // Declare the RAM variable
 	logic [DATA_WIDTH-1:0] ram[ADDR_DEPTH-1:0];
 
@@ -232,8 +232,11 @@ module slave #(
                             wD_buffer[0] <= wD_temp;
                         end
                         else begin
-                            wD_counter <= 0;
-                            ram[address] <= wD_buffer;
+                            check <= 1;
+                            ram[address]    <= wD_buffer;
+                            address         <= address + 1;                            
+                            wD_counter      <= 0;
+                            ram[address]    <= wD_buffer;
                             state <= WRITEB;
                         end
                     end
@@ -244,9 +247,6 @@ module slave #(
                             wD_buffer[0] <= wD_temp;
                         end
                         else begin
-                            check <= 1;
-                            ram[address]    <= wD_buffer;
-                            address         <= address + 1;
                             wD_counter      <= 0;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                            
@@ -263,5 +263,5 @@ module slave #(
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
-assign burst_reg = wD_buffer;
+// assign burst_reg = wD_buffer;
 endmodule
