@@ -18,6 +18,7 @@ module master #(
         input logic [$clog2(MEMORY_DEPTH)-1:0] address,
         input logic [1:0] slaveId,
         input logic start,
+        input logic eoc,
 		  
 	    output logic doneCom ,
         output logic [DATA_WIDTH-1:0] dataOut,
@@ -138,12 +139,6 @@ bram #(
 );
 
 logic communicationDone;
-// logic counter = 2'b00;
-// initial begin
-//     communicationDone   <= 0;
-// end 
-    
-
 
 
 always_ff @( posedge clk or negedge rstN) begin : topModule
@@ -174,12 +169,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //===========IDLE===========// 
             //==========================//
             idle:
-                if (start) begin 
+                if (start && ~eoc) begin 
                     state                       <= startConfig;
                     addressInternalBurtstBegin  <= address;
                     tempBurst                   <= burst;
                     tempControl                 <= {3'b111, slaveId, rdWr, burst, address};
-                    tempControl_2                 <= {3'b111, slaveId, rdWr, burst, address};
+                    tempControl_2               <= {3'b111, slaveId, rdWr, burst, address};
                     arbiterRequest              <= {3'b111, slaveId};
                     tempArbiterRequest          <= {3'b111, slaveId};
                     tempRdWr                    <= rdWr;
@@ -187,7 +182,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     addressInternal             <= addresstemp;
                     
                 end
-                else begin
+                else if (~start && eoc) begin
+                    state <= done;
+                end
+                else if (~start && ~eoc)begin
                     addresstemp         <= 0;
                     fromArbiter         <= 0;
                     tempReadData        <= 0;
@@ -213,15 +211,21 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //==========================//
             startConfig:
                 if (start) begin
-                    state                       <= startEndConfig;
-                    addressInternalBurtstEnd    <= address;
-                    wr                          <= 1;
-                    dataInternal                <= data;
-                    addressInternal             <= addresstemp;
+                    if (inEx) begin
+                        state                       <= startEndConfig;
+                        addressInternalBurtstEnd    <= address;
+                        wr                          <= 1;
+                        dataInternal                <= data;
+                        addressInternal             <= addresstemp;
+                    end
+                    else begin
+                        addressInternalBurtstEnd    <= address;
+                        addressInternalBurtstBegin  <= address;
+                        state                       <= startEndConfig;
+                    end
                 end
                 else begin                   
                     
-    
                     if (inEx) begin : internalExternalWrite
                         if (tempBurst == 1) begin
                                 dataInternal                <= data;
@@ -250,8 +254,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 clock_counter               <= 2'd0;
                             end
                         end
-                            // else begin
-                            // end
+                            
                     end
                     // else begin
                         // addressInternal <= address;
@@ -944,6 +947,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 end
             done: 
                 begin
+                    doneCom         <= 1;
                     addressInternal <= address;
                     dataOut         <= internalDataOut;    
                 end
