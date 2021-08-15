@@ -65,12 +65,12 @@ logic [1:0]                 clock_counter;
 
 logic [1:0]                 fromArbiter;
 logic [2:0]                 arbGrant;
-logic [3:0]                 arbiterCounnter;
+logic [4:0]                 arbiterCounnter;
 
 logic [4:0]                 controlCounter;
 logic [4:0]                 arbiterRequest, tempArbiterRequest;
 
-logic [CONTROL_LEN-1:0]     tempControl;
+logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
 
 logic [ADDRESS_WIDTH-1:0]   burstLen;
 logic [ADDRESS_WIDTH-1:0]   addressInternal, addresstemp;
@@ -94,7 +94,7 @@ start_ state,nextstate;
 
 
 // define states for the communication process
-typedef enum logic [2:0]{
+typedef enum logic [3:0]{
     idleCom,
     reqCom, 
     reqAck,
@@ -102,6 +102,7 @@ typedef enum logic [2:0]{
     masterHold,
     masterDone,
     masterSplit,
+    splitComContinue,
 	over
 } comStates;
 
@@ -158,7 +159,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         doneCom             <= 1'b0;
         controlCounter      <= 5'd0;
         clock_counter       <= 2'd0;
-        arbiterCounnter     <= 3'd0;
+        arbiterCounnter     <= 4'd0;
         address_counter     <= 0;
         j                   <= 0;
         k                   <= 0;
@@ -178,6 +179,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     addressInternalBurtstBegin  <= address;
                     tempBurst                   <= burst;
                     tempControl                 <= {3'b111, slaveId, rdWr, burst, address};
+                    tempControl_2                 <= {3'b111, slaveId, rdWr, burst, address};
                     arbiterRequest              <= {3'b111, slaveId};
                     tempArbiterRequest          <= {3'b111, slaveId};
                     tempRdWr                    <= rdWr;
@@ -197,7 +199,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     doneCom             <= 1'b0;
                     controlCounter      <= 5'd0;
                     clock_counter       <= 2'd0;
-                    arbiterCounnter     <= 3'd0;
+                    arbiterCounnter     <= 4'd0;
                     address_counter     <= 0;
                     j                   <= 0;
                     k                   <= 0;
@@ -272,9 +274,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin + 1;
                     if(burstLen == 0)begin
                         tempControl[12] <= 0;
+                        tempControl_2[12] <= 0;
                     end
                     else begin
                         tempControl[12] <= 1;
+                        tempControl_2[12] <= 1;
                     end
                 end
 
@@ -300,41 +304,37 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             // end
 
                         reqCom:
-                            if (arbiterCounnter < 3'd6) begin
-                                arbiterCounnter         <= arbiterCounnter + 3'd1;
+                            if (arbiterCounnter < 4'd6) begin
                                 arbSend                 <= arbiterRequest[4];
                                 arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
-                                // fromArbiter[2:1]        <= fromArbiter[1:0];
-                                // fromArbiter[0]          <= arbCont;
-                                // fromArbiter[1]          <= fromArbiter[0];
-                                // fromArbiter[0]          <= arbCont;
+                                arbiterCounnter         <= arbiterCounnter + 1;
                             end
-                            else if (arbiterCounnter >= 3'd6) begin
-                                // arbiterCounnter         <= arbiterCounnter + 3'd1;
-                                // fromArbiter             <= {fromArbiter[2:1], arbCont};
-                                // fromArbiter[1]          <= fromArbiter[0];
-                                // fromArbiter[0]          <= arbCont;
-                                if (fromArbiter == 2'd11) begin
-                                    arbiterCounnter     <= 3'd0;
+                            else if (arbiterCounnter == 4'd6) begin
+                                arbiterCounnter     <= arbiterCounnter;
+                                if (fromArbiter == 2'b11) begin: ClearNew
                                     arbSend             <= 1'b1;
+                                    tempControl         <= tempControl_2;
+                                    controlCounter      <= 0;
                                     communicationState  <= reqAck;
                                 end
-                                else begin
-                                    // arbiterCounnter     <= 3'd0;
-                                    // arbiterRequest      <= tempArbiterRequest;
+                                else if (fromArbiter == 2'b10) begin: ClearSplit
+                                    arbSend             <= 1'b1;
+                                    communicationState  <= splitComContinue;
+                                end
+                                else begin 
                                     communicationState  <= reqCom;
                                 end
                             end
                         
                         reqAck:
-                            if (arbiterCounnter < 3'd2) begin
+                            if (arbiterCounnter < 4'd8) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 communicationState  <= reqAck;
                                 // fromArbiter[1]      <= fromArbiter[0];
                                 // fromArbiter[0]      <= arbCont;
                             end
-                            else if (arbiterCounnter == 3'd2) begin
+                            else if (arbiterCounnter == 4'd8) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
                                 control             <= tempControl[18];
@@ -715,10 +715,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 dataInternal                <= tempReadData;
                                                 addressInternal             <= addressInternalBurtstBegin;
                                                 addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
-                                                wr                  <= 1;
-                                                i                   <= 0;
-                                                burstLen            <= burstLen - 1;
-                                                communicationState  <= masterDone;   
+                                                wr                          <= 1;
+                                                i                           <= 0;
+                                                burstLen                    <= burstLen - 1;
+                                                communicationState          <= masterDone;   
                                             end
                                         end
                                         else if (burstLen == 1)begin
@@ -782,9 +782,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
 
                         masterDone: begin
-                            communicationState <= idleCom;
+                            communicationState <= reqCom;
                             wr                 <= 0;
-                            valid               <=0;
+                            valid              <= 0;
                         end 
                         /*
                         if arbiter needs to set everything from scratch: masteridle
