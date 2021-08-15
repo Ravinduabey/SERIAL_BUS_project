@@ -116,7 +116,6 @@ generate
     end
 endgenerate
 //////////////// MASTER module instantiate (end) /////////////
-
 main_state_t current_state, next_state;
 
 //////////////////// master configuration state related logics /////////////////
@@ -217,7 +216,12 @@ always_comb begin
     case (current_state)
         master_slave_sel: begin
             if (!jump_stateN) begin
-                next_state = read_write_sel;
+                if (SW[3:0] == '0) begin  // if no slave is selected to both master no communication happens
+                    next_state = communication_done;
+                end
+                else begin
+                    next_state = read_write_sel;
+                end    
             end
         end
 
@@ -298,7 +302,7 @@ always_comb begin
                         if (M_external_write_sel[current_config_master] == 1'b0) begin
                             next_config_state = config_last;
                         end
-                        else if (slave_last_addr[current_config_master]-slave_first_addr[current_config_master]<=2) begin
+                        else if (data_bank_wr_count[current_config_master]==0) begin // only 1 external write
                             next_config_state = config_last;
                         end
                         else begin
