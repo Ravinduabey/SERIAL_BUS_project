@@ -1,7 +1,7 @@
 /*
     this module is the central arbiter controller module who controls the bus depending on the requests comes from any number of masters. 
 */
-module controller #(
+module a_controller #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
     parameter THRESH = 1000,
@@ -26,12 +26,13 @@ module controller #(
   //================================// 
 	input logic ready,
 
-	output logic [M_ID_WIDTH-1:0] addr_select,
-	output logic [M_ID_WIDTH-1:0] MOSI_data_select,
-	output logic [M_ID_WIDTH-1:0] valid_select,
-	output logic [M_ID_WIDTH-1:0] last_select,
-  output logic [S_ID_WIDTH-1:0] MISO_data_select,
-	output logic [S_ID_WIDTH-1:0] ready_select
+  output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0
+	// output logic [M_ID_WIDTH-1:0] addr_select,
+	// output logic [M_ID_WIDTH-1:0] MOSI_data_select,
+	// output logic [M_ID_WIDTH-1:0] valid_select,
+	// output logic [M_ID_WIDTH-1:0] last_select,
+  // output logic [S_ID_WIDTH-1:0] MISO_data_select,
+	// output logic [S_ID_WIDTH-1:0] ready_select
 );
 
   //===========================================//
@@ -64,7 +65,7 @@ state_t state = START;
 state_t next_state;
 
 //this register is used for external multiplexer selection input
-logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0;
+// logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0;
 
 //these registers trigger when interrupts occur
 logic intr = '0;
@@ -76,7 +77,7 @@ logic intr_route = '0;
   ////////////////////////////////
 
 logic thresh;
-thresh_counter #(.THRESH(THRESH)) thresh_detector (.*);
+a_thresh_counter #(.THRESH(THRESH)) thresh_detector (.*);
 
 
 localparam NRML = 1'b0;
@@ -90,7 +91,7 @@ logic [M_ID_WIDTH-1:0] next_master, old_master, master_out;
 logic [S_ID_WIDTH-1:0] cur_slave = '0;
 logic [S_ID_WIDTH-1:0] next_slave, old_slave, slave_out;
 
-priority_selector #(
+a_priority_selector #(
   .NO_MASTERS(NO_MASTERS),
   .NO_SLAVES(NO_SLAVES)
   ) master_selector (
@@ -129,14 +130,14 @@ assign cur_done = done[cur_master];
 //   external mux selection   //
 ////////////////////////////////
 
-always_comb begin : muxController
-  addr_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	MOSI_data_select  = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	valid_select      = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	last_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-  MISO_data_select  = bus_state [S_ID_WIDTH-1:0];
-	ready_select      = bus_state [S_ID_WIDTH-1:0];
-end
+// always_comb begin : muxController
+  // addr_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+	// MOSI_data_select  = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+	// valid_select      = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+	// last_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
+  // MISO_data_select  = bus_state [S_ID_WIDTH-1:0];
+	// ready_select      = bus_state [S_ID_WIDTH-1:0];
+// end
 
 
 always_comb begin : stateMachine
@@ -258,4 +259,4 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     endcase 
 end
 
-endmodule : controller
+endmodule : a_controller

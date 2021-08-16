@@ -23,12 +23,13 @@ module arbiter #(
   //===================// 
 	input logic ready,
 
-	output logic [M_ID_WIDTH-1:0] addr_select,
-	output logic [M_ID_WIDTH-1:0] MOSI_data_select,
-	output logic [M_ID_WIDTH-1:0] valid_select,
-	output logic [M_ID_WIDTH-1:0] last_select,
-  output logic [S_ID_WIDTH-1:0] MISO_data_select,
-	output logic [S_ID_WIDTH-1:0] ready_select
+  output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state
+	// output logic [M_ID_WIDTH-1:0] addr_select,
+	// output logic [M_ID_WIDTH-1:0] MOSI_data_select,
+	// output logic [M_ID_WIDTH-1:0] valid_select,
+	// output logic [M_ID_WIDTH-1:0] last_select,
+  // output logic [S_ID_WIDTH-1:0] MISO_data_select,
+	// output logic [S_ID_WIDTH-1:0] ready_select
 );
 
   //===============================================//
@@ -45,7 +46,7 @@ module arbiter #(
   genvar i;
   generate
     for (i = '0; i< NO_MASTERS; i = i+1) begin : master
-    master_port #(
+    a_master_port #(
       .NO_SLAVES(NO_SLAVES)
       ) master_interconnector (
       .clk(clk),
@@ -63,7 +64,7 @@ endgenerate
   //===================//
   //    controller     //
   //===================// 
-controller #(
+a_controller #(
   .NO_MASTERS(NO_MASTERS),
   .NO_SLAVES(NO_SLAVES),
   .THRESH(THRESH)
@@ -75,12 +76,13 @@ controller #(
   .done(done),
   .cmd(cmd),
   .ready(ready),
-  .addr_select(addr_select),
-  .MOSI_data_select(MOSI_data_select),
-  .valid_select(valid_select),
-  .last_select(last_select),
-  .MISO_data_select(MISO_data_select),
-  .ready_select(ready_select)
+  .bus_state(bus_state)
+  // .addr_select(addr_select),
+  // .MOSI_data_select(MOSI_data_select),
+  // .valid_select(valid_select),
+  // .last_select(last_select),
+  // .MISO_data_select(MISO_data_select),
+  // .ready_select(ready_select)
 );
 
 endmodule : arbiter
