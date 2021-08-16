@@ -29,7 +29,8 @@ localparam int SLAVE_ADDR_WIDTHS[SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog
 
 localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or read all the slave address locations without loss
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
-
+localparam S_ID_WIDTH = $clog2(SLAVE_COUNT+1);
+localparam M_ID_WIDTH = $clog2(MASTER_COUNT);
 
 logic rstN, clk, jump_stateN, jump_next_addr;
 logic [3:0]KEY_OUT;
@@ -96,6 +97,15 @@ logic S_last[0:SLAVE_COUNT-1];
 //with Top Module
 logic [SLAVEID-1:0]S_slave_ID[0:SLAVE_COUNT-1];  //********************
 
+/// arbiter module related wires
+logic [M_ID_WIDTH-1:0] a_addr_select;
+logic [M_ID_WIDTH-1:0] a_MOSI_data_select;
+logic [M_ID_WIDTH-1:0] a_valid_select;
+logic [M_ID_WIDTH-1:0] a_last_select;
+logic [S_ID_WIDTH-1:0] a_MISO_data_select;
+logic [S_ID_WIDTH-1:0] a_ready_select;
+logic a_ready;
+
 
 logic M_read_write_sel[0:MASTER_COUNT-1];
 logic M_read_write_sel_next[0:MASTER_COUNT-1];
@@ -154,24 +164,6 @@ generate
     end
 endgenerate
 
-///// bus interconnect instantiation ///////////
-bus_interconnect bus_interconnect(
-    input  [2:0] master, 
-    input  [2:0] slave,
-
-    input       m1_valid, m1_last, m1_wD,
-    output      m1_ready, m1_rD,
-    input       m2_valid, m2_last, m2_wD,
-    output      m2_ready, m2_rD,
-
-    output      s1_valid, s1_last, s1_wD,
-    input       s1_ready, s1_rD,
-    output      s2_valid, s2_last, s2_wD,
-    input       s2_ready, s2_rD,
-    output      s3_valid, s3_last, s3_wD,
-    input       s3_ready, s3_rD
-);
-
 /////// slave instantiation ////////////
 generate 
     for (jj=0; jj<SLAVE_COUNT; jj++) begin : SLAVE
@@ -227,6 +219,42 @@ arbiter arbiter
   output logic [S_ID_WIDTH-1:0] MISO_data_select,
 	output logic [S_ID_WIDTH-1:0] ready_select
 );
+
+/// bus_interconnect instantiation ////
+
+bus_interconnect #(
+    .NO_MASTERS(MASTER_COUNT),
+    .NO_SLAVES(SLAVE_COUNT),
+    .THRESH(MAX_SPLIT_TRANS_WAIT_CLK_COUNT), //************ this is not used ************************
+) bus_interconnect (
+
+    // arbiter controllers
+    .addr_select(a_addr_select),
+	.MOSI_data_select(a_MOSI_data_select),
+	.valid_select(a_valid_select),
+	.last_select(a_last_select),
+    .MISO_data_select(a_MISO_data_select),
+	.ready_select(a_ready_select),
+
+    .ready(a_ready),
+
+    //masters
+    input   logic [M_ID_WIDTH-1:0] control,
+	input   logic [M_ID_WIDTH-1:0] wD,
+	input   logic [M_ID_WIDTH-1:0] valid,
+	input   logic [M_ID_WIDTH-1:0] last,
+    output  logic [S_ID_WIDTH-1:0] rD,
+	output  logic [S_ID_WIDTH-1:0] ready,
+
+    //slaves
+    output  logic [M_ID_WIDTH-1:0] control,
+	output  logic [M_ID_WIDTH-1:0] wD,
+	output  logic [M_ID_WIDTH-1:0] valid,
+	output  logic [M_ID_WIDTH-1:0] last,
+    input   logic [S_ID_WIDTH-1:0] rD,
+	input   logic [S_ID_WIDTH-1:0] ready,
+    );
+
 
 
 main_state_t current_state, next_state;
