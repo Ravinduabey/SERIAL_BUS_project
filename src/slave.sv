@@ -43,7 +43,7 @@ module slave #(
     logic                      wD_temp;
 
     // Declare the RAM variable
-	logic [DATA_WIDTH-1:0] ram[ADDR_DEPTH-1:0];
+	logic [DATA_WIDTH-1:0] ram [ADDR_DEPTH-1:0];
 
 	// Variable to hold the registered read address
 	logic [ADDR_WIDTH-1:0] address;
@@ -108,7 +108,14 @@ module slave #(
         else begin
             case (state)
                 // INIT : begin
-                    
+                //     address <= 0;
+                //     config_counter <= 0;
+                //     rD_counter <= 0;
+                //     wD_counter <= 0;
+                //     //temp_control <= 0;
+                //     ready <= 1;
+                //     rD_buffer <= 0;
+                //     wD_buffer <= 0;
                 // end
                 IDLE : begin
                     config_counter <= 0;
@@ -142,16 +149,16 @@ module slave #(
                 end
                 CONFIG2 : begin
                     //                  start                       slaveid
-                    // if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==reg_slave_ID ) begin
-                    if (config_buffer[CON:CON-2]==START) begin
+                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==reg_slave_ID ) begin
+                    // if (config_buffer[CON:CON-2]==START) begin
                         address <= config_buffer[ADDR_WIDTH-1:0];
                         if (config_buffer[CON-2-SLAVEID-1]==0) begin     //read
-                            ready <= 1;
+                            // ready <= 1;
                             check <= 1;        
                             rD_buffer       <= ram[address];
                             rD_temp         <= rD_buffer[DATA_WIDTH-1];
                             // rD_buffer       <= rD_buffer << 1;
-                            rD_counter      <= rD_counter + 1;                            
+                            // rD_counter      <= rD_counter + 1;                            
                             state           <= READ;                                                   
                         end
                         else if (config_buffer[CON-2-SLAVEID-1]==1) begin  //write
@@ -166,7 +173,7 @@ module slave #(
                 end 
                 READ : begin
                     // check <= 1;
-                    rD_buffer       <= ram[address];
+                    // rD_buffer       <= ram[address];
                     rD_buffer       <= rD_buffer << 1;
                     rD_temp         <= rD_buffer[DATA_WIDTH-1];
                     rD_counter      <= rD_counter + 1;
@@ -176,6 +183,7 @@ module slave #(
                     end 
                     else begin
                         rD_counter  <= 0;
+                        ready       <= 0;
                         if (config_buffer[CON-2-SLAVEID-2]==0) state <= IDLE;
                         else begin
                         address     <= address + 1;
@@ -191,12 +199,12 @@ module slave #(
                     ready           <= 1;
                     rD_buffer       <= ram[address]; 
                     if (last == 0) begin
-                        if (rD_counter < DATA_WIDTH-1) begin
+                        if (rD_counter < DATA_WIDTH) begin
                             rD_counter <= rD_counter + 1;
                             rD_buffer  <= rD_buffer << 1;
                             rD_temp    <= rD_buffer[DATA_WIDTH-1];
                         end
-                        else if (rD_counter == DATA_WIDTH-1) begin
+                        else if (rD_counter == DATA_WIDTH) begin
                             ready      <= 0;
                             rD_counter <= 0;
                             address    <= address + 1;
@@ -286,11 +294,12 @@ module slave #(
                 default: state <= IDLE;
                     
             endcase
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+
         end 
     end
-
+assign reg_slave_ID = slave_ID;
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
-// assign rD_buffer = ram[address];
 endmodule
