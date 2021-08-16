@@ -26,7 +26,7 @@ logic [M_ID_WIDTH-1:0] master_in;
 logic [S_ID_WIDTH-1:0] slave_in;
 logic [M_ID_WIDTH-1:0] master_out;
 logic [S_ID_WIDTH-1:0] slave_out;
-logic [S_ID_WIDTH-1:0] slave_id [NO_MASTERS-1:0];
+logic [S_ID_WIDTH-1:0] slave_id [0:NO_MASTERS-1];
 
 localparam NRML = 3'b00;
 localparam SPLIT = 3'b01;
