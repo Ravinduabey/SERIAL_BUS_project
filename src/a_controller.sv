@@ -16,10 +16,10 @@ module a_controller #(
   //  master  //
   //==========// 
 
-  input logic [S_ID_WIDTH-1:0] id [NO_MASTERS-1:0],
-  input logic [1:0] com_state [NO_MASTERS-1:0],
-  input logic done [NO_MASTERS-1:0],
-  output logic [1:0] cmd [NO_MASTERS-1:0],
+  input logic [S_ID_WIDTH-1:0] id [0:NO_MASTERS-1],
+  input logic [1:0] com_state [0:NO_MASTERS-1],
+  input logic done [0:NO_MASTERS-1],
+  output logic [1:0] cmd [0:NO_MASTERS-1],
   
   //================================//
   //    external bus multiplexers   //
