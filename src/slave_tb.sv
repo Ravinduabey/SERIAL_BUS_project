@@ -23,7 +23,7 @@ timeunit 1ns; timeprecision 1ps;
     end
 
 
-    slave #(.ADDR_DEPTH(2000),.SLAVES(3), .DATA_WIDTH(8)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.slave_ID(slave_ID),.resetn(resetn),.clk(clk));
+    slave #(.ADDR_DEPTH(2000),.SLAVES(3), .DATA_WIDTH(8)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.slave_ID(slave_ID),.rstN(resetn),.clk(clk));
 
     initial begin
         resetn <= 1;
