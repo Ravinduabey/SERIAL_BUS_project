@@ -5,12 +5,12 @@ module slave #(
     parameter ADDR_DEPTH = 2000,
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
-    parameter SLAVEID = $clog2(SLAVES)
+    parameter SLAVEID = $clog2(SLAVES+1),
     // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
     output logic rD,                  //serial read_data
-    output logic ready,               //default HIGh
+    output logic ready,               //default HIGH
 
     input logic control,              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
     input logic wD,                   //serial write_data
@@ -20,7 +20,7 @@ module slave #(
     //with Top Module
     input logic [SLAVEID-1:0]slave_ID,
     input logic clk,
-    input logic resetn   
+    input logic rstN   
 );
     localparam ADDR_WIDTH   = $clog2(ADDR_DEPTH);
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
@@ -35,7 +35,6 @@ module slave #(
     logic [CON_COUNTER-1 :0] config_counter;
     logic                    temp_control;
 
-    //logic [ADDR_WIDTH-1   :0]  address;
     logic [DATA_WIDTH-1   :0]  rD_buffer;             //data out buffer for READ  RAM -->|_|_|_|_|_..._|--> |_|
     logic [DATA_COUNTER   :0]  rD_counter;            
     logic                      rD_temp;
@@ -95,9 +94,9 @@ module slave #(
         $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
     end
 
-    always_ff @( posedge clk or negedge resetn ) begin : slaveStateMachine
+    always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
         // state <= next_state;
-        if (!resetn) begin
+        if (!rstN) begin
             config_buffer <= 0;
             rD_counter <= 0;
             wD_counter <= 0;
@@ -299,9 +298,7 @@ module slave #(
                     
             endcase
 
-            // initial begin
             // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
-            // end
 
             $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
 
