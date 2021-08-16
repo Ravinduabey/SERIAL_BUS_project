@@ -35,12 +35,13 @@ logic port_out [NO_MASTERS-1:0];
   //===================// 
 logic ready;
 
-logic [M_ID_WIDTH-1:0] addr_select;
-logic [M_ID_WIDTH-1:0] MOSI_data_select;
-logic [M_ID_WIDTH-1:0] valid_select;
-logic [M_ID_WIDTH-1:0] last_select;
-logic [S_ID_WIDTH-1:0] MISO_data_select;
-logic [S_ID_WIDTH-1:0] ready_select;
+logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state;
+// logic [M_ID_WIDTH-1:0] addr_select;
+// logic [M_ID_WIDTH-1:0] MOSI_data_select;
+// logic [M_ID_WIDTH-1:0] valid_select;
+// logic [M_ID_WIDTH-1:0] last_select;
+// logic [S_ID_WIDTH-1:0] MISO_data_select;
+// logic [S_ID_WIDTH-1:0] ready_select;
 
 arbiter dut (.*);
 

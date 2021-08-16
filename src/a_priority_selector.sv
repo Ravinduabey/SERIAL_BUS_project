@@ -1,7 +1,7 @@
 /*
     this module will lookout for any master requests. Depending on the state, controller gets to know for whom the bus should be allocated next. 
 */
-module priority_selector #(
+module a_priority_selector #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
     parameter S_ID_WIDTH = $clog2(NO_SLAVES+1),
@@ -76,4 +76,4 @@ always_comb begin : masterSlaveSelector
     end
 endcase
 end  
-endmodule : priority_selector
+endmodule : a_priority_selector

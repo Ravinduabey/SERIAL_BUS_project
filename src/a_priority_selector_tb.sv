@@ -1,4 +1,4 @@
-module priority_selector_tb();
+module a_priority_selector_tb();
 timeunit 1ns;
 timeprecision 1ps;
 
@@ -32,7 +32,7 @@ localparam NRML = 3'b00;
 localparam SPLIT = 3'b01;
 localparam PRIORITY = 3'b10;
 
-priority_selector dut(.*);
+a_priority_selector dut(.*);
 
 initial begin
     rstN = 1;
