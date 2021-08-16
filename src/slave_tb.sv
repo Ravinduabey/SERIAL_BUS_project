@@ -37,7 +37,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD)
         resetn <= 1;
 
-        //control signal 111_01_11_00000000000 : write burst from ram[0]
+        //control signal 111_01_11_00000000011 : write burst from ram[0]
         #(CLOCK_PERIOD*3);
         control <= 1;
         #(CLOCK_PERIOD*3);
@@ -46,19 +46,20 @@ timeunit 1ns; timeprecision 1ps;
         control <= 1;
         #(CLOCK_PERIOD*3);
         control <= 0;
-        #(CLOCK_PERIOD*11);
-        control <= 1;           //just to make sure following bits are ignored
-        #(CLOCK_PERIOD);
+        #(CLOCK_PERIOD*9);
+        control <= 1;           
+        #(CLOCK_PERIOD*2);
         control <= 0;
 
-        repeat (50) @(posedge clk) begin
+        repeat (50) @(posedge clk) begin        //write data
             if (ready) begin
             valid <= 1;
-            wD <= 1;
-            #(CLOCK_PERIOD*5);
-            // @(posedge clk);
             wD <= 0;
+            #(CLOCK_PERIOD);
+            wD <= 1;
             #(CLOCK_PERIOD*3);
+            wD <= 0;
+            #(CLOCK_PERIOD*4);
             valid <= 0;
             #(CLOCK_PERIOD);
             valid <= 1;
@@ -85,7 +86,7 @@ timeunit 1ns; timeprecision 1ps;
 
         #(CLOCK_PERIOD*4);
 
-        //control signal 111010100000000000 read burst from ram[0]
+        //control signal 111010100000000011 read burst from ram[0]
         control <= 1;
         #(CLOCK_PERIOD*3);
         control <= 0;
@@ -97,9 +98,9 @@ timeunit 1ns; timeprecision 1ps;
         control <= 1;
         #(CLOCK_PERIOD);
         control <= 0;
-        #(CLOCK_PERIOD*11);
+        #(CLOCK_PERIOD*9);
         control <= 1;           //just to make sure following bits are ignored
-        #(CLOCK_PERIOD);
+        #(CLOCK_PERIOD*2);
         control <= 0;
         #(CLOCK_PERIOD);
         

@@ -6,6 +6,7 @@ module slave #(
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
     parameter SLAVEID = $clog2(SLAVES)
+    // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
     output logic rD,                  //serial read_data
@@ -53,22 +54,20 @@ module slave #(
     logic [3:0] state;
     // logic [3:0] next_state;
 
-    // localparam INIT     = 4'b1111;
-    localparam IDLE     = 4'b0000;
-    localparam CONFIG   = 4'b0001;
-    localparam CONFIG2  = 4'b0010;
-    localparam READ     = 4'b0011;
-    localparam READ2    = 4'b0100;
-    localparam READB    = 4'b0101;
-    localparam WRITE    = 4'b0110;
-    localparam WRITEB   = 4'b0111;
+    // localparam INIT     = 4'd7;
+    localparam IDLE     = 4'd0;
+    localparam CONFIG   = 4'd1;
+    localparam CONFIG2  = 4'd2;
+    localparam READ     = 4'd3;
+    localparam READB    = 4'd4;
+    localparam WRITE    = 4'd5;
+    localparam WRITEB   = 4'd6;
 
     // typedef enum logic [3:0] { 
     //    IDLE,
     //    CONFIG,
     //    CONFIG2,
     //    READ,
-    //    READ2,
     //    READB,
     //    WRITE,
     //    WRITEB 
@@ -88,9 +87,13 @@ module slave #(
     //     wD_buffer <= 0;
     // end
 
+    // initial begin
+    // if (MEM_INIT_FILE != "") $readmemh(MEM_INIT_FILE, ram);
+    // end
+
     initial begin
-		$readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
-	end
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+    end
 
     always_ff @( posedge clk or negedge resetn ) begin : slaveStateMachine
         // state <= next_state;
@@ -144,6 +147,7 @@ module slave #(
                     else begin
                         config_counter <= 0;
                         ready <= 0;
+                        address <= config_buffer[ADDR_WIDTH-1:0];
                         state <= CONFIG2;
                     end
                 end
@@ -151,7 +155,6 @@ module slave #(
                     //                  start                       slaveid
                     if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==reg_slave_ID ) begin
                     // if (config_buffer[CON:CON-2]==START) begin
-                        address <= config_buffer[ADDR_WIDTH-1:0];
                         if (config_buffer[CON-2-SLAVEID-1]==0) begin     //read
                             // ready <= 1;
                             check <= 1;        
@@ -294,6 +297,11 @@ module slave #(
                 default: state <= IDLE;
                     
             endcase
+
+            // initial begin
+            // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
+            // end
+
             $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
 
         end 
