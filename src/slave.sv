@@ -190,6 +190,7 @@ module slave #(
                         if (config_buffer[CON-2-SLAVEID-2]==0) state <= IDLE;
                         else begin
                         address     <= address + 1;
+                        rD_buffer   <= ram[address+1]; 
                         state       <= READB;
                         end
                     //     state  <= READ2;
@@ -200,7 +201,7 @@ module slave #(
                 // end
                 READB: begin
                     ready           <= 1;
-                    rD_buffer       <= ram[address]; 
+                    rD_buffer       <= ram[address+1]; 
                     if (last == 0) begin
                         if (rD_counter < DATA_WIDTH) begin
                             rD_counter <= rD_counter + 1;
