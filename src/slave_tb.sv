@@ -55,22 +55,59 @@ timeunit 1ns; timeprecision 1ps;
         wD <= 0;
         repeat (5) @(posedge clk) begin
             if (ready) begin
-            #(CLOCK_PERIOD*2);
             wD <= 1;
             #(CLOCK_PERIOD*5);
             // @(posedge clk);
             wD <= 0;
             #(CLOCK_PERIOD*3);
+            valid <= 0;
+            #(CLOCK_PERIOD);
+            valid <= 1;
+            #(CLOCK_PERIOD);
             wD <= 1;
             #(CLOCK_PERIOD*3);
             wD <= 0;
             #(CLOCK_PERIOD*5);
+            valid <= 0;
+            #(CLOCK_PERIOD);
+            valid <= 1;
+            #(CLOCK_PERIOD);
             end
         end
         last <= 1;
         wD <= 1;
         #(CLOCK_PERIOD*5);
         wD <= 0;
+        #(CLOCK_PERIOD*3);
+
+        @(posedge clk);
+        resetn <= 0;
+        #(CLOCK_PERIOD)
+        resetn <= 1;
+        last <= 0;
+
+        #(CLOCK_PERIOD*4);
+
+        //control signal 111010100000000001 read burst from ram[1]
+        control <= 1;
+        #(CLOCK_PERIOD*3);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD*10);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        
+        #(CLOCK_PERIOD*32);
+        last <= 1;
     end
 
     
