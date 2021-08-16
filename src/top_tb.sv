@@ -30,9 +30,9 @@ typedef enum logic{
 localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
 localparam logic master_RW[0:1] = '{write,read};
 localparam logic external_write[0:1] = '{1'b1, 1'b1};
-localparam int   external_write_count[0:1] = '{10,10};
-localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{2,3};
-localparam logic [MASTER_ADDR_WIDTH-1:0] slave_address_count[0:1] = '{10,15};
+localparam int   external_write_count[0:1] = '{1,2};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{1,1};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_address_count[0:1] = '{1,1};
 localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr = 3;
 
 
@@ -52,6 +52,8 @@ logic [17:0]SW;
 logic [17:0]LEDR;
 logic [3:0]LEDG;
 logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7;
+logic [7:0]LCD_DATA;
+logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON;
 
 logic rstN, jump_stateN, jump_next_addr;
 logic communication_ready, communication_done;

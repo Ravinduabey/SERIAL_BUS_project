@@ -6,6 +6,7 @@ module slave #(
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
     parameter SLAVEID = $clog2(SLAVES)
+    // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
     output logic rD,                  //serial read_data
@@ -42,10 +43,8 @@ module slave #(
     logic [DATA_COUNTER   :0]  wD_counter;
     logic                      wD_temp;
 
-    // logic [DATA_WIDTH-1   :0]  burst_reg;
-    
     // Declare the RAM variable
-	logic [DATA_WIDTH-1:0] ram[ADDR_DEPTH-1:0];
+	logic [DATA_WIDTH-1:0] ram [ADDR_DEPTH-1:0];
 
 	// Variable to hold the registered read address
 	logic [ADDR_WIDTH-1:0] address;
@@ -53,27 +52,24 @@ module slave #(
     logic check;
 
     logic [3:0] state;
-    logic [3:0] next_state;
+    // logic [3:0] next_state;
 
-    localparam IDLE     = 4'b0000;
-    localparam CONFIG   = 4'b0001;
-    localparam CONFIG2  = 4'b0010;
-    localparam READ     = 4'b0011;
-    localparam READ2    = 4'b0100;
-    localparam READB    = 4'b0101;
-    localparam WRITE    = 4'b0110;
-    localparam WRITE2   = 4'b0111;
-    localparam WRITEB   = 4'b1000;
+    // localparam INIT     = 4'd7;
+    localparam IDLE     = 4'd0;
+    localparam CONFIG   = 4'd1;
+    localparam CONFIG2  = 4'd2;
+    localparam READ     = 4'd3;
+    localparam READB    = 4'd4;
+    localparam WRITE    = 4'd5;
+    localparam WRITEB   = 4'd6;
 
     // typedef enum logic [3:0] { 
     //    IDLE,
     //    CONFIG,
     //    CONFIG2,
     //    READ,
-    //    READ2,
     //    READB,
     //    WRITE,
-    //    WRITE2,
     //    WRITEB 
     // } state_;
 
@@ -91,6 +87,14 @@ module slave #(
     //     wD_buffer <= 0;
     // end
 
+    // initial begin
+    // if (MEM_INIT_FILE != "") $readmemh(MEM_INIT_FILE, ram);
+    // end
+
+    initial begin
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+    end
+
     always_ff @( posedge clk or negedge resetn ) begin : slaveStateMachine
         // state <= next_state;
         if (!resetn) begin
@@ -106,6 +110,16 @@ module slave #(
         end
         else begin
             case (state)
+                // INIT : begin
+                //     address <= 0;
+                //     config_counter <= 0;
+                //     rD_counter <= 0;
+                //     wD_counter <= 0;
+                //     //temp_control <= 0;
+                //     ready <= 1;
+                //     rD_buffer <= 0;
+                //     wD_buffer <= 0;
+                // end
                 IDLE : begin
                     config_counter <= 0;
                     rD_counter <= 0;
@@ -133,19 +147,22 @@ module slave #(
                     else begin
                         config_counter <= 0;
                         ready <= 0;
+                        address <= config_buffer[ADDR_WIDTH-1:0];
                         state <= CONFIG2;
                     end
                 end
                 CONFIG2 : begin
                     //                  start                       slaveid
                     if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==reg_slave_ID ) begin
-                        address <= config_buffer[ADDR_WIDTH-1:0];
+                    // if (config_buffer[CON:CON-2]==START) begin
                         if (config_buffer[CON-2-SLAVEID-1]==0) begin     //read
+                            // ready <= 1;
+                            check <= 1;        
                             rD_buffer       <= ram[address];
-                            rD_temp         <= rD_buffer[0];
-                            rD_buffer       <= rD_buffer << 1;
-                            rD_counter      <= rD_counter + 1;                            
-                            state      <= READ;                                                   
+                            rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                            // rD_buffer       <= rD_buffer << 1;
+                            // rD_counter      <= rD_counter + 1;                            
+                            state           <= READ;                                                   
                         end
                         else if (config_buffer[CON-2-SLAVEID-1]==1) begin  //write
                             ready <= 1;
@@ -153,43 +170,61 @@ module slave #(
                                 // wD_buffer[0] <= wD_temp;
                                 state <= WRITE;
                             end
-                            else        state <= CONFIG2;
+                            else  state <= CONFIG2;
                         end
                     end
                 end 
                 READ : begin
-                    rD_temp         <= rD_buffer[0];
+                    // check <= 1;
+                    // rD_buffer       <= ram[address];
                     rD_buffer       <= rD_buffer << 1;
+                    rD_temp         <= rD_buffer[DATA_WIDTH-1];
                     rD_counter      <= rD_counter + 1;
-                    if (rD_counter < DATA_COUNTER) begin
+                    if (rD_counter < DATA_WIDTH) begin
                         ready <= 1;                                              
-                        next_state  <= READ;
+                        state  <= READ;
                     end 
                     else begin
                         rD_counter  <= 0;
-                        next_state  <= READ2;
+                        ready       <= 0;
+                        if (config_buffer[CON-2-SLAVEID-2]==0) state <= IDLE;
+                        else begin
+                        address     <= address + 1;
+                        rD_buffer   <= ram[address+1]; 
+                        state       <= READB;
+                        end
+                    //     state  <= READ2;
                     end
                 end                
-                READ2: begin
-                    if (config_buffer[CON-2-SLAVEID-2]==0) 
-                        state  <= IDLE;
-                    else begin
-                        address     <= address + 1;
-                        state  <= READB;
-                    end
+                // READ2: begin
                     
-                end
+                // end
                 READB: begin
-                    if ((last == 0) && (rD_counter < DATA_WIDTH)) begin
+                    ready           <= 1;
+                    rD_buffer       <= ram[address+1]; 
+                    if (last == 0) begin
+                        if (rD_counter < DATA_WIDTH) begin
+                            rD_counter <= rD_counter + 1;
+                            rD_buffer  <= rD_buffer << 1;
+                            rD_temp    <= rD_buffer[DATA_WIDTH-1];
+                        end
+                        else if (rD_counter == DATA_WIDTH) begin
+                            ready      <= 0;
+                            rD_counter <= 0;
+                            address    <= address + 1;
+                        end 
+                    end
+                    else begin
                         rD_counter <= rD_counter + 1;
                         rD_buffer  <= rD_buffer << 1;
-                        rD_temp    <= rD_buffer[0];
+                        rD_temp    <= rD_buffer[DATA_WIDTH-1];
+                        state      <= IDLE;
                     end
                 end
                 WRITE: begin
                     if (wD_counter < DATA_WIDTH) begin
-                        wD_counter <= wD_counter + 1;
-                        wD_buffer <= wD_buffer << 1;
+                        wD_counter  <= wD_counter + 1;
+                        wD_buffer   <= wD_buffer << 1;
                         wD_buffer[0] <= wD_temp;
                     end
                     else begin 
@@ -197,12 +232,16 @@ module slave #(
                         ram[address] <= wD_buffer;
                         if (config_buffer[CON-2-SLAVEID-2]==0) state <= IDLE;
                         else begin
-                            if (last==0) begin
-                                wD_counter <= 1;
-                                wD_buffer <= wD_buffer << 1;
-                                wD_buffer[0] <= wD_temp;
-                                address <= address + 1;
-                                state <= WRITEB;
+                            if (last==0 && valid==1) begin
+                                wD_counter      <= 1;
+                                wD_buffer       <= wD_buffer << 1;
+                                wD_buffer[0]    <= wD_temp;
+                                address         <= address + 1;
+                                state           <= WRITEB;
+                            end
+                            else if (last==0 && valid==0) begin
+                                address         <= address +1;
+                                state           <= WRITEB;
                             end
                             else state <= IDLE;
                         end
@@ -226,42 +265,50 @@ module slave #(
                 // end
                 WRITEB: begin
                     if (last == 0) begin
-                        if (wD_counter < DATA_WIDTH) begin
-                            wD_counter <= wD_counter + 1;
-                            wD_buffer <= wD_buffer << 1;
-                            wD_buffer[0] <= wD_temp;
+                        if (wD_counter < DATA_WIDTH && valid==1) begin
+                            wD_counter      <= wD_counter + 1;
+                            wD_buffer       <= wD_buffer << 1;
+                            wD_buffer[0]    <= wD_temp;
                         end
-                        else begin
-                            wD_counter <= 0;
-                            ram[address] <= wD_buffer;
-                            state <= WRITEB;
+                        else if (wD_counter == DATA_WIDTH) begin
+                            ram[address]    <= wD_buffer;
+                            address         <= address + 1;                            
+                            wD_counter      <= 0;
+                            state           <= WRITEB;
+                        end
+                        else if (valid == 0) begin
+                            state           <= WRITEB;
                         end
                     end
                     else begin
-                        if (wD_counter < DATA_WIDTH) begin
-                            wD_counter <= wD_counter + 1;
-                            wD_buffer <= wD_buffer << 1;
-                            wD_buffer[0] <= wD_temp;
-                        end
-                        else begin
-                            check <= 1;
-                            ram[address]    <= wD_buffer;
-                            address         <= address + 1;
-                            wD_counter      <= 0;
-                            wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp;                            
-                            state <= IDLE;
-                        end
+                        // wD_counter <= 0;                        
+                        // if (wD_counter < DATA_WIDTH) begin
+                        //     wD_counter      <= wD_counter + 1;
+                        //     wD_buffer       <= wD_buffer << 1;
+                        //     wD_buffer[0]    <= wD_temp;
+                        // end
+                        // else begin
+                        wD_buffer       <= wD_buffer << 1;
+                        wD_buffer[0]    <= wD_temp; 
+                        config_buffer   <= 0;                           
+                        state           <= IDLE;
+                        // end
                     end
                 end                
                 default: state <= IDLE;
                     
             endcase
+
+            // initial begin
+            // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
+            // end
+
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+
         end 
     end
-
+assign reg_slave_ID = slave_ID;
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
-assign burst_reg = wD_buffer;
 endmodule

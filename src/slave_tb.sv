@@ -37,7 +37,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD)
         resetn <= 1;
 
-        //control signal 111_01_11_00000000001 : write burst from ram[1]
+        //control signal 111_01_11_00000000011 : write burst from ram[0]
         #(CLOCK_PERIOD*3);
         control <= 1;
         #(CLOCK_PERIOD*3);
@@ -46,31 +46,117 @@ timeunit 1ns; timeprecision 1ps;
         control <= 1;
         #(CLOCK_PERIOD*3);
         control <= 0;
-        #(CLOCK_PERIOD*10);
-        control <= 1;
-        #(CLOCK_PERIOD);
+        #(CLOCK_PERIOD*9);
+        control <= 1;           
+        #(CLOCK_PERIOD*2);
         control <= 0;
 
-        valid <= 1;
-        wD <= 0;
-        repeat (5) @(posedge clk) begin
+        repeat (50) @(posedge clk) begin        //write data
             if (ready) begin
-            #(CLOCK_PERIOD*2);
-            wD <= 1;
-            #(CLOCK_PERIOD*5);
-            // @(posedge clk);
+            valid <= 1;
             wD <= 0;
-            #(CLOCK_PERIOD*3);
+            #(CLOCK_PERIOD);
             wD <= 1;
             #(CLOCK_PERIOD*3);
             wD <= 0;
+            #(CLOCK_PERIOD*4);
+            valid <= 0;
+            #(CLOCK_PERIOD);
+            valid <= 1;
+            #(CLOCK_PERIOD);
+            wD <= 1;
+            #(CLOCK_PERIOD*3);
+            wD <= 0;
             #(CLOCK_PERIOD*5);
+            valid <= 0;
+            #(CLOCK_PERIOD);
             end
         end
         last <= 1;
         wD <= 1;
         #(CLOCK_PERIOD*5);
         wD <= 0;
+        #(CLOCK_PERIOD*3);
+
+        @(posedge clk);
+        resetn <= 0;
+        #(CLOCK_PERIOD)
+        resetn <= 1;
+        last <= 0;
+
+        #(CLOCK_PERIOD*4);
+
+        //control signal 111010100000000011 read burst from ram[0]
+        control <= 1;
+        #(CLOCK_PERIOD*3);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD*9);
+        control <= 1;           //just to make sure following bits are ignored
+        #(CLOCK_PERIOD*2);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        
+        #(CLOCK_PERIOD*8*50);      // send last HIGH after 50 words? 
+        last <= 1;
+
+                #(CLOCK_PERIOD*3)
+        //control signal 111_01_10_00000000000 write to ram[0]
+        control <= 1;
+        #(CLOCK_PERIOD*3);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        control <= 1;
+        #(CLOCK_PERIOD*2);
+        control <= 0;
+        #(CLOCK_PERIOD*12);
+        control <= 1;           //just to make sure following bits are ignored
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        wD <= 1;
+        valid <= 1;
+        #(CLOCK_PERIOD*8);
+        wD <= 0;
+        valid <= 0;
+
+        #(CLOCK_PERIOD*3)
+        //control signal 111_01_00_00000000000 read from ram[0]
+        control <= 1;
+        #(CLOCK_PERIOD*3);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD*13);
+        control <= 1;           //just to make sure following bits are ignored
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
+
+        #(CLOCK_PERIOD*20)
+        //control signal 111_01_00_00000000011 read from ram[3]
+        control <= 1;
+        #(CLOCK_PERIOD*3);
+        control <= 0;
+        #(CLOCK_PERIOD);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD*11);
+        control <= 1;           //just to make sure following bits are ignored
+        #(CLOCK_PERIOD*2);
+        control <= 0;
+        #(CLOCK_PERIOD);
+
     end
 
     

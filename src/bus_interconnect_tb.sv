@@ -14,6 +14,15 @@ module bus_interconnect_tb ();
     logic   s3_valid, s3_last, s3_wD;
     logic   s3_ready, s3_rD;
 
+    logic clk;
+    localparam CLOCK_PERIOD = 20;
+    initial begin
+        clk <= 0;
+            forever begin
+                #(CLOCK_PERIOD/2) clk <= ~clk;
+            end
+    end
+
     bus_interconnect dut (
         .master(master), .slave(slave), 
         .m1_valid(m1_valid), .m1_last(m1_last), .m1_wD(m1_wD),
@@ -30,11 +39,16 @@ module bus_interconnect_tb ();
     );
 
     initial begin
+        @(posedge clk);
         master <= 2'b01;
         slave  <= 2'b10;
         m1_valid <= 1;
         m1_last <= 0;
         m1_wD <= 1;
+        m2_valid <= 0;
+        m2_last <= 1;
+        m2_wD <= 0;
+        #(CLOCK_PERIOD*5);
         master <= 2'b10;
 
     end
