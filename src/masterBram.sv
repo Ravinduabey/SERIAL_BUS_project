@@ -1,4 +1,4 @@
-module bram #(
+module masterBram #(
     parameter MEMORY_DEPTH = 4092,
     parameter DATA_WIDTH = 16,
 	parameter MEM_INIT_FILE = ""
@@ -33,4 +33,4 @@ module bram #(
 
 	assign q = ram[addr_reg];       // Read data
 
-endmodule: bram
+endmodule: masterBram

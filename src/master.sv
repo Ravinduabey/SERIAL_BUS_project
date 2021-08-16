@@ -127,7 +127,7 @@ internalComStates internalComState;
 //Instantiate the bram for the master module//
 //==========================================//
 
-bram #(
+masterBram #(
     .MEMORY_DEPTH               ( MEMORY_DEPTH  ),
     .DATA_WIDTH                 ( DATA_WIDTH    ),
     .MEM_INIT_FILE              ("mem.txt"      )
@@ -791,6 +791,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         
                         masterSplit: communicationState <= reqCom;
                         
+                        //=======================================//
+                        //   Split Communication continue state  //
+                        //=======================================//
                         splitComContinue: 
                             if (fromArbiter == 2'b00 || fromArbiter == 2'b01) begin
                                 fromArbiter[1]      <= fromArbiter[0];

@@ -1,4 +1,4 @@
-module bram_tb();
+module masterBram_tb();
     timeunit 1ns; timeprecision 1ps;
 
     logic clk;
@@ -17,7 +17,7 @@ module bram_tb();
     logic                               wr;
     logic [DATA_WIDTH-1:0]              q;
 
-bram #(
+masterBram #(
     .MEMORY_DEPTH               ( MEMORY_DEPTH ),
     .DATA_WIDTH                  ( DATA_WIDTH )
 ) dut(
