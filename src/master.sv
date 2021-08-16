@@ -938,8 +938,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                     endcase
                 end
+                
             //==========================//
-    
             //===========Done===========// 
             //==========================//
                 else begin
@@ -953,32 +953,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 end
         endcase
         end
-    //     if (state == idle) begin
-            
-    //     end
-    //    else if (state == startConfig && ~inEx) begin
-    //         tempControl <= {3'b111, slaveId, rdWr, burst, address};
-    //         if (state == startConfig && inEx) begin
-    //             // counter <= counter + 2'b01;
-
-    //             /*
-    //             Write the external data from masters zeroth address
-    //             till all data is received
-    //             */
-    //         end
-    //    end
-    //    else if (state == startCom) begin
-    //        /*
-    //        start communication process
-    //        */
-    //    end
-        // else if (state == done) begin
-        //     /*
-        //     Allow external read for the master
-        //     */
-        // end
-    // end
     
     end
-// assign dataInternal = data;
+
 endmodule: master 
