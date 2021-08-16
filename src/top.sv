@@ -4,7 +4,8 @@ module top import details::*;
     parameter MASTER_COUNT=2,  // number of masters
     parameter DATA_WIDTH = 16,   // width of a data word in slave & master
     parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
-    parameter MAX_MASTER_WRITE_DEPTH = 16  // maximum number of addresses of a master that can be externally written
+    parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
+    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 1000 
 
 )
 (
@@ -85,6 +86,17 @@ logic M_last[0:MASTER_COUNT-1];
 logic arbCont[0:MASTER_COUNT-1];
 logic arbSend[0:MASTER_COUNT-1];
 
+// slave module input outputs
+logic S_rD[0:SLAVE_COUNT-1];      
+logic S_ready[0:SLAVE_COUNT-1];   
+logic S_control[0:SLAVE_COUNT-1]; 
+logic S_wD[0:SLAVE_COUNT-1];      
+logic S_valid[0:SLAVE_COUNT-1];   
+logic S_last[0:SLAVE_COUNT-1];    
+//with Top Module
+logic [SLAVEID-1:0]S_slave_ID[0:SLAVE_COUNT-1];  //********************
+
+
 logic M_read_write_sel[0:MASTER_COUNT-1];
 logic M_read_write_sel_next[0:MASTER_COUNT-1];
 logic M_external_write_sel[0:MASTER_COUNT-1];
@@ -99,6 +111,7 @@ logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr_next[0:MASTER_COUNT-1]; // slave R/W first addr
 logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr_next[0:MASTER_COUNT-1]; // slave R/W last addr (when burst R/W)
+
 
 //////////////////// master configuration state related logics /////////////////
 localparam CONFIG_CLK_COUNT = 2;
@@ -129,14 +142,14 @@ generate
             //    with slave     //
             .rD(M_rD[jj]),         
             .ready(M_ready[jj]),
-            .control,           // START|SLAVE_ID|r/w|B|address| 
-            .wrD,
-            .valid,
-            .last,
+            .control(M_control[jj]),           // START|SLAVE_ID|r/w|B|address| 
+            .wrD(M_wrD[jj]),
+            .valid(M_valid),
+            .last(M_last),
 
             //    with arbiter   //
-            logic arbCont,
-            logic arbSend
+            .arbCont(arbCont[jj]),
+            .arbSend(arbSend[jj])
         );
     end
 endgenerate
@@ -163,39 +176,56 @@ bus_interconnect bus_interconnect(
 generate 
     for (jj=0; jj<SLAVE_COUNT; jj++) begin : SLAVE
         slave #(
-            ADDR_DEPTH = 2000,
-            SLAVES = 3,
-            DATA_WIDTH = 32,
-            SLAVEID = $clog2(SLAVES)
+            .ADDR_DEPTH(SLAVE_DEPTHS[jj]),
+            .SLAVES(SLAVE_COUNT),
+            .DATA_WIDTH(DATA_WIDTH)
         ) slave(
             // with Master (through interconnect)
-            output logic rD,                  //serial read_data
-            output logic ready,               //default HIGh
+            .rD(S_rD[jj]),                  //serial read_data
+            .ready(S_ready[jj]),               //default HIGh
 
-            input logic control,              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
-            input logic wD,                   //serial write_data
-            input logic valid,                //default LOW
-            input logic last,                 //default LOW
+            .control(S_control[jj]),              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
+            .wD(S_wD[jj]),                   //serial write_data
+            .valid(S_valid[jj]),                //default LOW
+            .last(S_last[jj]),                 //default LOW
 
             //with Top Module
-            input logic [SLAVEID-1:0]slave_ID,
-            input logic clk,
-            input logic resetn   
-        )
+            .slave_ID, //***************
+            .clk,
+            .rstN   
+        );
     end
 
 endgenerate
 
 //////// arbiter instantiation
-arbiter arbiter(
-    input logic clk,
-	 input logic rstn,
-    input logic m1_in,
-	 input logic m2_in,
-	 output logic m1_out,
-	 output logic m2_out,
-	 input logic ready,
-	 output logic buscontrol
+arbiter arbiter
+#(
+    .NO_MASTERS(MASTER_COUNT),
+    .NO_SLAVES(SLAVE_COUNT),
+    .THRESH(MAX_SPLIT_TRANS_WAIT_CLK_COUNT), 
+)(
+
+  .clk,
+  .rstN,
+  
+  //============//
+  //  masters   //
+  //============// 
+  .port_in(arbSend),
+  .port_out(arbCont),
+
+  //===================//
+  //    multiplexers   //
+  //===================// 
+	input logic ready,
+
+	output logic [M_ID_WIDTH-1:0] addr_select,
+	output logic [M_ID_WIDTH-1:0] MOSI_data_select,
+	output logic [M_ID_WIDTH-1:0] valid_select,
+	output logic [M_ID_WIDTH-1:0] last_select,
+  output logic [S_ID_WIDTH-1:0] MISO_data_select,
+	output logic [S_ID_WIDTH-1:0] ready_select
 );
 
 
