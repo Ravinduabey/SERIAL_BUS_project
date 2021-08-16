@@ -75,6 +75,16 @@ logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_dataOut_reg[0:MASTER_COUNT-1]; // to keep the values reed from masters
 logic [DATA_WIDTH-1:0] M_dataOut_next[0:MASTER_COUNT-1];
 
+logic M_rD[0:MASTER_COUNT-1];         
+logic M_ready[0:MASTER_COUNT-1];
+logic M_control[0:MASTER_COUNT-1];           // START|SLAVE_ID|r/w|B|address| 
+logic M_wrD[0:MASTER_COUNT-1];
+logic M_valid[0:MASTER_COUNT-1];
+logic M_last[0:MASTER_COUNT-1];
+
+logic arbCont[0:MASTER_COUNT-1];
+logic arbSend[0:MASTER_COUNT-1];
+
 logic M_read_write_sel[0:MASTER_COUNT-1];
 logic M_read_write_sel_next[0:MASTER_COUNT-1];
 logic M_external_write_sel[0:MASTER_COUNT-1];
@@ -100,22 +110,95 @@ logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_config_write_count, next_confi
 genvar jj;
 generate
     for (jj=0;jj<MASTER_COUNT; jj=jj+1) begin:MASTER
-        master #(.ADDRESS_DEPTH(MASTER_DEPTH), .DATA_WIDTH(DATA_WIDTH)) master(
+        master #(.MEMORY_DEPTH(MASTER_DEPTH), .DATA_WIDTH(DATA_WIDTH)) master(
+
+        //  with topModule   //
             .clk, .rstN, 
             .burst(M_burst[jj]), // used to tell whether external write is a burst or not
-            .rdWr(M_rdWr[jj]),                           
-            .inEx(M_inEx[jj]),                           
+            .rdWr(M_rdWr[jj]),   // read or write: 0 1                        
+            .inEx(M_inEx[jj]),   // internal or external                        
             .data(M_data[jj]),
             .address(M_address[jj]),
             .slaveId(M_slaveId[jj]),
             .start(M_start[jj]),
+            .eoc(),
 
             .doneCom(M_doneCom[jj]),
-            .dataOut(M_dataOut[jj])
+            .dataOut(M_dataOut[jj]),
+
+            //    with slave     //
+            .rD(M_rD[jj]),         
+            .ready(M_ready[jj]),
+            .control,           // START|SLAVE_ID|r/w|B|address| 
+            .wrD,
+            .valid,
+            .last,
+
+            //    with arbiter   //
+            logic arbCont,
+            logic arbSend
         );
     end
 endgenerate
-//////////////// MASTER module instantiate (end) /////////////
+
+///// bus interconnect instantiation ///////////
+bus_interconnect bus_interconnect(
+    input  [2:0] master, 
+    input  [2:0] slave,
+
+    input       m1_valid, m1_last, m1_wD,
+    output      m1_ready, m1_rD,
+    input       m2_valid, m2_last, m2_wD,
+    output      m2_ready, m2_rD,
+
+    output      s1_valid, s1_last, s1_wD,
+    input       s1_ready, s1_rD,
+    output      s2_valid, s2_last, s2_wD,
+    input       s2_ready, s2_rD,
+    output      s3_valid, s3_last, s3_wD,
+    input       s3_ready, s3_rD
+);
+
+/////// slave instantiation ////////////
+generate 
+    for (jj=0; jj<SLAVE_COUNT; jj++) begin : SLAVE
+        slave #(
+            ADDR_DEPTH = 2000,
+            SLAVES = 3,
+            DATA_WIDTH = 32,
+            SLAVEID = $clog2(SLAVES)
+        ) slave(
+            // with Master (through interconnect)
+            output logic rD,                  //serial read_data
+            output logic ready,               //default HIGh
+
+            input logic control,              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
+            input logic wD,                   //serial write_data
+            input logic valid,                //default LOW
+            input logic last,                 //default LOW
+
+            //with Top Module
+            input logic [SLAVEID-1:0]slave_ID,
+            input logic clk,
+            input logic resetn   
+        )
+    end
+
+endgenerate
+
+//////// arbiter instantiation
+arbiter arbiter(
+    input logic clk,
+	 input logic rstn,
+    input logic m1_in,
+	 input logic m2_in,
+	 output logic m1_out,
+	 output logic m2_out,
+	 input logic ready,
+	 output logic buscontrol
+);
+
+
 main_state_t current_state, next_state;
 
 //////////////////// master configuration state related logics /////////////////
