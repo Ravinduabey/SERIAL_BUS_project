@@ -1,7 +1,7 @@
 /*
       this module will write the master according to the protocol designed. 
 */
-module write_buffer #(
+module a_write_buffer #(
     WIDTH = 3
 )(
     input  logic [WIDTH-1:0] din,

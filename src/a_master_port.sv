@@ -1,7 +1,7 @@
 /*
     this intermediate module will connect each master with the controller. inside the arbiter this port will be communicating with controller. only essential commands are send to the controller. rest is taken care by the port
 */
-module master_port # (
+module a_master_port # (
   parameter NO_SLAVES = 3,
   parameter S_ID_WIDTH = $clog2(NO_SLAVES+1)
 )
@@ -64,7 +64,7 @@ localparam WIDTH = 3;
 logic [WIDTH-1:0] write_val;
 logic write;
 
-write_buffer # (.WIDTH(WIDTH))
+a_write_buffer # (.WIDTH(WIDTH))
 master_write(
   .clk(clk),
   .rstN(rstN),
@@ -216,4 +216,4 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     endcase 
 end
 
-endmodule : master_port
+endmodule : a_master_port

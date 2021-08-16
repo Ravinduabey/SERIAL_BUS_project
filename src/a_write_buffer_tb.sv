@@ -1,4 +1,4 @@
-module write_buffer_tb();
+module a_write_buffer_tb();
 
     timeunit 1ns;
     timeprecision 1ps;
@@ -19,7 +19,7 @@ module write_buffer_tb();
     logic load;
     logic dout;
 
-    write_buffer dut(.*);
+    a_write_buffer dut(.*);
 
 
     initial begin
