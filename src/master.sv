@@ -1,6 +1,7 @@
 module master #(
-    parameter MEMORY_DEPTH = 4096,
-    parameter DATA_WIDTH = 16
+    parameter MEMORY_DEPTH  = 4096,
+    parameter DATA_WIDTH    = 16,
+    parameter NO_SLAVES     = 2
 )( 
 
 	    ///////////////////////
@@ -9,19 +10,19 @@ module master #(
         //===================// 
 	    ///////////////////////
 		  
-        input logic clk,                            // clock
-        input logic rstN,                           // reset
-        input logic burst,                          // burst master to slave
-        input logic rdWr,                           // read or write: 0 1
-        input logic inEx,                           // internal or external
-        input logic [DATA_WIDTH-1:0] data,
-        input logic [$clog2(MEMORY_DEPTH)-1:0] address,
-        input logic [1:0] slaveId,
-        input logic start,
-        input logic eoc,
+        input   logic                             clk,      // clock
+        input   logic                             rstN,     // reset
+        input   logic                             burst,                          
+        input   logic                             rdWr,     // read or write: 0 1
+        input   logic                             inEx,     // internal or external
+        input   logic [DATA_WIDTH-1:0]            data,
+        input   logic [$clog2(MEMORY_DEPTH)-1:0]  address,
+        input   logic [NO_SLAVES-1:0]             slaveId,
+        input   logic                             start,
+        input   logic                             eoc,
 		  
-	    output logic doneCom ,
-        output logic [DATA_WIDTH-1:0] dataOut,
+	    output  logic                             doneCom,
+        output  logic [DATA_WIDTH-1:0]            dataOut,
 
 		  
 	    ///////////////////////
@@ -29,13 +30,13 @@ module master #(
         //    with slave     //
         //===================// 
 	    ///////////////////////
-        input logic rD,         
-        input logic ready,
+        input   logic                             rD,         
+        input   logic                             ready,
 
-	    output logic control,           // START|SLAVE_ID|r/w|B|address| 
-        output logic wrD,
-        output logic valid,
-        output logic last,
+	    output  logic                             control, // START|SLAVE_ID|r/w|B|address| 
+        output  logic                             wrD,
+        output  logic                             valid,
+        output  logic                             last,
 		  
 
         ///////////////////////
@@ -43,10 +44,10 @@ module master #(
         //    with arbiter   //
         //===================// 
 	    ///////////////////////
-        input logic arbCont,
+        input   logic                             arbCont,
 
 
-        output logic arbSend
+        output  logic                             arbSend
 );
 
 
@@ -54,7 +55,7 @@ module master #(
 
 localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
 localparam CONTROL_LEN = 7 + ADDRESS_WIDTH;
-// localparam CLEAR_NEW = 1'b111;
+
 
 
 logic                       wr;
@@ -80,6 +81,7 @@ logic [DATA_WIDTH-1:0]      dataInternal, internalDataOut, tempReadData;
 logic [ADDRESS_WIDTH-1:0]   address_counter;
 
 logic [$clog2(DATA_WIDTH):0] i;
+
 // define states for the top module
 typedef enum logic [2:0]{
     idle,
@@ -119,8 +121,7 @@ typedef enum logic [2:0]{
 } internalComStates;
 
 internalComStates internalComState;
-// logic [2:0] arbPStop;
-// logic [2:0] arbSplit;
+
 
 //==========================================//
 //Instantiate the bram for the master module//
@@ -147,14 +148,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         fromArbiter         <= 0;
         tempReadData        <= 0;
         i                   <= 0;
-        control             <= 1'b0;
-        wrD                 <= 1'b0;
-        valid               <= 1'b0;
+        control             <= 0;
+        wrD                 <= 0;
+        valid               <= 0;
         last                <= 0;
-        doneCom             <= 1'b0;
-        controlCounter      <= 5'd0;
-        clock_counter       <= 2'd0;
-        arbiterCounnter     <= 4'd0;
+        doneCom             <= 0;
+        controlCounter      <= 0;
+        clock_counter       <= 0;
+        arbiterCounnter     <= 0;
         address_counter     <= 0;
         j                   <= 0;
         k                   <= 0;
@@ -190,14 +191,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     fromArbiter         <= 0;
                     tempReadData        <= 0;
                     i                   <= 0;
-                    control             <= 1'b0;
-                    wrD                 <= 1'b0;
-                    valid               <= 1'b0;
+                    control             <= 0;
+                    wrD                 <= 0;
+                    valid               <= 0;
                     last                <= 0;
-                    doneCom             <= 1'b0;
-                    controlCounter      <= 5'd0;
-                    clock_counter       <= 2'd0;
-                    arbiterCounnter     <= 4'd0;
+                    doneCom             <= 0;
+                    controlCounter      <= 0;
+                    clock_counter       <= 0;
+                    arbiterCounnter     <= 0;
                     address_counter     <= 0;
                     j                   <= 0;
                     k                   <= 0;
@@ -276,12 +277,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     wr               <= 0;
                     burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin + 1;
                     if(burstLen == 0)begin
-                        tempControl[12] <= 0;
-                        tempControl_2[12] <= 0;
+                        tempControl[12]     <= 0;
+                        tempControl_2[12]   <= 0;
                     end
                     else begin
-                        tempControl[12] <= 1;
-                        tempControl_2[12] <= 1;
+                        tempControl[12]     <= 1;
+                        tempControl_2[12]   <= 1;
                     end
                 end
 
@@ -301,6 +302,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 communicationState  <= reqCom;
                                 arbiterCounnter     <= 0;
                                 controlCounter      <= 0;
+                                arbiterRequest      <= tempArbiterRequest;
                             end
 
                         reqCom:
@@ -778,7 +780,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
 
                         masterDone: begin
-                            communicationState <= reqCom;
+                            communicationState <= idleCom;
                             wr                 <= 0;
                             valid              <= 0;
                         end 
