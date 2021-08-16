@@ -12,7 +12,7 @@ module a_priority_selector #(
     input logic [M_ID_WIDTH-1:0] master_in,
     input logic [S_ID_WIDTH-1:0] slave_in,
     input logic thresh,
-    input logic [S_ID_WIDTH-1:0] slave_id [NO_MASTERS-1:0],
+    input logic [S_ID_WIDTH-1:0] slave_id [0:NO_MASTERS-1],
 
     output logic [M_ID_WIDTH-1:0] master_out,
     output logic [S_ID_WIDTH-1:0] slave_out,
