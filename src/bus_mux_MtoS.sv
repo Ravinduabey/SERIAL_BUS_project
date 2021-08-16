@@ -1,4 +1,4 @@
-module mux_MtoS #(
+module bus_mux_MtoS #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
     parameter S_ID_WIDTH = $clog2(NO_SLAVES+1), //2

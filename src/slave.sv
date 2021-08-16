@@ -5,7 +5,8 @@ module slave #(
     parameter ADDR_DEPTH = 2000,
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
-    parameter SLAVEID = [$clog2(SLAVES+1)-1:0]
+    parameter S_ID_WIDTH = $clog2(SLAVES+1),
+    parameter SLAVEID 
     // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
@@ -29,7 +30,7 @@ module slave #(
     localparam START        = 3'b111;
 
 
-    logic [SLAVEID-1:0] reg_slave_ID;
+    // logic [SLAVEID-1:0] reg_slave_ID;
 
     logic [CON           :0] config_buffer;
     logic [CON_COUNTER-1 :0] config_counter;
@@ -152,7 +153,7 @@ module slave #(
                 end
                 CONFIG2 : begin
                     //                  start                       slaveid
-                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==reg_slave_ID ) begin
+                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==SLAVEID ) begin
                     // if (config_buffer[CON:CON-2]==START) begin
                         if (config_buffer[CON-2-SLAVEID-1]==0) begin     //read
                             // ready <= 1;
