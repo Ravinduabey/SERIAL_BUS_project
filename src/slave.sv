@@ -5,7 +5,7 @@ module slave #(
     parameter ADDR_DEPTH = 2000,
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
-    parameter SLAVEID = $clog2(SLAVES+1),
+    parameter SLAVEID = [$clog2(SLAVES+1)-1:0]
     // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
@@ -18,7 +18,7 @@ module slave #(
     input logic last,                 //default LOW
 
     //with Top Module
-    input logic [SLAVEID-1:0]slave_ID,
+    // input logic [SLAVEID-1:0]slave_ID,
     input logic clk,
     input logic rstN   
 );

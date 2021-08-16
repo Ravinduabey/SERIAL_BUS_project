@@ -43,6 +43,7 @@ module bus_interconnect_tb #(
     end
 
     
+    
     initial begin
         @(posedge clk);
         master <= 2'b01;
