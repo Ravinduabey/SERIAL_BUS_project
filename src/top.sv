@@ -1,4 +1,4 @@
-module top 
+module top import details::*;
 #(
     parameter SLAVE_COUNT=3,  // number of slaves
     parameter MASTER_COUNT=2,  // number of masters
@@ -13,7 +13,9 @@ module top
     input logic [17:0]SW,
     output logic [17:0]LEDR,
     output logic [3:0]LEDG,
-    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7
+    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+    output logic [7:0]LCD_DATA,
+    output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON
         
 );
 
@@ -39,13 +41,13 @@ assign clk = CLOCK_50;
 ///////////// debouncing (start) //////////////
 
 localparam TIME_DELAY = 500; // time delay for debouncing in ms
-genvar i;
+genvar ii;
 generate
-    for (i=0;i<4;i=i+1) begin: debouncing
+    for (ii=0;ii<4;ii=ii+1) begin: debouncing
         debouncer #(.TIME_DELAY(TIME_DELAY)) debouncer(
             .clk(clk),
-            .value_in(KEY[i]),
-            .value_out(KEY_OUT[i])
+            .value_in(KEY[ii]),
+            .value_out(KEY_OUT[ii])
         );
     end
 endgenerate
@@ -95,45 +97,26 @@ logic [$clog2(CONFIG_CLK_COUNT)-1:0]current_config_clk_count, next_config_clk_co
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_config_write_count, next_config_write_count;
 
 //////////////// MASTER module instantiate (start) /////////////
-genvar j;
+genvar jj;
 generate
-    for (j=0;j<MASTER_COUNT; j=j+1) begin:MASTER
+    for (jj=0;jj<MASTER_COUNT; jj=jj+1) begin:MASTER
         master #(.ADDRESS_DEPTH(MASTER_DEPTH), .DATA_WIDTH(DATA_WIDTH)) master(
             .clk, .rstN, 
-            .burst(M_burst[j]),
-            .rdWr(M_rdWr[j]),                           
-            .inEx(M_inEx[j]),                           
-            .data(M_data[j]),
-            .address(M_address[j]),
-            .slaveId(M_slaveId[j]),
-            .start(M_start[j]),
+            .burst(M_burst[jj]), // used to tell whether external write is a burst or not
+            .rdWr(M_rdWr[jj]),                           
+            .inEx(M_inEx[jj]),                           
+            .data(M_data[jj]),
+            .address(M_address[jj]),
+            .slaveId(M_slaveId[jj]),
+            .start(M_start[jj]),
 
-            .doneCom(M_doneCom[j]),
-            .dataOut(M_dataOut[j])
+            .doneCom(M_doneCom[jj]),
+            .dataOut(M_dataOut[jj])
         );
     end
 endgenerate
 //////////////// MASTER module instantiate (end) /////////////
-
-/////////// main states //////////////////
-typedef enum logic [3:0]{
-    master_slave_sel    = 4'd0,     // state - 0
-    read_write_sel      = 4'd1,     // state - 1
-    external_write_sel  = 4'd2,     // state - 1.5 
-    external_write_M1   = 4'd3,     // state - 1.51
-    external_write_M1_2 = 4'd4,     // state - 1.52
-    external_write_M2   = 4'd5,     // state - 1.53
-    slave_addr_sel_M1   = 4'd6,     // state - 2
-    slave_addr_sel_M2   = 4'd7,     // state - 3
-    addr_count_sel_M1   = 4'd8,     // state - 4
-    addr_count_sel_M2   = 4'd9,     // state - 5
-    config_masters      = 4'd10,    // state - 6    
-    communication_ready = 4'd11,    // state - 6.5 
-    communicating       = 4'd12,    // state - 7
-    communication_done  = 4'd13     // state - 8
-} state_t;
-
-state_t current_state, next_state;
+main_state_t current_state, next_state;
 
 //////////////////// master configuration state related logics /////////////////
 typedef enum logic [2:0] {
@@ -233,7 +216,12 @@ always_comb begin
     case (current_state)
         master_slave_sel: begin
             if (!jump_stateN) begin
-                next_state = read_write_sel;
+                if (SW[3:0] == '0) begin  // if no slave is selected to both master no communication happens
+                    next_state = communication_done;
+                end
+                else begin
+                    next_state = read_write_sel;
+                end    
             end
         end
 
@@ -314,7 +302,7 @@ always_comb begin
                         if (M_external_write_sel[current_config_master] == 1'b0) begin
                             next_config_state = config_last;
                         end
-                        else if (slave_last_addr[current_config_master]-slave_first_addr[current_config_master]<=2) begin
+                        else if (data_bank_wr_count[current_config_master]==0) begin // only 1 external write
                             next_config_state = config_last;
                         end
                         else begin
@@ -401,21 +389,21 @@ always_comb begin
     case (current_state) 
         master_slave_sel: begin
 
-            for (integer i=0;i<MASTER_COUNT;i=i+1) begin 
-                M_slaveId_next[i] = SW[2*i+1 -:2];
+            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin 
+                M_slaveId_next[ii] = SW[2*ii+1 -:2];
             end
         end   
 
         read_write_sel: begin 
-            for (integer i=0;i<MASTER_COUNT;i=i+1)begin
-                M_read_write_sel_next[i] = SW[i];
+            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1)begin
+                M_read_write_sel_next[ii] = SW[ii];
             end
             
         end 
 
         external_write_sel: begin
-            for (integer i=0;i<MASTER_COUNT;i=i+1) begin
-                M_exteral_write_sel_next[i] = SW[i];
+            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
+                M_exteral_write_sel_next[ii] = SW[ii];
             end
                       
         end 
@@ -425,6 +413,7 @@ always_comb begin
                 next_data_bank_addr = '0; // reset to 0 for next master value write
             end
             else if (!jump_next_addr) begin
+                M_burst_next[0] = 1'b1; // externally write more than 1 address
                 next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
                 data_bank_wr_count_next[0] = data_bank_wr_count[0] + 1'b1; // count the number of external writes
             end
@@ -435,6 +424,7 @@ always_comb begin
                 next_data_bank_addr = '0; // reset to 0 for next master value write
             end
             else if (!jump_next_addr) begin
+                M_burst_next[0] = 1'b1; // externally write more than 1 address
                 next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
                 data_bank_wr_count_next[0] = data_bank_wr_count[0] + 1'b1; // count the number of external writes
             end
@@ -445,6 +435,7 @@ always_comb begin
                 next_data_bank_addr = '0; // reset to 0 for next master value write
             end
             else if (!jump_next_addr) begin
+                M_burst_next[1] = 1'b1; // externally write more than 1 address
                 next_data_bank_addr = current_data_bank_addr + 1'b1;  // go to the next address of the same master
                 data_bank_wr_count_next[1] = data_bank_wr_count[1] + 1'b1; // count the number of external writes
             end
@@ -459,13 +450,6 @@ always_comb begin
         end 
          
         addr_count_sel_M1: begin
-            // decide burst or not
-            if (SW[MASTER_ADDR_WIDTH-1:0] == '0) begin
-                M_burst_next[0] = 1'b0;
-            end
-            else begin
-                M_burst_next[0] = 1'b1;
-            end
             // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0]) >= SLAVE_DEPTHS[M_slaveId[0]-1]) begin
                 slave_last_addr_next[0] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[0]-1'b1]); // if given length is too large select untill the last address of the slave
@@ -477,13 +461,6 @@ always_comb begin
         end 
 
         addr_count_sel_M2: begin
-            // decide burst or not
-            if (SW[MASTER_ADDR_WIDTH-1:0] == '0) begin
-                M_burst_next[1] = 1'b0;
-            end
-            else begin
-                M_burst_next[1] = 1'b1;
-            end
             // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1]) >= SLAVE_DEPTHS[M_slaveId[1]-1]) begin
                 slave_last_addr_next[1] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[1]-1'b1]); // if given length is too large select untill the last address of the slave
@@ -563,20 +540,221 @@ always_comb begin
         communication_done: begin
             M_dataOut_next = M_dataOut; //read both masters same address
             if (!jump_next_addr) begin
-                for (integer i=0;i<MASTER_COUNT;i=i+1) begin
-                    M_address_next[i] = SW[MASTER_ADDR_WIDTH-1:0];
+                for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
+                    M_address_next[ii] = SW[MASTER_ADDR_WIDTH-1:0];
                 end          
             end
         end   
     endcase
 end
 
-
-
 //////// LEDs control //////
 assign LEDG[0] = (current_state == master_slave_sel)? 1'b1:1'b0; // to indicate initial state
 assign LEDG[1] = (current_state == communication_ready)? 1'b1:1'b0; // to indicate master configuration done. Now communication can be started.
+assign LEDG[3] = (current_state == communicating)? 1'b1:1'b0; // master slave communicating
 assign LEDG[2] = (current_state == communication_done)? 1'b1:1'b0; // master slave communication is over
 assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
+
+
+//////// LCD control //////////////
+
+logic new_data, new_data_next, LCD_ready;
+charactor_t line_1[0:15];
+charactor_t line_2[0:15];
+charactor_t line_1_next[0:15];
+charactor_t line_2_next[0:15];
+logic LCD_first_time_show, LCD_first_time_show_next;
+logic [17:0]current_SW,current_SW_2, next_SW;
+
+typedef enum logic {
+    waiting = 1'b0,
+    new_data_signal_sending = 1'b1
+} new_data_state_t;
+
+new_data_state_t current_new_data_state, next_new_data_state;
+
+always_ff @(posedge clk) begin
+    if (!rstN) begin
+        line_1 <= '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
+        line_2 <= '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
+        new_data <= 1'b0;
+        current_new_data_state <= waiting;
+        LCD_first_time_show <= 1'b0;
+        current_SW <= '0;
+        current_SW_2 <='0;
+    end
+    else begin
+        line_1 <= line_1_next;
+        line_2 <= line_2_next;
+        new_data <= new_data_next;
+        current_new_data_state <= next_new_data_state;
+        LCD_first_time_show <= LCD_first_time_show_next;
+        current_SW <= next_SW;
+        current_SW_2 <= current_SW; // shifting
+    end
+end
+
+always_comb begin
+    line_1_next = line_1;
+    line_2_next = '{space,space,space,space,space,space,space,space,space,space,space,space,space,space,space,space};
+
+    case (current_state) 
+
+        master_slave_sel: begin
+            line_1_next = '{M,a,s,t,e,r, space, s,l,a,v,e, space, s,e,l};
+            line_2_next = '{M,num_1, space, right_arrow, space, S,get_slave_num(SW[1:0]),space,space,M,num_2, space, right_arrow, space, S,get_slave_num(SW[3:2])};
+            
+        end
+
+        read_write_sel: begin
+            line_1_next = '{R,e,a,d, space, w,r,i,t,e, space, s,e,l ,space,space};
+            line_2_next = '{M,num_1, space, dash, space, get_operation(SW[0]), space,space, M,num_2, space, dash, space, get_operation(SW[1]), space,space};
+        end
+
+        external_write_sel: begin
+            line_1_next = '{E,x,t,e,r,n,a,l, space, w,r,i,t,e,question_mark, space};
+            line_2_next = '{M,num_1, space, dash, space, get_decision(SW[0]), space,space, M,num_2, space, right_arrow, space, get_decision(SW[1]), space,space};
+        end
+
+        external_write_M1: begin
+            line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_1, space,space,space};
+            line_2_next = '{A,d,d,r,dash,get_number(current_data_bank_addr), space, V,a,l,dash,get_number(SW[15:12]),get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
+        end
+
+        external_write_M1_2: begin
+            line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_1, space,space,space};
+            line_2_next = '{A,d,d,r,dash,get_number(current_data_bank_addr), space, V,a,l,dash,get_number(SW[15:12]),get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
+        end
+
+        external_write_M2: begin
+            line_1_next = '{E,x,t,dot, space, w,r,i,t,e, space, M,num_2, space,space,space};
+            line_2_next = '{A,d,d,r,dash,get_number(current_data_bank_addr), space, V,a,l,dash,get_number(SW[15:12]),get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
+        end
+
+        slave_addr_sel_M1: begin
+            line_1_next = '{M,num_1, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
+            line_2_next = '{S,t,a,r,t, space, a,d,d,r,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
+        end
+
+        slave_addr_sel_M2: begin
+            line_1_next = '{M,num_2, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
+            line_2_next = '{S,t,a,r,t, space, a,d,d,r,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
+        end
+
+        addr_count_sel_M1: begin
+            line_1_next = '{M,num_1, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
+            line_2_next = '{C,o,u,n,t,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space,space,space,space,space,space};
+        end
+
+        addr_count_sel_M2: begin
+            line_1_next = '{M,num_2, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
+            line_2_next = '{C,o,u,n,t,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space,space,space,space,space,space};
+        end
+
+        config_masters: begin
+            line_1_next = '{C,o,n,f,i,g,u,r,e, space, m,a,s,t,e,r};
+        end
+
+        communication_ready: begin
+            line_1_next = '{C,o,m,dot, space, r,e,a,d,y, space,space,space,space,space,space};
+        end
+
+        communicating: begin
+            line_1_next = '{C,o,m,m,u,n,i,c,a,t,i,n,g, dot,dot,dot};
+        end
+
+        communication_done: begin
+            line_1_next = '{M,s,t,r,dot, space, a,d,d,r,dot, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
+            line_2_next = '{M,num_1,dash, get_number(M_dataOut[0][15:12]),get_number(M_dataOut[0][11:8]),get_number(M_dataOut[0][7:4]),get_number(M_dataOut[0][3:0]), space, M,num_2,dash, get_number(M_dataOut[1][15:12]),get_number(M_dataOut[1][11:8]),get_number(M_dataOut[1][7:4]),get_number(M_dataOut[1][3:0]), space};
+        end
+
+
+    endcase
+end
+
+// set new_data signal to the LCD_module after reset, when state change, when swich changed, jump to next address (external write)
+always_comb begin
+    new_data_next = new_data;
+    next_new_data_state = current_new_data_state;
+    LCD_first_time_show_next = LCD_first_time_show;
+    next_SW = SW[17:0];
+
+    case (current_new_data_state) 
+        waiting: begin
+            new_data_next = 1'b0;
+
+            if (current_state != next_state) begin
+                next_new_data_state = new_data_signal_sending;
+            end 
+            else if (current_SW != current_SW_2) begin
+                next_new_data_state = new_data_signal_sending;
+            end
+            else if (current_data_bank_addr != next_data_bank_addr) begin
+                next_new_data_state = new_data_signal_sending;
+            end
+            else if (!LCD_first_time_show) begin
+                next_new_data_state = new_data_signal_sending;
+                LCD_first_time_show_next = 1'b1;
+            end
+        end 
+
+        new_data_signal_sending: begin
+            if (LCD_ready) begin
+                new_data_next = 1'b1;
+                next_new_data_state = waiting;
+            end
+        end
+    endcase
+end
+
+LCD_TOP LCD_TOP(.clk, .rstN, .new_data, .line_1, .line_2, .ready(LCD_ready), 
+                .LCD_DATA, .LCD_RW, .LCD_EN, .LCD_RS, .LCD_BLON, .LCD_ON);
+
+
+function automatic charactor_t get_slave_num(input logic[1:0]value_in);
+    charactor_t slave_num;
+    case (value_in)
+        2'b00: slave_num = underscore;
+        2'b01: slave_num = num_1;
+        2'b10: slave_num = num_2;
+        2'b11: slave_num = num_3;
+    endcase
+
+    return slave_num;
+endfunction
+
+function automatic charactor_t get_operation(input logic value_in);
+    charactor_t operation;
+    case (value_in)
+        1'b0: operation = R;
+        1'b1: operation = W;
+    endcase
+
+    return operation;
+
+endfunction
+
+function automatic charactor_t get_decision(input logic value_in);
+    charactor_t decision;
+    case(value_in)
+        1'b0: decision = n;
+        1'b1: decision = y;
+    endcase
+
+    return decision;
+
+endfunction
+
+function automatic charactor_t get_number(input logic[3:0] value_in);
+    charactor_t number;
+    if (value_in < 10)begin
+        number = charactor_t'({4'b0011, value_in});
+    end
+    else begin
+        number = charactor_t'({4'b0100, (value_in-4'd9)});
+    end
+    return number;
+
+endfunction
 
 endmodule : top
