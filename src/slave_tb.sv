@@ -61,7 +61,7 @@ timeunit 1ns; timeprecision 1ps;
             wD <= 0;
             #(CLOCK_PERIOD*4);
             valid <= 0;
-            #(CLOCK_PERIOD);
+            #(CLOCK_PERIOD*8);
             valid <= 1;
             #(CLOCK_PERIOD);
             wD <= 1;
