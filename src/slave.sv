@@ -61,7 +61,7 @@ module slave #(
     localparam READB    = 4'd4;
     localparam WRITE    = 4'd5;
     localparam WRITEB   = 4'd6;
-    
+
     logic [3:0] state = IDLE;
 
     // typedef enum logic [3:0] { 
@@ -218,15 +218,15 @@ module slave #(
                     else begin
                         rD_counter <= rD_counter + 1;
                         rD_buffer  <= rD_buffer << 1;
-                        rD_temp    <= rD_buffer[DATA_WIDTH-1];
+                        rD_temp    <= rD_buffer[DATA_WIDTH-1];      //msb first
                         state      <= IDLE;
                     end
                 end
                 WRITE: begin
-                    if (wD_counter < DATA_WIDTH) begin
+                    if (wD_counter < DATA_WIDTH-1) begin
                         wD_counter  <= wD_counter + 1;
                         wD_buffer   <= wD_buffer << 1;
-                        wD_buffer[0] <= wD_temp;
+                        wD_buffer[0] <= wD_temp;                    //msb first
                     end
                     else begin 
                         wD_counter <= 0;
