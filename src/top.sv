@@ -14,7 +14,7 @@ module top import details::*;
     input logic [17:0]SW,
     output logic [17:0]LEDR,
     output logic [3:0]LEDG,
-    // output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON
         
@@ -649,6 +649,7 @@ always_comb begin
                         if (current_config_master != MASTER_COUNT-1) begin
                             next_config_master = current_config_master+1'b1;
                             next_config_write_count = '0;
+                            M_start_next[current_config_master+1] = 1'b1; // send start configuration for next master
                             M_address_next[current_config_master+1] = slave_first_addr[current_config_master+1];
                             M_data_next[current_config_master+1] = M_data_bank[current_config_master+1][0]; // the first external write value of first master (need only if external write)
                         end
