@@ -1,7 +1,7 @@
 module masterBram #(
     parameter MEMORY_DEPTH = 4092,
-    parameter DATA_WIDTH = 16,
-	parameter MEM_INIT_FILE = ""
+    parameter DATA_WIDTH = 16
+//	parameter MEM_INIT_FILE = ""
 )(
     input   logic                                       clk,
     input   logic                                       wr,
@@ -14,11 +14,10 @@ module masterBram #(
     logic [DATA_WIDTH-1:0] ram[MEMORY_DEPTH-1:0];
 	localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
 	
+	
 
 	initial begin
-	if (MEM_INIT_FILE != "") begin
-		$readmemh(MEM_INIT_FILE, ram);
-	end
+		$readmemh("..\\src\\mem.txt", ram);
 	end
 
 	logic [ADDRESS_WIDTH-1:0] addr_reg;
