@@ -93,9 +93,9 @@ module slave #(
     // if (MEM_INIT_FILE != "") $readmemh(MEM_INIT_FILE, ram);
     // end
 
-    initial begin
-        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
-    end
+    // initial begin
+    //     $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+    // end
 
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
         // state <= next_state;
@@ -332,7 +332,7 @@ module slave #(
 
             // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
 
-            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+            // $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
 
         end 
     end
