@@ -61,7 +61,7 @@ localparam CONTROL_LEN = 7 + ADDRESS_WIDTH;
 logic                       wr;
 logic                       tempRdWr;
 logic                       tempBurst;
-integer 				    j, k;
+
 
 logic [1:0]                 clock_counter;
 
@@ -78,7 +78,7 @@ logic [ADDRESS_WIDTH-1:0]   burstLen;
 logic [ADDRESS_WIDTH-1:0]   addressInternal, addresstemp;
 logic [ADDRESS_WIDTH-1:0]   addressInternalBurtstBegin, addressInternalBurtstEnd;
 logic [DATA_WIDTH-1:0]      dataInternal, internalDataOut, tempReadData;
-logic [ADDRESS_WIDTH-1:0]   address_counter;
+
 
 logic [$clog2(DATA_WIDTH):0] i;
 
@@ -129,8 +129,8 @@ internalComStates internalComState;
 
 masterBram #(
     .MEMORY_DEPTH               ( MEMORY_DEPTH  ),
-    .DATA_WIDTH                 ( DATA_WIDTH    ),
-    .MEM_INIT_FILE              ("mem.txt"      )
+    .DATA_WIDTH                 ( DATA_WIDTH    )
+//    .MEM_INIT_FILE              ("mem.txt"      )
     ) bram(
         .clk            (clk                ),
         .wr             (wr                 ),
@@ -156,9 +156,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         controlCounter      <= 0;
         clock_counter       <= 0;
         arbiterCounnter     <= 0;
-        address_counter     <= 0;
-        j                   <= 0;
-        k                   <= 0;
         state               <= idle;
         communicationState  <= idleCom;
         internalComState    <= checkState;
@@ -199,9 +196,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     controlCounter      <= 0;
                     clock_counter       <= 0;
                     arbiterCounnter     <= 0;
-                    address_counter     <= 0;
-                    j                   <= 0;
-                    k                   <= 0;
                     state               <= idle;
                     communicationState  <= idleCom;
                     internalComState    <= checkState;
@@ -233,7 +227,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 addressInternal             <= addresstemp;
                             if (clock_counter < 2'd1) begin
                                 wr                          <= 1;
-                                addresstemp                 <= addresstemp + 1;
+                                addresstemp                 <= addresstemp + 1'b1;
                                 clock_counter               <= clock_counter + 2'd1;
                             end
 
@@ -275,7 +269,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 else begin
                     state            <= startEndConfig;
                     wr               <= 0;
-                    burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin + 1;
+                    burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin + 1'b1;
                     if(burstLen == 0)begin
                         tempControl[12]     <= 0;
                         tempControl_2[12]   <= 0;
@@ -309,7 +303,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             if (arbiterCounnter < 4'd6) begin
                                 arbSend                 <= arbiterRequest[4];
                                 arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
-                                arbiterCounnter         <= arbiterCounnter + 1;
+                                arbiterCounnter         <= arbiterCounnter + 1'b1;
                             end
                             else if (arbiterCounnter == 4'd6) begin
                                 arbiterCounnter     <= arbiterCounnter;
@@ -377,11 +371,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 wr               <= 0;
                                                 if (~valid)begin
                                                     if (i < 2)begin
-                                                        i = i +1;
+                                                        i = i + 1'b1;
                                                     end
                                                     else begin
                                                         tempReadData                <= internalDataOut;
-                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                         i                           <= 0; 
                                                         internalComState            <= burstWrite;
                                                     end
@@ -423,7 +417,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             if(burstLen > 0) begin
                                                 if (i < DATA_WIDTH) begin
                                                     tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                    i               <= i + 1;
+                                                    i               <= i + 1'b1;
                                                     wr              <= 0;
                                                     valid           <= 1;
                                                 end
@@ -431,11 +425,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     tempReadData[i]             <= rD;
                                                     dataInternal                <= tempReadData;
                                                     addressInternal             <= addressInternalBurtstBegin;
-                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                     wr                  <= 1;
                                                     i                   <= 0; 
                                                     valid               <= 0;
-                                                    burstLen            <= burstLen - 1;   
+                                                    burstLen            <= burstLen - 1'b1;   
                                                 end
                                                 // else if (i > DATA_WIDTH) begin
                                                 //     i <= 0;
@@ -455,7 +449,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     singleWrite:
                                         if (~valid)begin
                                             if (i < 1)begin
-                                                i = i +1;
+                                                i = i + 1'b1;
                                             end
                                             else begin
                                                 tempReadData    <= internalDataOut;
@@ -466,7 +460,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         else begin
                                             if (i < DATA_WIDTH) begin
                                                 wrD     <= tempReadData[DATA_WIDTH-1-i];
-                                                i       <= i + 1;
+                                                i       <= i + 1'b1;
                                             end
                                             else begin
                                                 valid   <= 0;
@@ -479,13 +473,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             if (i < DATA_WIDTH) begin
                                                 wrD                 <= tempReadData[DATA_WIDTH-1-i];
                                                 addressInternal     <= addressInternalBurtstBegin;
-                                                i                   <= i + 1;
+                                                i                   <= i + 1'b1;
                                                 valid               <= 1;
                                             end
                                             else if (i == DATA_WIDTH) begin
                                                 i                           <= 0;
-                                                burstLen                    <= burstLen -1 ;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                burstLen                    <= burstLen - 1'b1;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                 tempReadData                <= internalDataOut;
                                                 valid                       <= 0;
                                             end
@@ -494,14 +488,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             if (i < DATA_WIDTH-1) begin
                                                 wrD                 <= tempReadData[DATA_WIDTH-1-i];
                                                 addressInternal     <= addressInternalBurtstBegin;
-                                                i                   <= i + 1;
+                                                i                   <= i + 1'b1;
                                                 valid               <= 1;
                                             end
                                             else if (i == DATA_WIDTH-1) begin
                                                 i                           <= 0;
                                                 wrD                         <= tempReadData[DATA_WIDTH-1-i];
-                                                burstLen                    <= burstLen -1 ;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                burstLen                    <= burstLen - 1'b1 ;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                 tempReadData                <= internalDataOut;
                                                 valid                       <= 1;
                                                 last                        <= 1;
@@ -543,7 +537,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     else begin
                                         if (~valid)begin
                                             if (i < 1)begin
-                                                i = i +1;
+                                                i = i + 1'b1;
                                             end
                                             else begin
                                                 tempReadData    <= internalDataOut;
@@ -554,7 +548,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         else begin
                                             if (i < DATA_WIDTH) begin
                                                 wrD     <= tempReadData[DATA_WIDTH-1-i];
-                                                i       <= i + 1;
+                                                i       <= i + 1'b1;
                                             end
                                             else begin
                                                 valid   <= 0;
@@ -569,7 +563,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             if(burstLen > 1) begin
                                                 if (i < DATA_WIDTH) begin
                                                     tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                    i               <= i + 1;
+                                                    i               <= i + 1'b1;
                                                     wr              <= 0;
                                                     valid           <= 1;
                                                 end
@@ -577,17 +571,17 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     tempReadData[i]             <= rD;
                                                     dataInternal                <= tempReadData;
                                                     addressInternal             <= addressInternalBurtstBegin;
-                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                     wr                  <= 1;
                                                     i                   <= 0;
-                                                    burstLen            <= burstLen - 1;
+                                                    burstLen            <= burstLen - 1'b1;
                                                     communicationState  <= masterDone;   
                                                 end
                                             end
                                             else if (burstLen == 1)begin
                                                 if (i < DATA_WIDTH) begin
                                                         tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                        i               <= i + 1;
+                                                        i               <= i + 1'b1;
                                                         wr              <= 0;
                                                         valid           <= 1;
                                                     end
@@ -595,11 +589,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                         tempReadData[i]             <= rD;
                                                         dataInternal                <= tempReadData;
                                                         addressInternal             <= addressInternalBurtstBegin;
-                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                         wr                  <= 1;
                                                         i                   <= 0; 
                                                         valid               <= 0;
-                                                        burstLen            <= burstLen - 1;
+                                                        burstLen            <= burstLen - 1'b1;
                                                         communicationState  <= over;
                                                     end
                                             end
@@ -611,13 +605,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             if (i < DATA_WIDTH) begin
                                                 wrD                 <= tempReadData[DATA_WIDTH-1-i];
                                                 addressInternal     <= addressInternalBurtstBegin;
-                                                i                   <= i + 1;
+                                                i                   <= i + 1'b1;
                                                 valid               <= 1;
                                             end
                                             else if (i == DATA_WIDTH) begin
                                                 i                           <= 0;
-                                                burstLen                    <= burstLen -1 ;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                burstLen                    <= burstLen - 1'b1;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                 tempReadData                <= internalDataOut;
                                                 valid                       <= 0;
                                                 communicationState          <= masterDone;
@@ -627,14 +621,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             if (i < DATA_WIDTH-1) begin
                                                 wrD                 <= tempReadData[DATA_WIDTH-1-i];
                                                 addressInternal     <= addressInternalBurtstBegin;
-                                                i                   <= i + 1;
+                                                i                   <= i + 1'b1;
                                                 valid               <= 1;
                                             end
                                             else if (i == DATA_WIDTH-1) begin
                                                 i                           <= 0;
                                                 wrD                         <= tempReadData[DATA_WIDTH-1-i];
-                                                burstLen                    <= burstLen -1 ;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                burstLen                    <= burstLen - 1'b1;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                 tempReadData                <= internalDataOut;
                                                 valid                       <= 1;
                                                 last                        <= 1;
@@ -678,7 +672,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 else begin
                                     if (~valid)begin
                                         if (i < 1)begin
-                                            i = i +1;
+                                            i = i + 1'b1;
                                         end
                                         else begin
                                             tempReadData    <= internalDataOut;
@@ -689,7 +683,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     else begin
                                         if (i < DATA_WIDTH) begin
                                             wrD     <= tempReadData[DATA_WIDTH-1-i];
-                                            i       <= i + 1;
+                                            i       <= i + 1'b1;
                                         end
                                         else begin
                                             valid   <= 0;
@@ -704,7 +698,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         if(burstLen > 1) begin
                                             if (i < DATA_WIDTH) begin
                                                 tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                i               <= i + 1;
+                                                i               <= i + 1'b1;
                                                 wr              <= 0;
                                                 valid           <= 1;
                                             end
@@ -712,17 +706,17 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 tempReadData[i]             <= rD;
                                                 dataInternal                <= tempReadData;
                                                 addressInternal             <= addressInternalBurtstBegin;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                 wr                          <= 1;
                                                 i                           <= 0;
-                                                burstLen                    <= burstLen - 1;
+                                                burstLen                    <= burstLen - 1'b1;
                                                 communicationState          <= masterDone;   
                                             end
                                         end
                                         else if (burstLen == 1)begin
                                             if (i < DATA_WIDTH) begin
                                                     tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                    i               <= i + 1;
+                                                    i               <= i + 1'b1;
                                                     wr              <= 0;
                                                     valid           <= 1;
                                                 end
@@ -730,11 +724,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     tempReadData[i]             <= rD;
                                                     dataInternal                <= tempReadData;
                                                     addressInternal             <= addressInternalBurtstBegin;
-                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                     wr                  <= 1;
                                                     i                   <= 0; 
                                                     valid               <= 0;
-                                                    burstLen            <= burstLen - 1;
+                                                    burstLen            <= burstLen - 1'b1;
                                                     communicationState  <= over;
                                                 end
                                         end
@@ -746,13 +740,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         if (i < DATA_WIDTH) begin
                                             wrD                 <= tempReadData[DATA_WIDTH-1-i];
                                             addressInternal     <= addressInternalBurtstBegin;
-                                            i                   <= i + 1;
+                                            i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
                                         else if (i == DATA_WIDTH) begin
                                             i                           <= 0;
-                                            burstLen                    <= burstLen -1 ;
-                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                            burstLen                    <= burstLen - 1'b1;
+                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                             tempReadData                <= internalDataOut;
                                             valid                       <= 0;
                                             communicationState          <= masterDone;
@@ -762,14 +756,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         if (i < DATA_WIDTH-1) begin
                                             wrD                 <= tempReadData[DATA_WIDTH-1-i];
                                             addressInternal     <= addressInternalBurtstBegin;
-                                            i                   <= i + 1;
+                                            i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
                                         else if (i == DATA_WIDTH-1) begin
                                             i                           <= 0;
                                             wrD                         <= tempReadData[DATA_WIDTH-1-i];
-                                            burstLen                    <= burstLen -1 ;
-                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                            burstLen                    <= burstLen - 1'b1;
+                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                             tempReadData                <= internalDataOut;
                                             valid                       <= 1;
                                             last                        <= 1;
@@ -824,7 +818,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         if(burstLen > 1) begin
                                             if (i < DATA_WIDTH) begin
                                                 tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                i               <= i + 1;
+                                                i               <= i + 1'b1;
                                                 wr              <= 0;
                                                 valid           <= 1;
                                             end
@@ -832,16 +826,16 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 tempReadData[i]             <= rD;
                                                 dataInternal                <= tempReadData;
                                                 addressInternal             <= addressInternalBurtstBegin;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                 wr                          <= 1;
                                                 i                           <= 0;
-                                                burstLen                    <= burstLen - 1;
+                                                burstLen                    <= burstLen - 1'b1;
                                             end
                                         end
                                         else if (burstLen == 1)begin
                                             if (i < DATA_WIDTH) begin
                                                     tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                    i               <= i + 1;
+                                                    i               <= i + 1'b1;
                                                     wr              <= 0;
                                                     valid           <= 1;
                                                 end
@@ -849,11 +843,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     tempReadData[i]             <= rD;
                                                     dataInternal                <= tempReadData;
                                                     addressInternal             <= addressInternalBurtstBegin;
-                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                     wr                  <= 1;
                                                     i                   <= 0; 
                                                     valid               <= 0;
-                                                    burstLen            <= burstLen - 1;
+                                                    burstLen            <= burstLen - 1'b1;
                                                     communicationState  <= over;
                                                 end
                                         end
@@ -890,7 +884,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             if(burstLen > 1) begin
                                                 if (i < DATA_WIDTH) begin
                                                     tempReadData[DATA_WIDTH-1-i]    <= rD;
-                                                    i                               <= i + 1;
+                                                    i                               <= i + 1'b1;
                                                     wr                              <= 0;
                                                     valid                           <= 1;
                                                 end
@@ -898,17 +892,17 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     tempReadData[i]             <= rD;
                                                     dataInternal                <= tempReadData;
                                                     addressInternal             <= addressInternalBurtstBegin;
-                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                     wr                          <= 1;
                                                     i                           <= 0;
-                                                    burstLen                    <= burstLen - 1;
+                                                    burstLen                    <= burstLen - 1'b1;
                                                     communicationState          <= masterDone;   
                                                 end
                                             end
                                             else if (burstLen == 1)begin
                                                 if (i < DATA_WIDTH) begin
                                                         tempReadData[DATA_WIDTH-1-i]    <= rD;
-                                                        i                               <= i + 1;
+                                                        i                               <= i + 1'b1;
                                                         wr                              <= 0;
                                                         valid                           <= 1;
                                                     end
@@ -916,11 +910,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                         tempReadData[i]             <= rD;
                                                         dataInternal                <= tempReadData;
                                                         addressInternal             <= addressInternalBurtstBegin;
-                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1;
+                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                         wr                  <= 1;
                                                         i                   <= 0; 
                                                         valid               <= 0;
-                                                        burstLen            <= burstLen - 1;
+                                                        burstLen            <= burstLen - 1'b1;
                                                         communicationState  <= over;
                                                     end
                                             end
