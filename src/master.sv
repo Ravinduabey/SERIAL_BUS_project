@@ -61,7 +61,7 @@ localparam CONTROL_LEN = 7 + ADDRESS_WIDTH;
 logic                       wr;
 logic                       tempRdWr;
 logic                       tempBurst;
-integer 				    j, k;
+
 
 logic [1:0]                 clock_counter;
 
@@ -129,8 +129,8 @@ internalComStates internalComState;
 
 masterBram #(
     .MEMORY_DEPTH               ( MEMORY_DEPTH  ),
-    .DATA_WIDTH                 ( DATA_WIDTH    ),
-    .MEM_INIT_FILE              ("mem.txt"      )
+    .DATA_WIDTH                 ( DATA_WIDTH    )
+//    .MEM_INIT_FILE              ("mem.txt"      )
     ) bram(
         .clk            (clk                ),
         .wr             (wr                 ),
@@ -157,8 +157,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         clock_counter       <= 0;
         arbiterCounnter     <= 0;
         address_counter     <= 0;
-        j                   <= 0;
-        k                   <= 0;
         state               <= idle;
         communicationState  <= idleCom;
         internalComState    <= checkState;
@@ -200,8 +198,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     clock_counter       <= 0;
                     arbiterCounnter     <= 0;
                     address_counter     <= 0;
-                    j                   <= 0;
-                    k                   <= 0;
                     state               <= idle;
                     communicationState  <= idleCom;
                     internalComState    <= checkState;
