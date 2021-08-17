@@ -98,12 +98,7 @@ logic S_last[0:SLAVE_COUNT-1];
 logic [SLAVEID-1:0]S_slave_ID[0:SLAVE_COUNT-1];  //********************
 
 /// arbiter module related wires
-logic [M_ID_WIDTH-1:0] a_addr_select;
-logic [M_ID_WIDTH-1:0] a_MOSI_data_select;
-logic [M_ID_WIDTH-1:0] a_valid_select;
-logic [M_ID_WIDTH-1:0] a_last_select;
-logic [S_ID_WIDTH-1:0] a_MISO_data_select;
-logic [S_ID_WIDTH-1:0] a_ready_select;
+logic [S_ID_WIDTH+M_ID_WIDTH-1:0] a_bus_state;
 logic a_ready;
 
 
@@ -191,12 +186,11 @@ generate
 endgenerate
 
 //////// arbiter instantiation
-arbiter arbiter
-#(
+arbiter #(
     .NO_MASTERS(MASTER_COUNT),
     .NO_SLAVES(SLAVE_COUNT),
-    .THRESH(MAX_SPLIT_TRANS_WAIT_CLK_COUNT), 
-)(
+    .THRESH(MAX_SPLIT_TRANS_WAIT_CLK_COUNT) 
+)arbiter(
 
   .clk,
   .rstN,
@@ -210,50 +204,37 @@ arbiter arbiter
   //===================//
   //    multiplexers   //
   //===================// 
-	input logic ready,
-
-	output logic [M_ID_WIDTH-1:0] addr_select,
-	output logic [M_ID_WIDTH-1:0] MOSI_data_select,
-	output logic [M_ID_WIDTH-1:0] valid_select,
-	output logic [M_ID_WIDTH-1:0] last_select,
-  output logic [S_ID_WIDTH-1:0] MISO_data_select,
-	output logic [S_ID_WIDTH-1:0] ready_select
+	.ready(a_ready),
+    .bus_state(a_bus_state)
 );
 
 /// bus_interconnect instantiation ////
 
-bus_interconnect #(
-    .NO_MASTERS(MASTER_COUNT),
-    .NO_SLAVES(SLAVE_COUNT),
-    .THRESH(MAX_SPLIT_TRANS_WAIT_CLK_COUNT), //************ this is not used ************************
-) bus_interconnect (
+// bus_interconnect #(
+//     .NO_MASTERS(MASTER_COUNT),
+//     .NO_SLAVES(SLAVE_COUNT)
+// ) bus_interconnect (
 
-    // arbiter controllers
-    .addr_select(a_addr_select),
-	.MOSI_data_select(a_MOSI_data_select),
-	.valid_select(a_valid_select),
-	.last_select(a_last_select),
-    .MISO_data_select(a_MISO_data_select),
-	.ready_select(a_ready_select),
+//     // arbiter controllers
+//     .bus_state(a_bus_state),
+//     .ready(a_ready),
 
-    .ready(a_ready),
+//     //masters
+//     input   logic [NO_MASTERS-1:0] control_M,
+// 	input   logic [NO_MASTERS-1:0] wD_M,
+// 	input   logic [NO_MASTERS-1:0] valid_M,
+// 	input   logic [NO_MASTERS-1:0] last_M,
+//     output  logic [NO_MASTERS-1:0] rD_M,
+// 	output  logic [NO_MASTERS-1:0] ready_M,
 
-    //masters
-    input   logic [M_ID_WIDTH-1:0] control,
-	input   logic [M_ID_WIDTH-1:0] wD,
-	input   logic [M_ID_WIDTH-1:0] valid,
-	input   logic [M_ID_WIDTH-1:0] last,
-    output  logic [S_ID_WIDTH-1:0] rD,
-	output  logic [S_ID_WIDTH-1:0] ready,
-
-    //slaves
-    output  logic [M_ID_WIDTH-1:0] control,
-	output  logic [M_ID_WIDTH-1:0] wD,
-	output  logic [M_ID_WIDTH-1:0] valid,
-	output  logic [M_ID_WIDTH-1:0] last,
-    input   logic [S_ID_WIDTH-1:0] rD,
-	input   logic [S_ID_WIDTH-1:0] ready,
-    );
+//     //slaves
+//     output  logic [NO_SLAVES-1:0] control_S,
+// 	output  logic [NO_SLAVES-1:0] wD_S,
+// 	output  logic [NO_SLAVES-1:0] valid_S,
+// 	output  logic [NO_SLAVES-1:0] last_S,
+//     input   logic [NO_SLAVES-1:0] rD_S,
+// 	input   logic [NO_SLAVES-1:0] ready_S
+//     );
 
 
 
