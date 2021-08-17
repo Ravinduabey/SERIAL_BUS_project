@@ -53,14 +53,14 @@ module slave #(
 
     // logic [3:0] next_state;
 
-    // localparam INIT     = 4'd7;
     localparam IDLE     = 4'd0;
     localparam CONFIG   = 4'd1;
     localparam CONFIG2  = 4'd2;
     localparam READ     = 4'd3;
-    localparam READB    = 4'd4;
-    localparam WRITE    = 4'd5;
-    localparam WRITEB   = 4'd6;
+    localparam READB1   = 4'd4;
+    localparam READB    = 4'd5;
+    localparam WRITE    = 4'd6;
+    localparam WRITEB   = 4'd7;
 
     logic [3:0] state = IDLE;
 
@@ -185,7 +185,7 @@ module slave #(
                 end 
                 READ : begin
                     // check <= 1;
-                    // rD_buffer       <= ram[address];
+                    rD_buffer       <= ram[address];
                     rD_buffer       <= rD_buffer << 1;
                     rD_temp         <= rD_buffer[DATA_WIDTH-1];
                     rD_counter      <= rD_counter + 1;
@@ -199,18 +199,17 @@ module slave #(
                         if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                         else begin
                         address     <= address + 1;
-                        rD_buffer   <= ram[address+1]; 
-                        state       <= READB;
+                        state       <= READB1;
                         end
                     //     state  <= READ2;
                     end
                 end                
-                // READ2: begin
-                    
-                // end
+                READB1: begin
+                    rD_buffer <= ram[address];
+                    state   <= READB;
+                end
                 READB: begin
-                    ready           <= 1;
-                    rD_buffer       <= ram[address+1]; 
+                    ready <= 1;
                     if (last == 0) begin
                         if (rD_counter < DATA_WIDTH) begin
                             rD_counter <= rD_counter + 1;
@@ -221,6 +220,7 @@ module slave #(
                             ready      <= 0;
                             rD_counter <= 0;
                             address    <= address + 1;
+                            state      <= READB1;
                         end 
                     end
                     else begin
