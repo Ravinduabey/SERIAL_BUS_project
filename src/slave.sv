@@ -6,7 +6,7 @@ module slave #(
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1),
-    parameter SLAVEID 
+    parameter SLAVEID = 1
     // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
@@ -51,7 +51,7 @@ module slave #(
 
     logic check;
 
-    logic [3:0] state;
+    logic [3:0] state = IDLE;
     // logic [3:0] next_state;
 
     // localparam INIT     = 4'd7;
