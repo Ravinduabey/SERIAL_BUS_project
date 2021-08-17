@@ -19,18 +19,18 @@ module slave #(
     input logic last,                 //default LOW
 
     //with Top Module
-    // input logic [SLAVEID-1:0]slave_ID,
+    // input logic [S_ID_WIDTH-1:0]slave_ID,
     input logic clk,
     input logic rstN   
 );
     localparam ADDR_WIDTH   = $clog2(ADDR_DEPTH);
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
-    localparam CON          = 3 + ADDR_WIDTH + 2 + SLAVEID-1;
+    localparam CON          = 3 + ADDR_WIDTH + 2 + S_ID_WIDTH-1;
     localparam CON_COUNTER  = $clog2(CON);
     localparam START        = 3'b111;
 
 
-    // logic [SLAVEID-1:0] reg_slave_ID;
+    // logic [S_ID_WIDTH-1:0] reg_slave_ID;
 
     logic [CON           :0] config_buffer;
     logic [CON_COUNTER-1 :0] config_counter;
@@ -153,9 +153,9 @@ module slave #(
                 end
                 CONFIG2 : begin
                     //                  start                       slaveid
-                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==SLAVEID ) begin
+                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
                     // if (config_buffer[CON:CON-2]==START) begin
-                        if (config_buffer[CON-2-SLAVEID-1]==0) begin     //read
+                        if (config_buffer[CON-2-S_ID_WIDTH-1]==0) begin     //read
                             // ready <= 1;
                             check <= 1;        
                             rD_buffer       <= ram[address];
@@ -187,7 +187,7 @@ module slave #(
                     else begin
                         rD_counter  <= 0;
                         ready       <= 0;
-                        if (config_buffer[CON-2-SLAVEID-2]==0) state <= IDLE;
+                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                         else begin
                         address     <= address + 1;
                         rD_buffer   <= ram[address+1]; 
@@ -230,7 +230,7 @@ module slave #(
                     else begin 
                         wD_counter <= 0;
                         ram[address] <= wD_buffer;
-                        if (config_buffer[CON-2-SLAVEID-2]==0) state <= IDLE;
+                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                         else begin
                             if (last==0 && valid==1) begin
                                 wD_counter      <= 1;
@@ -248,7 +248,7 @@ module slave #(
                     end 
                 end
                 // WRITE2: begin
-                //     if (config_buffer[CON-2-SLAVEID-2]==0) 
+                //     if (config_buffer[CON-2-S_ID_WIDTH-2]==0) 
                 //         state <= IDLE;
                 //     else begin
                 //         if (last==0) begin
@@ -305,7 +305,6 @@ module slave #(
 
         end 
     end
-assign reg_slave_ID = slave_ID;
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
