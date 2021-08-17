@@ -14,7 +14,7 @@ module top import details::*;
     input logic [17:0]SW,
     output logic [17:0]LEDR,
     output logic [3:0]LEDG,
-    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+    // output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON
         
@@ -71,6 +71,8 @@ logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId[0:MASTER_COUNT];
 logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId_next[0:MASTER_COUNT];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
+logic M_eoc[0:MASTER_COUNT-1];
+logic M_eoc_next[0:MASTER_COUNT-1];
 
 logic M_doneCom[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
@@ -138,7 +140,7 @@ generate
             .address(M_address[jj]),
             .slaveId(M_slaveId[jj]),
             .start(M_start[jj]),
-            .eoc(),
+            .eoc(M_eoc[jj]),
 
             .doneCom(M_doneCom[jj]),
             .dataOut(M_dataOut[jj]),
@@ -262,6 +264,8 @@ always_ff @(posedge clk or negedge rstN) begin
         M_address   <= '{default:'0}; 
         M_slaveId   <= '{default:'0}; 
 
+        M_eoc   <= '{default:'0};
+
         M_read_write_sel        <= '{default: '0};
         M_external_write_sel    <= '{default: '0};
 
@@ -290,11 +294,14 @@ always_ff @(posedge clk or negedge rstN) begin
         M_address   <= M_address_next; 
         M_slaveId   <= M_slaveId_next; 
 
+        M_eoc   <= M_eoc_next;
+
         M_read_write_sel        <= M_read_write_sel_next;
         M_external_write_sel    <= M_exteral_write_sel_next;
 
         slave_first_addr <= slave_first_addr_next;
         slave_last_addr  <= slave_last_addr_next;
+
 
         //////////// config_sub_states related logic /////////
         current_config_state        <= next_config_state;
@@ -304,6 +311,7 @@ always_ff @(posedge clk or negedge rstN) begin
 
         M_start <= M_start_next;
         M_data  <= M_data_next;
+        
 
         M_dataOut_reg <= M_dataOut_next;
 
@@ -490,6 +498,8 @@ always_comb begin
     M_address_next   = M_address;
     M_slaveId_next   = M_slaveId; 
 
+    M_eoc_next       = M_eoc;
+
     M_read_write_sel_next       = M_read_write_sel;
     M_exteral_write_sel_next    = M_external_write_sel;
 
@@ -512,6 +522,10 @@ always_comb begin
 
             for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin 
                 M_slaveId_next[ii] = SW[2*ii+1 -:2];
+            end
+
+            if ((SW[3:0] == '0) & (next_state == communication_done)) begin
+                M_eoc_next = '{default:1'b1};  // say masters to directly jump to last state without communication;
             end
         end   
 

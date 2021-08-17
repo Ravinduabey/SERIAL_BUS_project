@@ -6,7 +6,7 @@ module slave #(
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1),
-    parameter SLAVEID 
+    parameter SLAVEID = 1
     // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
@@ -19,18 +19,18 @@ module slave #(
     input logic last,                 //default LOW
 
     //with Top Module
-    // input logic [SLAVEID-1:0]slave_ID,
+    // input logic [S_ID_WIDTH-1:0]slave_ID,
     input logic clk,
     input logic rstN   
 );
     localparam ADDR_WIDTH   = $clog2(ADDR_DEPTH);
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
-    localparam CON          = 3 + ADDR_WIDTH + 2 + SLAVEID-1;
+    localparam CON          = 3 + ADDR_WIDTH + 2 + S_ID_WIDTH-1;
     localparam CON_COUNTER  = $clog2(CON);
     localparam START        = 3'b111;
 
 
-    // logic [SLAVEID-1:0] reg_slave_ID;
+    // logic [S_ID_WIDTH-1:0] reg_slave_ID;
 
     logic [CON           :0] config_buffer;
     logic [CON_COUNTER-1 :0] config_counter;
@@ -51,7 +51,6 @@ module slave #(
     logic same, read;
     // logic check;
 
-    logic [3:0] state;
     // logic [3:0] next_state;
 
     // localparam IDLE     = 4'd0;
@@ -63,7 +62,21 @@ module slave #(
     // localparam WRITE    = 4'd6;
     // localparam WRITEB   = 4'd7;
 
+<<<<<<< HEAD
 //    logic [3:0] state = IDLE;
+=======
+    logic [3:0] state = IDLE;
+
+    // typedef enum logic [3:0] { 
+    //    IDLE,
+    //    CONFIG,
+    //    CONFIG2,
+    //    READ,
+    //    READB,
+    //    WRITE,
+    //    WRITEB 
+    // } state_;
+>>>>>>> 0b0e966 (still instantiating. need to rebase master module)
 
     typedef enum logic [3:0] { 
        INIT,
@@ -160,9 +173,9 @@ module slave #(
                 end
                 CONFIG2 : begin
                     //                  start                       slaveid
-                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-SLAVEID]==SLAVEID ) begin
+                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
                     // if (config_buffer[CON:CON-2]==START) begin
-                        if (config_buffer[CON-2-SLAVEID-1]==0) begin     //read
+                        if (config_buffer[CON-2-S_ID_WIDTH-1]==0) begin     //read
                             // ready <= 1;
                             if (!same) begin
                                 rD_buffer       <= ram[address];
@@ -199,7 +212,7 @@ module slave #(
                     else begin
                         rD_counter  <= 0;
                         ready       <= 0;
-                        if (config_buffer[CON-2-SLAVEID-2]==0) state <= IDLE;
+                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                         else begin
                         address     <= address + 1'b1;
                         state       <= READB1;
@@ -235,7 +248,11 @@ module slave #(
                 end
                 WRITE: begin
                     if (wD_counter < DATA_WIDTH-1) begin
+<<<<<<< HEAD
                         wD_counter  <= wD_counter + 1'b1;
+=======
+                        wD_counter  <= wD_counter + 1;
+>>>>>>> 0b0e966 (still instantiating. need to rebase master module)
                         wD_buffer   <= wD_buffer << 1;
                         wD_buffer[0] <= wD_temp;                    //msb first
                     end
@@ -260,7 +277,7 @@ module slave #(
                     end 
                 end
                 // WRITE2: begin
-                //     if (config_buffer[CON-2-SLAVEID-2]==0) 
+                //     if (config_buffer[CON-2-S_ID_WIDTH-2]==0) 
                 //         state <= IDLE;
                 //     else begin
                 //         if (last==0) begin
@@ -317,7 +334,6 @@ module slave #(
 
         end 
     end
-assign reg_slave_ID = slave_ID;
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
