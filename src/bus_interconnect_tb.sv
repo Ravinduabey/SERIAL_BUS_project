@@ -1,37 +1,28 @@
-module bus_interconnect_tb #(
-    parameter NO_MASTERS = 2,
-    parameter NO_SLAVES = 3,
-    parameter THRESH = 1000,
-    parameter S_ID_WIDTH = $clog2(NO_SLAVES+1), //2
-    parameter M_ID_WIDTH = $clog2(NO_MASTERS) //1
-)(
+module bus_interconnect_tb ();
+    localparam  NO_SLAVES= 10;
+    localparam  NO_MASTERS= 5;
 
-    // arbiter controllers
-    input logic [M_ID_WIDTH-1:0] addr_select,
-	input logic [M_ID_WIDTH-1:0] MOSI_data_select,
-	input logic [M_ID_WIDTH-1:0] valid_select,
-	input logic [M_ID_WIDTH-1:0] last_select,
-    input logic [S_ID_WIDTH-1:0] MISO_data_select,
-	input logic [S_ID_WIDTH-1:0] ready_select,
+    localparam S_ID_WIDTH = $clog2(NO_SLAVES+1); //2
+    localparam M_ID_WIDTH = $clog2(NO_MASTERS); //1
 
-    output logic ready,
+    logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state;
+    logic ready;
 
-    //masters
-    input   logic [M_ID_WIDTH-1:0] control,
-	input   logic [M_ID_WIDTH-1:0] wD,
-	input   logic [M_ID_WIDTH-1:0] valid,
-	input   logic [M_ID_WIDTH-1:0] last,
-    output  logic [S_ID_WIDTH-1:0] rD,
-	output  logic [S_ID_WIDTH-1:0] ready,
+    logic  control_M    [0:NO_MASTERS-1]; 
+    logic  wD_M         [0:NO_MASTERS-1];
+    logic  valid_M      [0:NO_MASTERS-1];
+    logic  last_M       [0:NO_MASTERS-1];
+    logic  rD_M         [0:NO_MASTERS-1];
+    logic  ready_M      [0:NO_MASTERS-1];
 
-    //slaves
-    output  logic [M_ID_WIDTH-1:0] control,
-	output  logic [M_ID_WIDTH-1:0] wD,
-	output  logic [M_ID_WIDTH-1:0] valid,
-	output  logic [M_ID_WIDTH-1:0] last,
-    input   logic [S_ID_WIDTH-1:0] rD,
-	input   logic [S_ID_WIDTH-1:0] ready,
-    );
+//slaves
+    logic control_S     [0:NO_SLAVES-1];
+    logic wD_S          [0:NO_SLAVES-1];
+    logic valid_S       [0:NO_SLAVES-1];
+    logic last_S        [0:NO_SLAVES-1];
+    logic rD_S          [0:NO_SLAVES-1];
+    logic ready_S       [0:NO_SLAVES-1];
+
 
     logic clk;
     localparam CLOCK_PERIOD = 20;
@@ -42,19 +33,61 @@ module bus_interconnect_tb #(
             end
     end
 
+    bus_interconnect#(
+        .NO_MASTERS(NO_MASTERS),
+        .NO_SLAVES(NO_SLAVES)
+    ) bus (
+        .bus_state(bus_state),
+        .ready(ready),
+        .control_M(control_M),
+        .wD_M(wD_M),
+        .valid_M(valid_M),
+        .last_M(last_M),
+        .rD_M(rD_M),
+        .ready_M(ready_M),
+        .control_S(control_S),
+        .wD_S(wD_S),
+        .valid_S(valid_S),
+        .last_S(last_S),
+        .rD_S(rD_S),
+        .ready_S(ready_S)
+    );
     
     initial begin
         @(posedge clk);
-        master <= 2'b01;
-        slave  <= 2'b10;
-        m1_valid <= 1;
-        m1_last <= 0;
-        m1_wD <= 1;
-        m2_valid <= 0;
-        m2_last <= 1;
-        m2_wD <= 0;
+        bus_state <= 7'b0110011;
+        control_M <= '{5{'0}};
+        wD_M <= '{5{'0}};
+        valid_M <= '{5{'0}};
+        last_M <= '{5{'0}};
+        rD_S <= '{10{'0}};
+        ready_S <= '{10{'0}};
         #(CLOCK_PERIOD*5);
-        master <= 2'b10;
+        control_M <= '{5{'1}};
+        wD_M <= '{5{'1}};
+        valid_M <= '{5{'1}};
+        last_M <= '{5{'1}};
+        rD_S <= '{10{'1}};
+        ready_S <= '{10{'1}};
+        #(CLOCK_PERIOD*5);
+
+        bus_state <= 7'b0110101;
+        control_M <= '{5{'0}};
+        wD_M <= '{5{'0}};
+        valid_M <= '{5{'0}};
+        last_M <= '{5{'0}};
+        rD_S <= '{10{'0}};
+        ready_S <= '{10{'0}};
+        #(CLOCK_PERIOD*5);
+        control_M <= '{5{'1}};
+        wD_M <= '{5{'1}};
+        valid_M <= '{5{'1}};
+        last_M <= '{5{'1}};
+        rD_S <= '{10{'1}};
+        ready_S <= '{10{'1}};
+        #(CLOCK_PERIOD*5);
+
+        $stop;
 
     end
 

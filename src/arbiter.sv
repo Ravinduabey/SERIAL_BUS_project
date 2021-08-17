@@ -15,8 +15,8 @@ module arbiter #(
   //============//
   //  masters   //
   //============// 
-  input logic port_in [NO_MASTERS-1:0],
-  output logic port_out [NO_MASTERS-1:0],
+  input logic port_in [0:NO_MASTERS-1],
+  output logic port_out [0:NO_MASTERS-1],
 
   //===================//
   //    multiplexers   //
@@ -35,10 +35,10 @@ module arbiter #(
   //===============================================//
   //    wires between master ports and controller  //
   //===============================================// 
-  logic [S_ID_WIDTH-1:0] id [NO_MASTERS-1:0];
-  logic [1:0] com_state [NO_MASTERS-1:0];
-  logic done [NO_MASTERS-1:0];
-  logic [1:0] cmd [NO_MASTERS-1:0];
+  logic [S_ID_WIDTH-1:0] id [0:NO_MASTERS-1];
+  logic [1:0] com_state [0:NO_MASTERS-1];
+  logic done [0:NO_MASTERS-1];
+  logic [1:0] cmd [0:NO_MASTERS-1];
 
   //=============================//
   //    master ports generator   //

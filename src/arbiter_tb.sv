@@ -27,8 +27,8 @@ logic rstN;
 //============//
 //  masters   //
 //============// 
-logic port_in [NO_MASTERS-1:0];
-logic port_out [NO_MASTERS-1:0];
+logic port_in  [0:NO_MASTERS-1];
+logic port_out [0:NO_MASTERS-1];
 
   //===================//
   //    multiplexers   //

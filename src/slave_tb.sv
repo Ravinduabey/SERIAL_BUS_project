@@ -23,7 +23,7 @@ timeunit 1ns; timeprecision 1ps;
     end
 
 
-    slave #(.ADDR_DEPTH(2000),.SLAVES(3), .DATA_WIDTH(8)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.slave_ID(slave_ID),.rstN(resetn),.clk(clk));
+    slave #(.ADDR_DEPTH(2000),.SLAVES(3), .DATA_WIDTH(8), .SLAVEID(1)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.rstN(resetn),.clk(clk));
 
     initial begin
         resetn <= 1;
@@ -37,7 +37,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD)
         resetn <= 1;
 
-        //control signal 111_01_11_00000000011 : write burst from ram[0]
+        //control signal 111_01_11_00000000000 : write burst from ram[0]
         #(CLOCK_PERIOD*3);
         control <= 1;
         #(CLOCK_PERIOD*3);
@@ -46,7 +46,7 @@ timeunit 1ns; timeprecision 1ps;
         control <= 1;
         #(CLOCK_PERIOD*3);
         control <= 0;
-        #(CLOCK_PERIOD*9);
+        #(CLOCK_PERIOD*11);
         control <= 1;           
         #(CLOCK_PERIOD*2);
         control <= 0;
@@ -61,7 +61,7 @@ timeunit 1ns; timeprecision 1ps;
             wD <= 0;
             #(CLOCK_PERIOD*4);
             valid <= 0;
-            #(CLOCK_PERIOD);
+            #(CLOCK_PERIOD*8);
             valid <= 1;
             #(CLOCK_PERIOD);
             wD <= 1;
@@ -86,7 +86,7 @@ timeunit 1ns; timeprecision 1ps;
 
         #(CLOCK_PERIOD*4);
 
-        //control signal 111010100000000011 read burst from ram[0]
+        //control signal 111010100000000000 read burst from ram[0]
         control <= 1;
         #(CLOCK_PERIOD*3);
         control <= 0;
@@ -98,7 +98,7 @@ timeunit 1ns; timeprecision 1ps;
         control <= 1;
         #(CLOCK_PERIOD);
         control <= 0;
-        #(CLOCK_PERIOD*9);
+        #(CLOCK_PERIOD*11);
         control <= 1;           //just to make sure following bits are ignored
         #(CLOCK_PERIOD*2);
         control <= 0;
@@ -156,6 +156,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD*2);
         control <= 0;
         #(CLOCK_PERIOD);
+        $stop;
 
     end
 
