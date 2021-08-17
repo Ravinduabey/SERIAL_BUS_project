@@ -5,12 +5,11 @@ module bus_interconnect #(
     parameter M_ID_WIDTH = $clog2(NO_MASTERS) //1
 )(
 
-    // arbiter controllers
-    //this register is used for external multiplexer selection input
+    // arbiter 
     input logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state,
     output logic ready,
 
-    //masters
+    //masters from First master: 0 - Second master :1 --- last
     input   logic  control_M    [0:NO_MASTERS-1], 
 	input   logic  wD_M         [0:NO_MASTERS-1],
 	input   logic  valid_M      [0:NO_MASTERS-1],
@@ -18,7 +17,7 @@ module bus_interconnect #(
     output  logic  rD_M         [0:NO_MASTERS-1],
 	output  logic  ready_M      [0:NO_MASTERS-1],
 
-    //slaves
+    //slaves count  First Slave : 0 - Second Slave :1 --- last
     output  logic control_S     [0:NO_SLAVES-1],
 	output  logic wD_S          [0:NO_SLAVES-1],
 	output  logic valid_S       [0:NO_SLAVES-1],
@@ -67,70 +66,5 @@ module bus_interconnect #(
         end 
     endgenerate
     
-    
-
-
-
-
-    // bus_mux_MtoS #(
-    //     .NO_MASTERS(NO_MASTERS),
-    //     .NO_SLAVES(NO_SLAVES)
-    // ) control_mux (
-    //     .master_sel(master_sel),
-    //     .slave_sel(slave_sel),
-    //     .master(control_M),
-    //     .slave(control_S)
-    // );
-
-    // bus_mux_MtoS #(
-    //     .NO_MASTERS(NO_MASTERS),
-    //     .NO_SLAVES(NO_SLAVES)
-    // ) wD_mux (
-    //     .master_sel(master_sel),
-    //     .slave_sel(slave_sel),
-    //     .master(wD_M),
-    //     .slave(wD_S)
-    // );
-
-    // bus_mux_MtoS #(
-    //     .NO_MASTERS(NO_MASTERS),
-    //     .NO_SLAVES(NO_SLAVES)
-    // ) valid_mux (
-    //     .master_sel(master_sel),
-    //     .slave_sel(slave_sel),
-    //     .master(valid_M),
-    //     .slave(valid_S)
-    // );
-
-    // bus_mux_MtoS #(
-    //     .NO_MASTERS(NO_MASTERS),
-    //     .NO_SLAVES(NO_SLAVES)
-    // ) last_mux (
-    //     .master_sel(master_sel),
-    //     .slave_sel(slave_sel),
-    //     .master(last_M),
-    //     .slave(last_S)
-    // );
-
-    // bus_mux_StoM #(
-    //     .NO_MASTERS(NO_MASTERS),
-    //     .NO_SLAVES(NO_SLAVES)
-    // ) rD_mux (
-    //     .master_sel(master_sel),
-    //     .slave_sel(slave_sel),
-    //     .master(rD_M),
-    //     .slave(rD_S)
-    // );
-
-    // bus_mux_StoM #(
-    //     .NO_MASTERS(NO_MASTERS),
-    //     .NO_SLAVES(NO_SLAVES)
-    // ) ready_mux (
-    //     .master_sel(master_sel),
-    //     .slave_sel(slave_sel),
-    //     .master(ready_M),
-    //     .slave(ready_S)
-    // );
-
 endmodule
     

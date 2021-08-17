@@ -70,6 +70,23 @@ module bus_interconnect_tb ();
         rD_S <= '{10{'1}};
         ready_S <= '{10{'1}};
         #(CLOCK_PERIOD*5);
+
+        bus_state <= 7'b0110101;
+        control_M <= '{5{'0}};
+        wD_M <= '{5{'0}};
+        valid_M <= '{5{'0}};
+        last_M <= '{5{'0}};
+        rD_S <= '{10{'0}};
+        ready_S <= '{10{'0}};
+        #(CLOCK_PERIOD*5);
+        control_M <= '{5{'1}};
+        wD_M <= '{5{'1}};
+        valid_M <= '{5{'1}};
+        last_M <= '{5{'1}};
+        rD_S <= '{10{'1}};
+        ready_S <= '{10{'1}};
+        #(CLOCK_PERIOD*5);
+
         $stop;
 
     end
