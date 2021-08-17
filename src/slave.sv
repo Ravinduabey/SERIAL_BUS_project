@@ -51,7 +51,6 @@ module slave #(
 
     logic check;
 
-    logic [3:0] state = IDLE;
     // logic [3:0] next_state;
 
     // localparam INIT     = 4'd7;
@@ -62,6 +61,8 @@ module slave #(
     localparam READB    = 4'd4;
     localparam WRITE    = 4'd5;
     localparam WRITEB   = 4'd6;
+    
+    logic [3:0] state = IDLE;
 
     // typedef enum logic [3:0] { 
     //    IDLE,
