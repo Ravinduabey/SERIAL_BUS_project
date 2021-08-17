@@ -36,7 +36,6 @@ module slave #(
     logic [CON_COUNTER-1 :0] config_counter;
     logic                    temp_control;
 
-    logic [DATA_WIDTH-1   :0]  data_buffer; 
     logic [DATA_WIDTH-1   :0]  rD_buffer;             //data out buffer for READ  RAM -->|_|_|_|_|_..._|--> |_|
     logic [DATA_COUNTER   :0]  rD_counter;            
     logic                      rD_temp;
@@ -104,9 +103,8 @@ module slave #(
             rD_counter <= 0;
             wD_counter <= 0;
             config_counter <= 0;
-            // rD_buffer <= 0;
-            // wD_buffer <= 0;
-            data_buffer <= 0;
+            rD_buffer <= 0;
+            wD_buffer <= 0;
             rD_temp <= 0;
             ready <= 1;
             same <= 0;
@@ -164,16 +162,14 @@ module slave #(
                         if (config_buffer[CON-2-S_ID_WIDTH-1]==0) begin     //read
                             // ready <= 1;
                             if (!same) begin
-                                // rD_buffer       <= ram[address];
-                                data_buffer     <= ram[address];
+                                rD_buffer       <= ram[address];
                                 rD_temp         <= rD_buffer[DATA_WIDTH-1];
                                 // rD_buffer       <= rD_buffer << 1;
                                 // rD_counter      <= rD_counter + 1;                            
                                 state           <= READ; 
                             end  
                             else begin
-                                rD_temp         <= data_buffer[DATA_WIDTH-1];
-                                // rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                                rD_temp         <= rD_buffer[DATA_WIDTH-1];
                                 state           <= READ;                                 
                             end                                                
                         end
@@ -189,11 +185,9 @@ module slave #(
                 end 
                 READ : begin
                     // check <= 1;
-                    //// rD_buffer       <= ram[address];
-                    // rD_buffer       <= rD_buffer << 1;
-                    // rD_temp         <= rD_buffer[DATA_WIDTH-1];
-                    data_buffer     <= data_buffer << 1;
-                    rD_temp         <= data_buffer[DATA_WIDTH-1];                    
+                    // rD_buffer       <= ram[address];
+                    rD_buffer       <= rD_buffer << 1;
+                    rD_temp         <= rD_buffer[DATA_WIDTH-1];
                     rD_counter      <= rD_counter + 1;
                     if (rD_counter < DATA_WIDTH) begin
                         ready <= 1;                                              
@@ -205,8 +199,7 @@ module slave #(
                         if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                         else begin
                         address     <= address + 1;
-                        // rD_buffer   <= ram[address+1]; 
-                        data_buffer   <= ram[address+1]; 
+                        rD_buffer   <= ram[address+1]; 
                         state       <= READB;
                         end
                     //     state  <= READ2;
@@ -217,15 +210,12 @@ module slave #(
                 // end
                 READB: begin
                     ready           <= 1;
-                    // rD_buffer       <= ram[address+1]; 
-                    data_buffer   <= ram[address+1]; 
+                    rD_buffer       <= ram[address+1]; 
                     if (last == 0) begin
                         if (rD_counter < DATA_WIDTH) begin
                             rD_counter <= rD_counter + 1;
-                            // rD_buffer  <= rD_buffer << 1;
-                            // rD_temp    <= rD_buffer[DATA_WIDTH-1];
-                            data_buffer       <= data_buffer << 1;
-                            rD_temp         <= data_buffer[DATA_WIDTH-1];
+                            rD_buffer  <= rD_buffer << 1;
+                            rD_temp    <= rD_buffer[DATA_WIDTH-1];
                         end
                         else if (rD_counter == DATA_WIDTH) begin
                             ready      <= 0;
@@ -235,33 +225,26 @@ module slave #(
                     end
                     else begin
                         rD_counter <= rD_counter + 1;
-                        // rD_buffer  <= rD_buffer << 1;
-                        // rD_temp    <= rD_buffer[DATA_WIDTH-1];      //msb first
-                        data_buffer       <= data_buffer << 1;
-                        rD_temp         <= data_buffer[DATA_WIDTH-1];
+                        rD_buffer  <= rD_buffer << 1;
+                        rD_temp    <= rD_buffer[DATA_WIDTH-1];      //msb first
                         state      <= IDLE;
                     end
                 end
                 WRITE: begin
                     if (wD_counter < DATA_WIDTH-1) begin
                         wD_counter  <= wD_counter + 1;
-                        // wD_buffer   <= wD_buffer << 1;
-                        // wD_buffer[0] <= wD_temp;                    //msb first
-                        data_buffer   <= data_buffer << 1;
-                        data_buffer[0] <= wD_temp;                    //msb first
+                        wD_buffer   <= wD_buffer << 1;
+                        wD_buffer[0] <= wD_temp;                    //msb first
                     end
                     else begin 
                         wD_counter <= 0;
-                        // ram[address] <= wD_buffer;
-                        ram[address] <= data_buffer;
+                        ram[address] <= wD_buffer;
                         if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                         else begin
                             if (last==0 && valid==1) begin
                                 wD_counter      <= 1;
-                                // wD_buffer       <= wD_buffer << 1;
-                                // wD_buffer[0]    <= wD_temp;
-                                data_buffer   <= data_buffer << 1;
-                                data_buffer[0] <= wD_temp;                    //msb first
+                                wD_buffer       <= wD_buffer << 1;
+                                wD_buffer[0]    <= wD_temp;
                                 address         <= address + 1;
                                 state           <= WRITEB;
                             end
@@ -293,14 +276,11 @@ module slave #(
                     if (last == 0) begin
                         if (wD_counter < DATA_WIDTH && valid==1) begin
                             wD_counter      <= wD_counter + 1;
-                            // wD_buffer       <= wD_buffer << 1;
-                            // wD_buffer[0]    <= wD_temp;
-                            data_buffer   <= data_buffer << 1;
-                            data_buffer[0] <= wD_temp;                    //msb first
+                            wD_buffer       <= wD_buffer << 1;
+                            wD_buffer[0]    <= wD_temp;
                         end
                         else if (wD_counter == DATA_WIDTH) begin
-                            // ram[address]    <= wD_buffer;
-                            ram[address] <= data_buffer;
+                            ram[address]    <= wD_buffer;
                             address         <= address + 1;                            
                             wD_counter      <= 0;
                             state           <= WRITEB;
@@ -310,17 +290,15 @@ module slave #(
                         end
                     end
                     else begin
-                        // // wD_counter <= 0;                        
-                        // // if (wD_counter < DATA_WIDTH) begin
-                        // //     wD_counter      <= wD_counter + 1;
-                        // //     wD_buffer       <= wD_buffer << 1;
-                        // //     wD_buffer[0]    <= wD_temp;
-                        // // end
-                        // // else begin
-                        // wD_buffer       <= wD_buffer << 1;
-                        // wD_buffer[0]    <= wD_temp; 
-                        data_buffer   <= data_buffer << 1;
-                        data_buffer[0] <= wD_temp;                    //msb first
+                        // wD_counter <= 0;                        
+                        // if (wD_counter < DATA_WIDTH) begin
+                        //     wD_counter      <= wD_counter + 1;
+                        //     wD_buffer       <= wD_buffer << 1;
+                        //     wD_buffer[0]    <= wD_temp;
+                        // end
+                        // else begin
+                        wD_buffer       <= wD_buffer << 1;
+                        wD_buffer[0]    <= wD_temp; 
                         config_buffer   <= 0;                           
                         state           <= IDLE;
                         // end
