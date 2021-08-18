@@ -155,7 +155,7 @@ timeunit 1ns; timeprecision 1ps;
         control <= 1;           //just to make sure following bits are ignored
         #(CLOCK_PERIOD*2);
         control <= 0;
-        #(CLOCK_PERIOD);
+        #(CLOCK_PERIOD*50);
         $stop;
 
     end
