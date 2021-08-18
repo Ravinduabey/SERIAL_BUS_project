@@ -78,24 +78,17 @@ module slave #(
 	 
 	 state_ state = INIT;
 
-    // initial begin
-    //     check <= 0;
-    //     address <= 0;
-    //     config_counter <= 0;
-    //     rD_counter <= 0;
-    //     wD_counter <= 0;
-    //     //temp_control <= 0;
-    //     ready <= 1;
-    //     rD_buffer <= 0;
-    //     wD_buffer <= 0;
-    // end
-
+    
     // initial begin
     // if (MEM_INIT_FILE != "") $readmemh(MEM_INIT_FILE, ram);
     // end
 
+    initial begin
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
+    end
+
     // initial begin
-    //     $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+    //     $readmemh("slave-mem.txt",ram);
     // end
 
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
@@ -226,10 +219,19 @@ module slave #(
                         end 
                     end
                     else begin
-                        rD_counter <= rD_counter + 1'b1;
-                        rD_buffer  <= rD_buffer << 1;
-                        rD_temp    <= rD_buffer[DATA_WIDTH-1];      //msb first
-                        state      <= IDLE;
+                        if (rD_counter < DATA_WIDTH) begin
+                            rD_counter <= rD_counter + 1'b1;
+                            rD_buffer  <= rD_buffer << 1;
+                            rD_temp    <= rD_buffer[DATA_WIDTH-1];
+                        end
+                        else if (rD_counter == DATA_WIDTH) begin
+                            state      <= IDLE;
+                        end 
+                        
+                        // rD_counter <= rD_counter + 1'b1;
+                        // rD_buffer  <= rD_buffer << 1;
+                        // rD_temp    <= rD_buffer[DATA_WIDTH-1];      //msb first
+                        // state      <= IDLE;
                     end
                 end
                 WRITE: begin
@@ -258,22 +260,6 @@ module slave #(
                         end
                     end 
                 end
-                // WRITE2: begin
-                //     if (config_buffer[CON-2-S_ID_WIDTH-2]==0) 
-                //         state <= IDLE;
-                //     else begin
-                //         if (last==0) begin
-                //             wD_counter <= wD_counter + 1'b1;
-                //             wD_buffer <= wD_buffer << 1;
-                //             wD_buffer[0] <= wD_temp;
-                //             address <= address + 1'b1;
-                //             state <= WRITEB;
-                //         end
-                //         else begin
-                            
-                //         end
-                //     end
-                // end
                 WRITEB: begin
                     if (last == 0) begin
                         if (wD_counter < DATA_WIDTH && valid==1) begin
@@ -293,17 +279,17 @@ module slave #(
                     end
                     else begin
                         // wD_counter <= 0;                        
-                        // if (wD_counter < DATA_WIDTH) begin
-                        //     wD_counter      <= wD_counter + 1'b1;
-                        //     wD_buffer       <= wD_buffer << 1;
-                        //     wD_buffer[0]    <= wD_temp;
-                        // end
-                        // else begin
-                        wD_buffer       <= wD_buffer << 1;
-                        wD_buffer[0]    <= wD_temp; 
-                        config_buffer   <= 0;                           
-                        state           <= IDLE;
-                        // end
+                        if (wD_counter < DATA_WIDTH && valid) begin
+                            wD_counter      <= wD_counter + 1'b1;
+                            wD_buffer       <= wD_buffer << 1;
+                            wD_buffer[0]    <= wD_temp;
+                        end
+                        else begin
+                            state           <= IDLE;
+                            wD_buffer       <= wD_buffer << 1;
+                            wD_buffer[0]    <= wD_temp; 
+                            config_buffer   <= 0;                           
+                        end
                     end
                 end                
                 default: state <= IDLE;
@@ -312,7 +298,8 @@ module slave #(
 
             // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
 
-            // $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem.txt",ram);
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
+            // $writememh("slave-mem.txt",ram);
 
         end 
     end
