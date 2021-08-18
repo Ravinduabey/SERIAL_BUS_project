@@ -328,7 +328,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                         
                         reqAck:
-                            if (arbiterCounnter < 4'd8) begin
+                            if (arbiterCounnter < 4'd7) begin
+                                arbSend             <= 1'b0;
+                                arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                communicationState  <= reqAck;
+                            end
+                            else if (arbiterCounnter < 4'd8) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 communicationState  <= reqAck;
