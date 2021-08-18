@@ -141,7 +141,6 @@ masterBram #(
 
 logic communicationDone;
 
-
 always_ff @( posedge clk or negedge rstN) begin : topModule
     if (~rstN) begin
         addresstemp         <= 0;
