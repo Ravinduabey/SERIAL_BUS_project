@@ -150,7 +150,7 @@ timeunit 1ns; timeprecision 1ps;
         // rdWr    <= Read_slave;
         burst   <= burst_master;
         //start adress 
-        address <= 12'd6;
+        address <= 12'd3;
         
         #3;
         eoc     <= 0;

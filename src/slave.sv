@@ -50,6 +50,7 @@ module slave #(
 	logic [ADDR_WIDTH-1:0] address;
     logic same, read;
     logic check;
+    logic last_reg;
 
     // logic [3:0] next_state;
 
@@ -91,6 +92,7 @@ module slave #(
     //     $readmemh("slave-mem.txt",ram);
     // end
 
+    
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
         // state <= next_state;
         if (!rstN) begin
@@ -261,7 +263,22 @@ module slave #(
                     end 
                 end
                 WRITEB: begin
-                    if (last==0) begin
+                    if (last) begin
+                        if (wD_counter < DATA_WIDTH-1 && valid) begin
+                            wD_counter      <= wD_counter + 1'b1;
+                            wD_buffer       <= wD_buffer << 1;
+                            wD_buffer[0]    <= wD_temp;
+                        end
+                        else begin
+                            check <= 1;
+                            last_reg        <= last;
+                            state           <= IDLE;
+                            wD_buffer       <= wD_buffer << 1;
+                            wD_buffer[0]    <= wD_temp; 
+                            config_buffer   <= 0;                           
+                        end
+                    end
+                    else begin
                         if (wD_counter < DATA_WIDTH && valid==1) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
@@ -271,28 +288,6 @@ module slave #(
                             ram[address]    <= wD_buffer;
                             address         <= address + 1'b1;                            
                             wD_counter      <= 0;
-                            state           <= WRITEB;
-                        end
-                        else if (valid == 0) begin
-                            state           <= WRITEB;
-                        end
-                    end
-                    else begin
-                        check <= 1;
-                        if (wD_counter < DATA_WIDTH && valid) begin
-                            check <= 0;                            
-                            wD_counter      <= wD_counter + 1'b1;
-                            wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp;
-                        end
-                        else if (wD_counter == DATA_WIDTH) begin
-                            state           <= IDLE;
-                            wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp; 
-                            config_buffer   <= 0;                           
-                        end
-                        else if (valid == 0) begin
-                            state           <= WRITEB;
                         end
                     end
                 end                
@@ -310,4 +305,5 @@ module slave #(
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
+
 endmodule
