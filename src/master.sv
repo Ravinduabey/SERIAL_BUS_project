@@ -418,7 +418,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             wr                  <= 1;
                                             i                   <= i + 1'b1;    
                                             end
-                                            else if (~ready) begin
+                                            else if (~ready && i <= DATA_WIDTH) begin
                                                 wr <= 0;
                                             end
                                             else if (i > DATA_WIDTH) begin

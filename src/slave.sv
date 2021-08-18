@@ -280,6 +280,7 @@ module slave #(
                     else begin
                         check <= 1;
                         if (wD_counter < DATA_WIDTH && valid) begin
+                            check <= 0;                            
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;

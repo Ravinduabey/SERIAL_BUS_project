@@ -21,7 +21,7 @@ timeunit 1ns; timeprecision 1ps;
 
     //with Top Module
     logic [1:0]slave_ID;
-    logic clk;
+    logic clk = 0;
     logic rstN; 
 
     logic burst;
@@ -42,12 +42,12 @@ timeunit 1ns; timeprecision 1ps;
 
 
     localparam CLOCK_PERIOD = 20;
-    initial begin
-        clk <= 0;
-            forever begin
-                #(CLOCK_PERIOD/2) clk <= ~clk;
-            end
-    end
+   initial begin
+       clk <= 0;
+           forever begin
+               #(CLOCK_PERIOD/2) clk <= ~clk;
+           end
+   end
 
     typedef enum logic  {
         Read_slave  = 1'b0,
