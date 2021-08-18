@@ -49,8 +49,7 @@ module slave #(
 	// Variable to hold the registered read address
 	logic [ADDR_WIDTH-1:0] address;
     logic same, read;
-    logic check;
-    logic last_reg;
+    // logic check;
 
     // logic [3:0] next_state;
 
@@ -74,7 +73,8 @@ module slave #(
        READB1,
        READB,
        WRITE,
-       WRITEB 
+       WRITEB,
+       WRITEB2 
     } state_;
 	 
 	 state_ state = INIT;
@@ -123,7 +123,7 @@ module slave #(
                     config_counter <= 0;
                     rD_counter <= 0;
                     wD_counter <= 0;
-                    check <= 0; 
+                    // check <= 0; 
                     if (control == 1'b1) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
@@ -228,12 +228,7 @@ module slave #(
                         end
                         else if (rD_counter == DATA_WIDTH) begin
                             state      <= IDLE;
-                        end 
-                        
-                        // rD_counter <= rD_counter + 1'b1;
-                        // rD_buffer  <= rD_buffer << 1;
-                        // rD_temp    <= rD_buffer[DATA_WIDTH-1];      //msb first
-                        // state      <= IDLE;
+                        end                         
                     end
                 end
                 WRITE: begin
@@ -270,9 +265,8 @@ module slave #(
                             wD_buffer[0]    <= wD_temp;
                         end
                         else begin
-                            check <= 1;
-                            last_reg        <= last;
-                            state           <= IDLE;
+                            // check <= 1;
+                            state           <= WRITEB2;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp; 
                             config_buffer   <= 0;                           
@@ -290,6 +284,10 @@ module slave #(
                             wD_counter      <= 0;
                         end
                     end
+                end
+                WRITEB2 : begin
+                    ram[address]    <= wD_buffer;
+                    state           <= IDLE;
                 end                
                 default: state <= IDLE;
                     

@@ -1,11 +1,6 @@
 module master_slave_tb ();
 timeunit 1ns; timeprecision 1ps;
 
-//slave
-//write burst doesn't go to idle
-
-//master
-//single write to start valid one clock cycle later (with first bit)
 
     localparam DATA_WIDTH = 8;
     localparam ADDRESS_WIDTH = $clog2(4096);
