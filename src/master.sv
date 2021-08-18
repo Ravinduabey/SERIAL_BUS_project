@@ -374,7 +374,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     end
                                                     else begin
                                                         tempReadData                <= internalDataOut;
-                                                        addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                         i                           <= 0; 
                                                         internalComState            <= singleWrite;
                                                     end
@@ -413,7 +412,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 tempReadData[DATA_WIDTH-1-i] <= rD;
                                                 i               <= i + 1'b1;
                                             end
-                                            else if (i == DATA_WIDTH || ready) begin
+                                            else if (i == DATA_WIDTH) begin
                                             dataInternal        <= tempReadData;
                                             addressInternal     <= addressInternalBurtstBegin;
                                             wr                  <= 1;
@@ -497,15 +496,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 i                   <= i + 1'b1;
                                                 valid               <= 1;
                                             end
-                                            else if (i == DATA_WIDTH) begin
-                                                i                           <= 0;
-                                                burstLen                    <= burstLen - 1'b1;
-                                                // addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                tempReadData                <= internalDataOut;
-                                                valid                       <= 0;
-                                            end
+                                            
                                             else begin
                                                 valid               <= 0;
+                                                i                   <= 0;
                                                 communicationState  <= over;
                                                 last                <= 0;
                                             end
