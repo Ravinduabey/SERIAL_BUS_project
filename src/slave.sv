@@ -62,7 +62,21 @@ module slave #(
     // localparam WRITE    = 4'd6;
     // localparam WRITEB   = 4'd7;
 
+<<<<<<< HEAD
 //    logic [3:0] state = IDLE;
+=======
+    logic [3:0] state = IDLE;
+
+    // typedef enum logic [3:0] { 
+    //    IDLE,
+    //    CONFIG,
+    //    CONFIG2,
+    //    READ,
+    //    READB,
+    //    WRITE,
+    //    WRITEB 
+    // } state_;
+>>>>>>> 0b0e966 (still instantiating. need to rebase master module)
 
     typedef enum logic [3:0] { 
        INIT,
@@ -234,7 +248,11 @@ module slave #(
                 end
                 WRITE: begin
                     if (wD_counter < DATA_WIDTH-1) begin
+<<<<<<< HEAD
                         wD_counter  <= wD_counter + 1'b1;
+=======
+                        wD_counter  <= wD_counter + 1;
+>>>>>>> 0b0e966 (still instantiating. need to rebase master module)
                         wD_buffer   <= wD_buffer << 1;
                         wD_buffer[0] <= wD_temp;                    //msb first
                     end

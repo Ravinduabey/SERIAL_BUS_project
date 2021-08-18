@@ -4,7 +4,8 @@ module top import details::*;
     parameter MASTER_COUNT=2,  // number of masters
     parameter DATA_WIDTH = 16,   // width of a data word in slave & master
     parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
-    parameter MAX_MASTER_WRITE_DEPTH = 16  // maximum number of addresses of a master that can be externally written
+    parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
+    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 1000 
 
 )
 (
@@ -28,7 +29,8 @@ localparam int SLAVE_ADDR_WIDTHS[SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog
 
 localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or read all the slave address locations without loss
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
-
+localparam S_ID_WIDTH = $clog2(SLAVE_COUNT+1);
+localparam M_ID_WIDTH = $clog2(MASTER_COUNT);
 
 logic rstN, clk, jump_stateN, jump_next_addr;
 logic [3:0]KEY_OUT;
@@ -69,6 +71,8 @@ logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId[0:MASTER_COUNT];
 logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId_next[0:MASTER_COUNT];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
+logic M_eoc[0:MASTER_COUNT-1];
+logic M_eoc_next[0:MASTER_COUNT-1];
 
 logic M_doneCom[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
@@ -85,6 +89,20 @@ logic M_last[0:MASTER_COUNT-1];
 logic arbCont[0:MASTER_COUNT-1];
 logic arbSend[0:MASTER_COUNT-1];
 
+// slave module input outputs
+logic S_rD[0:SLAVE_COUNT-1];      
+logic S_ready[0:SLAVE_COUNT-1];   
+logic S_control[0:SLAVE_COUNT-1]; 
+logic S_wD[0:SLAVE_COUNT-1];      
+logic S_valid[0:SLAVE_COUNT-1];   
+logic S_last[0:SLAVE_COUNT-1];    
+
+
+/// arbiter module related wires
+logic [S_ID_WIDTH+M_ID_WIDTH-1:0] a_bus_state;
+logic a_ready;
+
+
 logic M_read_write_sel[0:MASTER_COUNT-1];
 logic M_read_write_sel_next[0:MASTER_COUNT-1];
 logic M_external_write_sel[0:MASTER_COUNT-1];
@@ -99,6 +117,7 @@ logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr_next[0:MASTER_COUNT-1]; // slave R/W first addr
 logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr_next[0:MASTER_COUNT-1]; // slave R/W last addr (when burst R/W)
+
 
 //////////////////// master configuration state related logics /////////////////
 localparam CONFIG_CLK_COUNT = 2;
@@ -121,7 +140,7 @@ generate
             .address(M_address[jj]),
             .slaveId(M_slaveId[jj]),
             .start(M_start[jj]),
-            .eoc(),
+            .eoc(M_eoc[jj]),
 
             .doneCom(M_doneCom[jj]),
             .dataOut(M_dataOut[jj]),
@@ -129,74 +148,95 @@ generate
             //    with slave     //
             .rD(M_rD[jj]),         
             .ready(M_ready[jj]),
-            .control,           // START|SLAVE_ID|r/w|B|address| 
-            .wrD,
-            .valid,
-            .last,
+            .control(M_control[jj]),           // START|SLAVE_ID|r/w|B|address| 
+            .wrD(M_wrD[jj]),
+            .valid(M_valid[jj]),
+            .last(M_last[jj]),
 
             //    with arbiter   //
-            logic arbCont,
-            logic arbSend
+            .arbCont(arbCont[jj]),
+            .arbSend(arbSend[jj])
         );
     end
 endgenerate
-
-///// bus interconnect instantiation ///////////
-bus_interconnect bus_interconnect(
-    input  [2:0] master, 
-    input  [2:0] slave,
-
-    input       m1_valid, m1_last, m1_wD,
-    output      m1_ready, m1_rD,
-    input       m2_valid, m2_last, m2_wD,
-    output      m2_ready, m2_rD,
-
-    output      s1_valid, s1_last, s1_wD,
-    input       s1_ready, s1_rD,
-    output      s2_valid, s2_last, s2_wD,
-    input       s2_ready, s2_rD,
-    output      s3_valid, s3_last, s3_wD,
-    input       s3_ready, s3_rD
-);
 
 /////// slave instantiation ////////////
 generate 
     for (jj=0; jj<SLAVE_COUNT; jj++) begin : SLAVE
         slave #(
-            ADDR_DEPTH = 2000,
-            SLAVES = 3,
-            DATA_WIDTH = 32,
-            SLAVEID = $clog2(SLAVES)
+            .ADDR_DEPTH(SLAVE_DEPTHS[jj]),
+            .SLAVES(SLAVE_COUNT),
+            .DATA_WIDTH(DATA_WIDTH),
+            .SLAVEID(jj+1)
         ) slave(
             // with Master (through interconnect)
-            output logic rD,                  //serial read_data
-            output logic ready,               //default HIGh
+            .rD(S_rD[jj]),                  //serial read_data
+            .ready(S_ready[jj]),               //default HIGh
 
-            input logic control,              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
-            input logic wD,                   //serial write_data
-            input logic valid,                //default LOW
-            input logic last,                 //default LOW
+            .control(S_control[jj]),              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
+            .wD(S_wD[jj]),                   //serial write_data
+            .valid(S_valid[jj]),                //default LOW
+            .last(S_last[jj]),                 //default LOW
 
             //with Top Module
-            input logic [SLAVEID-1:0]slave_ID,
-            input logic clk,
-            input logic resetn   
-        )
+            .clk,
+            .rstN   
+        );
     end
 
 endgenerate
 
 //////// arbiter instantiation
-arbiter arbiter(
-    input logic clk,
-	 input logic rstn,
-    input logic m1_in,
-	 input logic m2_in,
-	 output logic m1_out,
-	 output logic m2_out,
-	 input logic ready,
-	 output logic buscontrol
+arbiter #(
+    .NO_MASTERS(MASTER_COUNT),
+    .NO_SLAVES(SLAVE_COUNT),
+    .THRESH(MAX_SPLIT_TRANS_WAIT_CLK_COUNT) 
+)arbiter(
+
+  .clk,
+  .rstN,
+  
+  //============//
+  //  masters   //
+  //============// 
+  .port_in(arbSend),
+  .port_out(arbCont),
+
+  //===================//
+  //    multiplexers   //
+  //===================// 
+	.ready(a_ready),
+    .bus_state(a_bus_state)
 );
+
+//// bus_interconnect instantiation ////
+
+bus_interconnect #(
+    .NO_MASTERS(MASTER_COUNT),
+    .NO_SLAVES(SLAVE_COUNT)
+) bus_interconnect (
+
+    // arbiter 
+    .bus_state(a_bus_state),
+    .ready(a_ready),
+
+    //masters from First master: 0 - Second master :1 --- last
+    .control_M(M_control), 
+	.wD_M(M_wrD), //********* is this correct naming?????
+	.valid_M(M_valid),
+	.last_M(M_last),
+    .rD_M(M_rD),
+	.ready_M(M_ready),
+
+    //slaves count  First Slave : 0 - Second Slave :1 --- last
+    .control_S(S_control),
+	.wD_S(S_wD),
+	.valid_S(S_valid),
+	.last_S(S_last),
+    .rD_S(S_rD),
+	.ready_S(S_ready)  
+    );
+
 
 
 main_state_t current_state, next_state;
@@ -223,6 +263,8 @@ always_ff @(posedge clk or negedge rstN) begin
         M_inEx      <= '{default:'0};
         M_address   <= '{default:'0}; 
         M_slaveId   <= '{default:'0}; 
+
+        M_eoc   <= '{default:'0};
 
         M_read_write_sel        <= '{default: '0};
         M_external_write_sel    <= '{default: '0};
@@ -252,11 +294,14 @@ always_ff @(posedge clk or negedge rstN) begin
         M_address   <= M_address_next; 
         M_slaveId   <= M_slaveId_next; 
 
+        M_eoc   <= M_eoc_next;
+
         M_read_write_sel        <= M_read_write_sel_next;
         M_external_write_sel    <= M_exteral_write_sel_next;
 
         slave_first_addr <= slave_first_addr_next;
         slave_last_addr  <= slave_last_addr_next;
+
 
         //////////// config_sub_states related logic /////////
         current_config_state        <= next_config_state;
@@ -266,6 +311,7 @@ always_ff @(posedge clk or negedge rstN) begin
 
         M_start <= M_start_next;
         M_data  <= M_data_next;
+        
 
         M_dataOut_reg <= M_dataOut_next;
 
@@ -452,6 +498,8 @@ always_comb begin
     M_address_next   = M_address;
     M_slaveId_next   = M_slaveId; 
 
+    M_eoc_next       = M_eoc;
+
     M_read_write_sel_next       = M_read_write_sel;
     M_exteral_write_sel_next    = M_external_write_sel;
 
@@ -474,6 +522,10 @@ always_comb begin
 
             for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin 
                 M_slaveId_next[ii] = SW[2*ii+1 -:2];
+            end
+
+            if ((SW[3:0] == '0) & (next_state == communication_done)) begin
+                M_eoc_next = '{default:1'b1};  // say masters to directly jump to last state without communication;
             end
         end   
 
@@ -597,6 +649,7 @@ always_comb begin
                         if (current_config_master != MASTER_COUNT-1) begin
                             next_config_master = current_config_master+1'b1;
                             next_config_write_count = '0;
+                            M_start_next[current_config_master+1] = 1'b1; // send start configuration for next master
                             M_address_next[current_config_master+1] = slave_first_addr[current_config_master+1];
                             M_data_next[current_config_master+1] = M_data_bank[current_config_master+1][0]; // the first external write value of first master (need only if external write)
                         end
