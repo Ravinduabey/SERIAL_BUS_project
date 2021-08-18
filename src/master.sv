@@ -1,6 +1,6 @@
 module master #(
     parameter MEMORY_DEPTH  = 4096,
-    parameter DATA_WIDTH    = 16,
+    parameter DATA_WIDTH    = 8,
     parameter NO_SLAVES     = 2
 )( 
 

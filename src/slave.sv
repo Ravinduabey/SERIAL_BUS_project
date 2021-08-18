@@ -49,7 +49,7 @@ module slave #(
 	// Variable to hold the registered read address
 	logic [ADDR_WIDTH-1:0] address;
     logic same, read;
-    // logic check;
+    logic check;
 
     // logic [3:0] next_state;
 
@@ -62,21 +62,7 @@ module slave #(
     // localparam WRITE    = 4'd6;
     // localparam WRITEB   = 4'd7;
 
-<<<<<<< HEAD
 //    logic [3:0] state = IDLE;
-=======
-    logic [3:0] state = IDLE;
-
-    // typedef enum logic [3:0] { 
-    //    IDLE,
-    //    CONFIG,
-    //    CONFIG2,
-    //    READ,
-    //    READB,
-    //    WRITE,
-    //    WRITEB 
-    // } state_;
->>>>>>> 0b0e966 (still instantiating. need to rebase master module)
 
     typedef enum logic [3:0] { 
        INIT,
@@ -135,7 +121,7 @@ module slave #(
                     config_counter <= 0;
                     rD_counter <= 0;
                     wD_counter <= 0;
-                    // check <= 0; 
+                    check <= 0; 
                     if (control == 1'b1) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
@@ -250,11 +236,7 @@ module slave #(
                 end
                 WRITE: begin
                     if (wD_counter < DATA_WIDTH-1) begin
-<<<<<<< HEAD
                         wD_counter  <= wD_counter + 1'b1;
-=======
-                        wD_counter  <= wD_counter + 1;
->>>>>>> 0b0e966 (still instantiating. need to rebase master module)
                         wD_buffer   <= wD_buffer << 1;
                         wD_buffer[0] <= wD_temp;                    //msb first
                     end
@@ -279,7 +261,7 @@ module slave #(
                     end 
                 end
                 WRITEB: begin
-                    if (last == 0) begin
+                    if (last==0) begin
                         if (wD_counter < DATA_WIDTH && valid==1) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
@@ -296,17 +278,20 @@ module slave #(
                         end
                     end
                     else begin
-                        // wD_counter <= 0;                        
+                        check <= 1;
                         if (wD_counter < DATA_WIDTH && valid) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;
                         end
-                        else begin
+                        else if (wD_counter == DATA_WIDTH) begin
                             state           <= IDLE;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp; 
                             config_buffer   <= 0;                           
+                        end
+                        else if (valid == 0) begin
+                            state           <= WRITEB;
                         end
                     end
                 end                
@@ -316,7 +301,7 @@ module slave #(
 
             // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
 
-            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
+            // $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
             // $writememh("slave-mem.txt",ram);
 
         end 

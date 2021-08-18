@@ -23,7 +23,7 @@ timeunit 1ns; timeprecision 1ps;
     end
 
 
-    slave #(.ADDR_DEPTH(2000),.SLAVES(3), .DATA_WIDTH(8), .SLAVEID(1)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.rstN(resetn),.clk(clk));
+    slave #(.ADDR_DEPTH(2048),.SLAVES(3), .DATA_WIDTH(8), .SLAVEID(1)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.rstN(resetn),.clk(clk));
 
     initial begin
         resetn <= 1;
@@ -72,17 +72,18 @@ timeunit 1ns; timeprecision 1ps;
             #(CLOCK_PERIOD);
             end
         end
+        valid <= 1;
         last <= 1;
         wD <= 1;
         #(CLOCK_PERIOD*5);
         wD <= 0;
         #(CLOCK_PERIOD*3);
 
-        @(posedge clk);
-        resetn <= 0;
-        #(CLOCK_PERIOD)
-        resetn <= 1;
-        last <= 0;
+        // @(posedge clk);
+        // resetn <= 0;
+        // #(CLOCK_PERIOD)
+        // resetn <= 1;
+        // last <= 0;
 
         #(CLOCK_PERIOD*4);
 
