@@ -6,7 +6,6 @@ timeunit 1ns; timeprecision 1ps;
 
 //master
 //single write to start valid one clock cycle later (with first bit)
-//single read doesn't go to over
 
     localparam DATA_WIDTH = 8;
     localparam ADDRESS_WIDTH = $clog2(4096);
@@ -60,7 +59,7 @@ timeunit 1ns; timeprecision 1ps;
     } top_master_burst;
 
     slave #(
-        .ADDR_DEPTH(2000),
+        .ADDR_DEPTH(4096),
         .SLAVES(3), 
         .DATA_WIDTH(DATA_WIDTH), 
         .SLAVEID(1)
@@ -147,11 +146,11 @@ timeunit 1ns; timeprecision 1ps;
         slaveId <= 2'b01;
 
         //===to change read-write mode===//
-        // rdWr    <= Write_slave;
-        rdWr    <= Read_slave;
+        rdWr    <= Write_slave;
+        // rdWr    <= Read_slave;
         burst   <= burst_master;
         //start adress 
-        address <= 12'd0;
+        address <= 12'd6;
         
         #3;
         eoc     <= 0;
@@ -180,7 +179,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         start   <= 1;
         // last data    
-        address <= 12'd0;
+        address <= 12'd6;
         data    <= 16'd17;
 
         #(CLOCK_PERIOD);
