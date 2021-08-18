@@ -94,8 +94,7 @@ logic S_control[0:SLAVE_COUNT-1];
 logic S_wD[0:SLAVE_COUNT-1];      
 logic S_valid[0:SLAVE_COUNT-1];   
 logic S_last[0:SLAVE_COUNT-1];    
-//with Top Module
-logic [SLAVEID-1:0]S_slave_ID[0:SLAVE_COUNT-1];  //********************
+
 
 /// arbiter module related wires
 logic [S_ID_WIDTH+M_ID_WIDTH-1:0] a_bus_state;
@@ -149,8 +148,8 @@ generate
             .ready(M_ready[jj]),
             .control(M_control[jj]),           // START|SLAVE_ID|r/w|B|address| 
             .wrD(M_wrD[jj]),
-            .valid(M_valid),
-            .last(M_last),
+            .valid(M_valid[jj]),
+            .last(M_last[jj]),
 
             //    with arbiter   //
             .arbCont(arbCont[jj]),
@@ -165,7 +164,8 @@ generate
         slave #(
             .ADDR_DEPTH(SLAVE_DEPTHS[jj]),
             .SLAVES(SLAVE_COUNT),
-            .DATA_WIDTH(DATA_WIDTH)
+            .DATA_WIDTH(DATA_WIDTH),
+            .SLAVEID(jj+1)
         ) slave(
             // with Master (through interconnect)
             .rD(S_rD[jj]),                  //serial read_data
@@ -177,7 +177,6 @@ generate
             .last(S_last[jj]),                 //default LOW
 
             //with Top Module
-            .slave_ID, //***************
             .clk,
             .rstN   
         );
@@ -208,33 +207,33 @@ arbiter #(
     .bus_state(a_bus_state)
 );
 
-/// bus_interconnect instantiation ////
+//// bus_interconnect instantiation ////
 
-// bus_interconnect #(
-//     .NO_MASTERS(MASTER_COUNT),
-//     .NO_SLAVES(SLAVE_COUNT)
-// ) bus_interconnect (
+bus_interconnect #(
+    .NO_MASTERS(MASTER_COUNT),
+    .NO_SLAVES(SLAVE_COUNT)
+) bus_interconnect (
 
-//     // arbiter controllers
-//     .bus_state(a_bus_state),
-//     .ready(a_ready),
+    // arbiter 
+    .bus_state(a_bus_state),
+    .ready(a_ready),
 
-//     //masters
-//     input   logic [NO_MASTERS-1:0] control_M,
-// 	input   logic [NO_MASTERS-1:0] wD_M,
-// 	input   logic [NO_MASTERS-1:0] valid_M,
-// 	input   logic [NO_MASTERS-1:0] last_M,
-//     output  logic [NO_MASTERS-1:0] rD_M,
-// 	output  logic [NO_MASTERS-1:0] ready_M,
+    //masters from First master: 0 - Second master :1 --- last
+    .control_M(M_control), 
+	.wD_M(M_wrD), //********* is this correct naming?????
+	.valid_M(M_valid),
+	.last_M(M_last),
+    .rD_M(M_rD),
+	.ready_M(M_ready),
 
-//     //slaves
-//     output  logic [NO_SLAVES-1:0] control_S,
-// 	output  logic [NO_SLAVES-1:0] wD_S,
-// 	output  logic [NO_SLAVES-1:0] valid_S,
-// 	output  logic [NO_SLAVES-1:0] last_S,
-//     input   logic [NO_SLAVES-1:0] rD_S,
-// 	input   logic [NO_SLAVES-1:0] ready_S
-//     );
+    //slaves count  First Slave : 0 - Second Slave :1 --- last
+    .control_S(S_control),
+	.wD_S(S_wD),
+	.valid_S(S_valid),
+	.last_S(S_last),
+    .rD_S(S_rD),
+	.ready_S(S_ready)  
+    );
 
 
 
