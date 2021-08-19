@@ -839,7 +839,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                         masterDone: begin
                             if (clock_counter < 2'd1) begin
-                                arbSend <= 1;
+                                arbSend            <= 1;
                                 wr                 <= 0;
                                 valid              <= 0;
                                 clock_counter <= clock_counter + 1'b1;
@@ -857,7 +857,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         else masterAckownledgement
                         */
                         
-                        masterSplit: communicationState <= idleCom; // what should i send here
+                        masterSplit:
+                        begin
+                            communicationState <= masterDone; // what should i send here
+                            arbSend            <= 0;
+                        end 
                         
                         //=======================================//
                         //   Split Communication continue state  //
