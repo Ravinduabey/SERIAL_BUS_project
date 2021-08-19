@@ -121,6 +121,7 @@ module slave #(
                end
                 IDLE : begin
                     config_counter <= 0;
+                    ready           <=1;
                     rD_counter <= 0;
                     wD_counter <= 0;
                     // check <= 0; 
@@ -174,6 +175,9 @@ module slave #(
                             end
                             else  state <= CONFIG_NEXT;
                         end
+                    end
+                    else begin
+                        state <= IDLE;
                     end
                 end 
                 READ : begin
