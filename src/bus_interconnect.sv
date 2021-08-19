@@ -42,12 +42,12 @@ module bus_interconnect #(
     logic ready_mux; 
     logic rD_mux; 
 
-    assign control_mux  = control_M [master_sel ];
+    assign control_mux  = control_M [master_sel ];      
     assign wD_mux       = wD_M      [master_sel ];
     assign valid_mux    = valid_M   [master_sel ];
     assign last_mux     = last_M    [master_sel ];
-    assign ready_mux    = ready_S   [slave_sel  ];
-    assign rD_mux       = rD_S      [slave_sel  ];
+    assign ready_mux    = ready_S   [slave_sel-1];
+    assign rD_mux       = rD_S      [slave_sel-1];
 
     assign ready        = ready_mux;
     
@@ -55,10 +55,10 @@ module bus_interconnect #(
     genvar j;
     generate 
         for (i = 0; i<NO_SLAVES; i++) begin : master_to_slave
-            assign control_S[i] = (i==slave_sel) ? control_mux  : '0;
-            assign wD_S     [i] = (i==slave_sel) ? wD_mux       : '0; 
-            assign valid_S  [i] = (i==slave_sel) ? valid_mux    : '0;
-            assign last_S   [i] = (i==slave_sel) ? last_mux     : '0;
+            assign control_S[i] = (i==slave_sel-1) ? control_mux  : '0;
+            assign wD_S     [i] = (i==slave_sel-1) ? wD_mux       : '0; 
+            assign valid_S  [i] = (i==slave_sel-1) ? valid_mux    : '0;
+            assign last_S   [i] = (i==slave_sel-1) ? last_mux     : '0;
         end 
         for (j = 0; j<NO_MASTERS; j++) begin : slave_to_master
             assign ready_M  [j] = (j==master_sel) ? ready_mux   : '1;

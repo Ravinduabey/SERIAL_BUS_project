@@ -130,11 +130,12 @@ always_comb begin : stateMachine
       if (cmd==STOP_S) begin
         //send 000  
         write = '1;
+        write_val = 3'b010;
         next_state = DONE;
       end
       else if (cmd==STOP_P) begin
         //send 010
-        write_val = 3'b010;
+        // write_val = 3'b000;  
         write = '1;
         next_state = DONE;
       end

@@ -150,8 +150,8 @@ timeunit 1ns; timeprecision 1ps;
         slaveId <= 2'b01;
 
         //===to change read-write mode===//
-        rdWr    <= Write_slave;
-        // rdWr    <= Read_slave;
+        // rdWr    <= Write_slave;
+        rdWr    <= Read_slave;
         burst   <= burst_master;
         address <= 12'd0;
         
@@ -182,7 +182,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         start   <= 1;
         // last data
-        address <= 12'd0;
+        address <= 12'd3;
         data    <= 16'd17;
 
         #(CLOCK_PERIOD);
@@ -205,11 +205,18 @@ timeunit 1ns; timeprecision 1ps;
         // wait for arbiter request
         #(CLOCK_PERIOD*5);
 
-        arbCont <= 0;
+        arbCont <= 0;   // wait period
         #(CLOCK_PERIOD*5);
         arbCont <= 1;
         #(CLOCK_PERIOD*2);
         arbCont <= 0;
+
+        #(CLOCK_PERIOD*3);
+
+        // wait for arbiter clear for ack
+        arbCont <= 1;
+        #(CLOCK_PERIOD*2);
+
 
         //-- master will send the control signal for 19 clock_cycles--//
         master_control();
@@ -219,31 +226,38 @@ timeunit 1ns; timeprecision 1ps;
         //=======single read==========//
 
         
-        // rD      <= 0;
-        // #(CLOCK_PERIOD*3);
-        // // single_read(.rD(rD));
-        // ready   = 0;
-        // #(CLOCK_PERIOD*5);
+        rD      <= 0;
+        #(CLOCK_PERIOD*3);
+        // single_read(.rD(rD));
+        ready   = 0;
+        #(CLOCK_PERIOD*5);
 
-        // #(CLOCK_PERIOD*5);
-        // arbCont <=1;
-        // #CLOCK_PERIOD;
-        // arbCont <=0;
-        // #CLOCK_PERIOD;
+        // initiate split transaction
+        #(CLOCK_PERIOD*5);
+        arbCont <=0;
+        #CLOCK_PERIOD;
+        arbCont <=1;
+        #CLOCK_PERIOD;
 
-        
-        // #(CLOCK_PERIOD*15);
-        // arbCont  = 1;
-        // #(CLOCK_PERIOD);
-        // arbCont  = 1;
-        // #(CLOCK_PERIOD);
-        // arbCont  = 0;
-        // rD      <=1;
-        // #(CLOCK_PERIOD*22)
-        // ready   <= 0;
-        // #(CLOCK_PERIOD*10)
-        // arbCont <= 1;
-        // #(CLOCK_PERIOD*2);
+        arbCont <= 0;
+        // arbiter send split clear
+        #(CLOCK_PERIOD*15);
+        arbCont  = 1;
+        #(CLOCK_PERIOD);
+        arbCont  = 0;
+        // arbiter waits for ack
+        #(CLOCK_PERIOD*3);
+        // arbiter send clear for ack
+        arbCont  = 1;
+
+    
+        rD      <=1;
+        #(CLOCK_PERIOD*22)
+        // wait for control signal
+        ready   <= 0;
+        #(CLOCK_PERIOD*10)
+        arbCont <= 1;
+        #(CLOCK_PERIOD*2);
         // arbCont <= 0;
         // #(CLOCK_PERIOD*10);
         // arbCont <= 1;
@@ -274,6 +288,135 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         rD      <= 0;    //9
         #(CLOCK_PERIOD);    
+        rD      <= 1;    //10 64 
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //11 32
+        #(CLOCK_PERIOD);
+        rD      <= 0;   //12 16 
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //13 8
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //14 4
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //15 2
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //16 1  99
+
+        #(CLOCK_PERIOD*2);
+
+        //2nd data
+        rD      <= 0; //1
+        #(CLOCK_PERIOD);
+        rD      <= 0;  //2
+        #(CLOCK_PERIOD);
+        rD      <= 0;   //3
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //4
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //5
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //6
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //7
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //8
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //9
+        #(CLOCK_PERIOD);    
+        rD      <= 1;    //10 64
+        #(CLOCK_PERIOD);
+        // stop prority
+        arbCont <= 0;
+        rD      <= 1;    //11 32
+        #(CLOCK_PERIOD);
+        arbCont <= 0;
+        rD      <= 0;   //12
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //13
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //14 4
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //15
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //16 100
+        #(CLOCK_PERIOD*10);
+
+
+
+        #(CLOCK_PERIOD*10);
+        arbCont <= 1;
+        #(CLOCK_PERIOD);
+        arbCont <= 1;
+        #(CLOCK_PERIOD);
+        // arbCont <= 0;
+        rD      <=1;
+        #(CLOCK_PERIOD*22)
+
+        // 3rd data
+        rD      <= 0; //1
+        #(CLOCK_PERIOD);
+        rD      <= 0;  //2
+        #(CLOCK_PERIOD);
+        rD      <= 0;   //3
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //4
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //5
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //6
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //7
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //8
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //9
+        #(CLOCK_PERIOD);    
+        rD      <= 1;    //10 64
+        #(CLOCK_PERIOD);
+        arbCont <= 0;
+        rD      <= 1;    //11 32
+        #(CLOCK_PERIOD);
+        arbCont <= 0;
+        rD      <= 0;   //12
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //13
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //14 4
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //15 2
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //16  102
+        #(CLOCK_PERIOD*2);
+
+        #(CLOCK_PERIOD*10);
+        arbCont <= 1;
+        #(CLOCK_PERIOD);
+        arbCont <= 1;
+        #(CLOCK_PERIOD);
+        arbCont <= 0;
+        rD      <=1;
+        #(CLOCK_PERIOD*22)
+
+        //4th data
+
+        rD      <= 0; //1
+        #(CLOCK_PERIOD);
+        rD      <= 0;  //2
+        #(CLOCK_PERIOD);
+        rD      <= 0;   //3
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //4
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //5
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //6
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //7
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //8
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //9
+        #(CLOCK_PERIOD);    
         rD      <= 1;    //10
         #(CLOCK_PERIOD);
         rD      <= 1;    //11
@@ -282,184 +425,57 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         rD      <= 0;    //13
         #(CLOCK_PERIOD);
-        rD      <= 0;    //14
+        arbCont <= 1;
+        rD      <= 1;    //14
         #(CLOCK_PERIOD);
+        arbCont <= 0;
         rD      <= 1;    //15
         #(CLOCK_PERIOD);
         rD      <= 1;    //16
-
         #(CLOCK_PERIOD*2);
 
-        //2nd data
-        // rD      <= 1; //1
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;  //2
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;   //3
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //4
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //5
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //6
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //7
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //8
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //9
-        // #(CLOCK_PERIOD);    
-        // rD      <= 1;    //10
-        // #(CLOCK_PERIOD);
-        // arbCont <= 1;
-        // rD      <= 1;    //11
-        // #(CLOCK_PERIOD);
-        // arbCont <= 0;
-        // rD      <= 0;   //12
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //13
-        // #(CLOCK_PERIOD);
-        // rD      <= 1;    //14
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //15
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //16
-        // #(CLOCK_PERIOD*2);
 
-
-        // #(CLOCK_PERIOD*10);
-        // arbCont <= 1;
-        // #(CLOCK_PERIOD);
-        // arbCont <= 1;
-        // #(CLOCK_PERIOD);
-        // arbCont <= 0;
-        // rD      <=1;
-        // #(CLOCK_PERIOD*22)
-
-        // // 3rd data
-        // rD      <= 0; //1
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;  //2
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;   //3
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //4
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //5
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //6
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //7
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //8
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //9
-        // #(CLOCK_PERIOD);    
-        // rD      <= 1;    //10
-        // #(CLOCK_PERIOD);
-        // arbCont <= 1;
-        // rD      <= 1;    //11
-        // #(CLOCK_PERIOD);
-        // arbCont <= 0;
-        // rD      <= 0;   //12
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //13
-        // #(CLOCK_PERIOD);
-        // rD      <= 1;    //14
-        // #(CLOCK_PERIOD);
-        // rD      <= 1;    //15
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //16
-        // #(CLOCK_PERIOD*2);
-
-        // #(CLOCK_PERIOD*10);
-        // arbCont <= 1;
-        // #(CLOCK_PERIOD);
-        // arbCont <= 1;
-        // #(CLOCK_PERIOD);
-        // arbCont <= 0;
-        // rD      <=1;
-        // #(CLOCK_PERIOD*22)
-
-        // //4th data
-
-        // rD      <= 0; //1
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;  //2
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;   //3
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //4
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //5
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //6
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //7
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //8
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //9
-        // #(CLOCK_PERIOD);    
-        // rD      <= 1;    //10
-        // #(CLOCK_PERIOD);
-        // rD      <= 1;    //11
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;   //12
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //13
-        // #(CLOCK_PERIOD);
-        // arbCont <= 1;
-        // rD      <= 1;    //14
-        // #(CLOCK_PERIOD);
-        // arbCont <= 0;
-        // rD      <= 1;    //15
-        // #(CLOCK_PERIOD);
-        // rD      <= 1;    //16
-        // #(CLOCK_PERIOD*2);
-
-
-        // #(CLOCK_PERIOD*10);
-        // arbCont  <= 1;
-        // #(CLOCK_PERIOD);
-        // arbCont  <= 1;
-        // #(CLOCK_PERIOD);
-        // arbCont  <= 0;
-        // rD      <=1;
-        // #(CLOCK_PERIOD*22)
-        // // 5th data
-        // rD      <= 0; //1
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;  //2
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;   //3
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //4
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //5
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //6
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //7
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //8
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //9
-        // #(CLOCK_PERIOD);    
-        // rD      <= 1;    //10
-        // #(CLOCK_PERIOD);
-        // rD      <= 1;    //11
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;   //12
-        // #(CLOCK_PERIOD);
-        // rD      <= 1;    //13
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //14
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //15
-        // #(CLOCK_PERIOD);
-        // rD      <= 0;    //16
-        // #(CLOCK_PERIOD*2);
+        #(CLOCK_PERIOD*10);
+        arbCont  <= 1;
+        #(CLOCK_PERIOD);
+        arbCont  <= 1;
+        #(CLOCK_PERIOD);
+        arbCont  <= 0;
+        rD      <=1;
+        #(CLOCK_PERIOD*22)
+        // 5th data
+        rD      <= 0; //1
+        #(CLOCK_PERIOD);
+        rD      <= 0;  //2
+        #(CLOCK_PERIOD);
+        rD      <= 0;   //3
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //4
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //5
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //6
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //7
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //8
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //9
+        #(CLOCK_PERIOD);    
+        rD      <= 1;    //10
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //11
+        #(CLOCK_PERIOD);
+        rD      <= 0;   //12
+        #(CLOCK_PERIOD);
+        rD      <= 1;    //13
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //14
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //15
+        #(CLOCK_PERIOD);
+        rD      <= 0;    //16
+        #(CLOCK_PERIOD*2);
 
 
         #(CLOCK_PERIOD*200);
