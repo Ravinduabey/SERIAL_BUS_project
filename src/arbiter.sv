@@ -4,7 +4,7 @@
 module arbiter #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
-    parameter THRESH = 1000, 
+    parameter THRESH = 10000000, 
     parameter S_ID_WIDTH = $clog2(NO_SLAVES+1),
     parameter M_ID_WIDTH = $clog2(NO_MASTERS)
 )(

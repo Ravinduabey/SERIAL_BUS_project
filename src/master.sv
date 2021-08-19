@@ -344,10 +344,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 communicationState  <= reqAck;
                             end
-                            else if (arbiterCounnter < 4'd10) begin
+                            else if (arbiterCounnter < 4'd12) begin
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                             end
-                            else if (arbiterCounnter == 4'd10) begin
+                            else if (arbiterCounnter == 4'd12) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
                                 control             <= tempControl[18];
@@ -383,7 +383,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     case(internalComState)
 
                                     checkState:
-                                        if (tempRdWr == 1 && (arbCont == 0 || fromArbiter == 2'd1)) begin
+                                        if (tempRdWr == 1 && (arbCont == 1 || fromArbiter == 2'b11)) begin
                                             if (burstLen == 0) begin
                                                 wr = 0;
                                                 addressInternal  <= addressInternalBurtstBegin;
@@ -414,7 +414,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 end
                                             end
                                         end
-                                        else if (tempRdWr == 0 && (arbCont == 0 || fromArbiter == 2'd1)) begin
+                                        else if (tempRdWr == 0 && (arbCont == 1 || fromArbiter == 2'b11)) begin
                                             if (burstLen == 0) begin
                                                 internalComState <= singleRead;
                                                 valid            <= 1;

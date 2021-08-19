@@ -5,7 +5,7 @@ module top import details::*;
     parameter DATA_WIDTH = 16,   // width of a data word in slave & master
     parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
     parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
-    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 1000 
+    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 100 
 
 )
 (

@@ -17,7 +17,8 @@ module masterBram #(
 	
 
 	initial begin
-		$readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\mem.txt", ram);
+		$readmemh("mem.txt", ram);
+		$writememh("mem.txt", ram);
 	end
 
 	logic [ADDRESS_WIDTH-1:0] addr_reg;
