@@ -62,7 +62,7 @@ logic                       wr;
 logic                       tempRdWr;
 logic                       tempBurst;
 logic [1:0]                 tempHold;
-
+logic                       splitOnot;
 logic [1:0]                 clock_counter;
 
 logic [1:0]                 fromArbiter;
@@ -156,6 +156,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         tempHold            <= 0;
         clock_counter       <= 0;
         arbiterCounnter     <= 0;
+        splitOnot           <= 0;
         state               <= idle;
         communicationState  <= idleCom;
         internalComState    <= checkState;
@@ -197,6 +198,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     controlCounter      <= 0;
                     clock_counter       <= 0;
                     arbiterCounnter     <= 0;
+                    splitOnot           <= 0;
                     state               <= idle;
                     communicationState  <= idleCom;
                     internalComState    <= checkState;
@@ -300,8 +302,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         idleCom:
                             if (~arbCont) begin
                                 communicationState  <= reqCom;
+                                tempHold            <= 0;
                                 arbiterCounnter     <= 0;
                                 controlCounter      <= 0;
+                                clock_counter       <= 0;
                                 arbiterRequest      <= tempArbiterRequest;
                             end
 
@@ -314,14 +318,15 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             else if (arbiterCounnter == 4'd6) begin
                                 arbiterCounnter     <= arbiterCounnter;
                                 if (fromArbiter == 2'b11) begin: ClearNew
-                                    arbSend             <= 1'b1;
+                                    arbSend             <= 1'b1;            // first ack
                                     tempControl         <= tempControl_2;
                                     controlCounter      <= 0;
                                     communicationState  <= reqAck;
                                 end
                                 else if (fromArbiter == 2'b10) begin: ClearSplit
                                     arbSend             <= 1'b1;
-                                    communicationState  <= splitComContinue;
+                                    communicationState  <= reqAck;
+                                    splitOnot           <= 1;
                                 end
                                 else begin 
                                     communicationState  <= reqCom;
@@ -330,27 +335,35 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         
                         reqAck:
                             if (arbiterCounnter < 4'd7) begin
-                                arbSend             <= 1'b0;
+                                arbSend             <= 1'b0;        // second ack
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 communicationState  <= reqAck;
                             end
                             else if (arbiterCounnter < 4'd8) begin
-                                arbSend             <= 1'b1;
+                                arbSend             <= 1'b1;        // 3rd ack
                                 arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 communicationState  <= reqAck;
                             end
-                            else if (arbiterCounnter == 4'd8) begin
+                            else if (arbiterCounnter < 4'd10) begin
+                                arbiterCounnter     <= arbiterCounnter + 3'd1;
+                            end
+                            else if (arbiterCounnter == 4'd10) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
                                 control             <= tempControl[18];
                                 tempControl         <= {tempControl[17:0] ,1'b0};
                                 controlCounter      <= controlCounter + 5'd1;
+                                if (splitOnot == 1)begin
+                                    communicationState <= splitComContinue;
+                                end
+                                else begin
                                 communicationState  <= masterCom;
+                                end
                             end
 
                         masterCom:
                            
-                            if (fromArbiter == 2'b00 || fromArbiter == 2'b01) begin
+                            if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
 
                                 if (controlCounter < CONTROL_LEN) begin
                                     control             <= tempControl[18];
@@ -545,9 +558,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
 
 
-                            else if (fromArbiter == 2'b10)begin: priorityStop
+                            else if (fromArbiter == 2'b00)begin: priorityStop
                                 communicationState <= masterHold;
-                                arbSend <= 0;
+                                arbSend <= 0;       // fisrt hold bit 
                                 if (burstLen == 0) begin    // single
                                     if (tempRdWr == 0) begin   // read single 
                                         if (ready) begin
@@ -680,8 +693,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
 
                             end
-                            else if (fromArbiter == 2'b11)begin: splitStop
-                                communicationState <= masterSplit;                                
+                            else if (fromArbiter == 2'b01)begin: splitStop
+                                communicationState <= masterSplit; 
+                                splitOnot          <= 1;                               
                             end
                             
 
@@ -748,7 +762,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             i                           <= 0; 
                                             valid                       <= 0;
                                             burstLen                    <= burstLen - 1'b1;   
-                                            communicationState          <= masterDone;   
+                                            communicationState          <= masterDone; 
+                                            arbSend                     <= 0;  
+                                            clock_counter               <= 0;
                                         end
                                         else if (~ready) begin
                                             wr <= 0;
@@ -794,6 +810,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             tempReadData                <= internalDataOut;
                                             valid                       <= 0;
                                             communicationState          <= masterDone;
+                                            arbSend                     <= 0;
+                                            clock_counter               <= 0;
                                         end
                                     end
                                     else if (burstLen == 1) begin
@@ -820,22 +838,32 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         end
 
                         masterDone: begin
-                            communicationState <= idleCom;
-                            wr                 <= 0;
-                            valid              <= 0;
+                            if (clock_counter < 2'd1) begin
+                                arbSend <= 1;
+                                wr                 <= 0;
+                                valid              <= 0;
+                                clock_counter <= clock_counter + 1'b1;
+                            end
+                            else if (clock_counter < 2'd2) begin
+                                arbSend <= 0;
+                                clock_counter <= clock_counter + 1'b1;
+                            end
+                            else if (clock_counter == 2'd2) begin
+                                communicationState <= idleCom;
+                            end
                         end 
                         /*
                         if arbiter needs to set everything from scratch: masteridle
                         else masterAckownledgement
                         */
                         
-                        masterSplit: communicationState <= reqCom;
+                        masterSplit: communicationState <= idleCom; // what should i send here
                         
                         //=======================================//
                         //   Split Communication continue state  //
                         //=======================================//
                         splitComContinue: 
-                            if (fromArbiter == 2'b00 || fromArbiter == 2'b01) begin
+                            if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
                                 fromArbiter[1]      <= fromArbiter[0];
                                 fromArbiter[0]      <= arbCont;
                                 if (burstLen == 0) begin 
@@ -912,9 +940,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     end
                                 end
                             end
-                            else if (fromArbiter == 2'b10)begin 
+                            else if (fromArbiter == 2'b00)begin 
                                 communicationState <= masterHold;
-                                arbSend <= 0;
+                                splitOnot          <= 0;
+                                arbSend            <= 0;
                                 if (burstLen == 0) begin    // single
                                     if (tempRdWr == 0) begin   // read single 
                                         if (ready) begin
@@ -1050,10 +1079,21 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             begin
                                 last            <= 0;
                                 valid           <= 0;
-                                doneCom         <= 1;
                                 wr              <= 0;
-                                dataOut         <= dataInternal;
-                                addressInternal <= address;
+                                if (clock_counter < 2'd1) begin
+                                    arbSend <= 0;
+                                    clock_counter <= clock_counter + 1'b1;
+                                end
+                                else if (clock_counter < 2'd3) begin
+                                    arbSend <= 1;
+                                    clock_counter <= clock_counter + 1'b1;
+                                end
+                                else if (clock_counter == 2'd3) begin
+                                    arbSend         <= 0;
+                                    doneCom         <= 1;
+                                    dataOut         <= dataInternal;
+                                    addressInternal <= address;
+                                end
                             end
 
                     endcase
