@@ -6,7 +6,8 @@ module slave #(
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1),
-    parameter SLAVEID = 1
+    parameter SLAVEID = 1,
+    parameter DELAY = 0
     // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
@@ -120,6 +121,7 @@ module slave #(
                    wD_buffer <= 0;
                end
                 IDLE : begin
+                    ready <= 1;
                     config_counter <= 0;
                     rD_counter <= 0;
                     wD_counter <= 0;

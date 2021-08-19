@@ -61,7 +61,7 @@ module bus_interconnect #(
             assign last_S   [i] = (i==slave_sel) ? last_mux     : '0;
         end 
         for (j = 0; j<NO_MASTERS; j++) begin : slave_to_master
-            assign ready_M  [j] = (j==master_sel) ? ready_mux   : '0;
+            assign ready_M  [j] = (j==master_sel) ? ready_mux   : '1;
             assign rD_M     [j] = (j==master_sel) ? rD_mux      : '0;
         end 
     endgenerate
