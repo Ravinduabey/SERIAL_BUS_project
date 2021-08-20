@@ -37,10 +37,10 @@ localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_1};
 localparam logic master_RW[0:1] = '{write,read};
 localparam logic external_write[0:1] = '{1'b1, 1'b0};
 localparam int   external_write_count[0:1] = '{3,2};
-localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{0,0};
-localparam logic [MASTER_ADDR_WIDTH-1:0] slave_address_count[0:1] = '{1,1};
-localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr = 0; // read the masters' memory after communication
-localparam FIRST_START_MASTER = master_1; // this master will start communication first
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{1,1};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_address_count[0:1] = '{2,2};
+localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr[0:3] = '{1,2,3,4}; // read the masters' memory after communication
+localparam FIRST_START_MASTER = master_0; // this master will start communication first
 localparam COM_START_DELAY = 1000; //gap between 2 masters communication start signal
 
 
@@ -142,7 +142,7 @@ initial begin
 
     #(CLK_PERIOD*10);
     @(posedge clk);
-    get_data_from_masters(master_read_addr);
+    get_data_from_masters();
 
     #(CLK_PERIOD*10);
 
@@ -286,21 +286,25 @@ task automatic start_communication();
     #(CLK_PERIOD*10); // wait some time before next KEY press / SW change 
 endtask
 
-task automatic get_data_from_masters(logic [MASTER_ADDR_WIDTH-1:0] address);
-    @(posedge clk);
-    SW[MASTER_ADDR_WIDTH-1:0] = address; // set the switches
+task automatic get_data_from_masters();
 
-    @(posedge clk);
-    #(CLK_PERIOD*10);
+    foreach (master_read_addr[i]) begin
+        @(posedge clk);
+        SW[MASTER_ADDR_WIDTH-1:0] = master_read_addr[i]; // set the switches
 
-    @(posedge clk);
-    jump_next_addr = 1'b0; // press the push button
-    #(CLK_PERIOD*10); // hold the push button untill pass some time period
+        @(posedge clk);
+        #(CLK_PERIOD*10);
 
-    @(posedge clk);
-    jump_next_addr = 1'b1; // release the push button
+        @(posedge clk);
+        jump_next_addr = 1'b0; // press the push button
+        #(CLK_PERIOD*10); // hold the push button untill pass some time period
 
-    #(CLK_PERIOD*10); // wait some time before next KEY press / SW change 
+        @(posedge clk);
+        jump_next_addr = 1'b1; // release the push button
+
+        #(CLK_PERIOD*10); // wait some time before next KEY press / SW change 
+    end
+    
 endtask
 
 endmodule : top_tb
