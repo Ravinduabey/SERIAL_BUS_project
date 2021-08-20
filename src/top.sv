@@ -7,7 +7,7 @@ module top import details::*;
     parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
     parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 100 ,
     parameter FIRST_START_MASTER = 0, // this master will start communication first
-    parameter COM_START_DELAY = 1000 //gap between 2 masters communication start signal
+    parameter COM_START_DELAY = 0 //gap between 2 masters communication start signal
 
 )
 (
@@ -16,7 +16,7 @@ module top import details::*;
     input logic [17:0]SW,
     output logic [17:0]LEDR,
     output logic [3:0]LEDG,
-    output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+    // output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON
         
@@ -79,8 +79,6 @@ logic M_eoc_next[0:MASTER_COUNT-1];
 
 logic M_doneCom[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
-logic [DATA_WIDTH-1:0] M_dataOut_reg[0:MASTER_COUNT-1]; // to keep the values reed from masters
-logic [DATA_WIDTH-1:0] M_dataOut_next[0:MASTER_COUNT-1];
 
 logic M_rD[0:MASTER_COUNT-1];         
 logic M_ready[0:MASTER_COUNT-1];
@@ -282,8 +280,6 @@ always_ff @(posedge clk or negedge rstN) begin
         current_com_start_delay_count <= '0;
         both_masters_com_started <= 1'b0;
 
-        M_dataOut_reg <= '{default: '0};
-
     end
     else begin
         current_state <= next_state;
@@ -312,8 +308,6 @@ always_ff @(posedge clk or negedge rstN) begin
         
         current_com_start_delay_count <= next_com_start_delay_count;
         both_masters_com_started <= both_masters_com_started_next;
-
-        M_dataOut_reg <= M_dataOut_next;
 
     end
 end
@@ -512,8 +506,6 @@ always_comb begin
     slave_first_addr_next = slave_first_addr;
     slave_last_addr_next  = slave_last_addr;
 
-    M_dataOut_next = M_dataOut_reg;
-
     // config_sub_states related logic
     M_start_next = M_start;
     next_config_master = current_config_master;
@@ -699,12 +691,9 @@ always_comb begin
         end  
 
         communication_done: begin
-            M_dataOut_next = M_dataOut; //read both masters same address
-            if (!jump_next_addr) begin
-                for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
-                    M_address_next[ii] = SW[MASTER_ADDR_WIDTH-1:0];
-                end          
-            end
+            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
+                M_address_next[ii] = SW[MASTER_ADDR_WIDTH-1:0];
+            end          
         end   
     endcase
 end
