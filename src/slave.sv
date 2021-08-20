@@ -101,7 +101,7 @@ module slave #(
     // end
 
     initial begin
-        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
+        $readmemh("slave-mem-1.txt",ram);
     end
 
     
@@ -378,8 +378,8 @@ module slave #(
 
             // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
 
-            $writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
-            // $writememh("slave-mem.txt",ram);
+//            $writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
+          $writememh("slave-mem.txt",ram);
 
         end 
     end
