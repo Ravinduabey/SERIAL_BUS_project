@@ -59,7 +59,7 @@ module slave #(
 
     //Variable to hold latest read address
     //to avoid unnecessary memory access 
-    //when the read was 
+    //when the read was not carried out
 	logic [ADDR_WIDTH-1:0] prev_read_address;
 
     logic [DEL_COUNTER-1 :0]  delay_counter;
@@ -199,16 +199,21 @@ module slave #(
                         state   <= READ;
                     end 
                     else begin
-                        rD_counter      <= 0;
-                        delay_counter   <= 0;
-                        ready           <= 0;
-                        if (config_buffer[burst_]==0) begin
-                            prev_read_address   <= address;
-                            state               <= IDLE;
+                        if (valid) begin
+                            rD_counter      <= 0;
+                            delay_counter   <= 0;
+                            ready           <= 0;
+                            if (config_buffer[burst_]==0) begin
+                                prev_read_address   <= address;
+                                state               <= IDLE;
+                            end
+                            else begin
+                            address         <= address + 1'b1;
+                            state           <= READB_GET;
+                            end
                         end
                         else begin
-                        address         <= address + 1'b1;
-                        state           <= READB_GET;
+                            
                         end
                     end
                 end                
