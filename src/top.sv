@@ -5,7 +5,9 @@ module top import details::*;
     parameter DATA_WIDTH = 16,   // width of a data word in slave & master
     parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
     parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
-    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 100 
+    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 100 ,
+    parameter FIRST_START_MASTER = 0, // this master will start communication first
+    parameter COM_START_DELAY = 1000 //gap between 2 masters communication start signal
 
 )
 (
@@ -31,6 +33,7 @@ localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or 
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
 localparam S_ID_WIDTH = $clog2(SLAVE_COUNT+1);
 localparam M_ID_WIDTH = $clog2(MASTER_COUNT);
+
 
 logic rstN, clk, jump_stateN, jump_next_addr;
 logic [3:0]KEY_OUT;
@@ -67,8 +70,8 @@ logic [DATA_WIDTH-1:0] M_data[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_data_next[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address_next[0:MASTER_COUNT-1];
-logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId[0:MASTER_COUNT];
-logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId_next[0:MASTER_COUNT];
+logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId[0:MASTER_COUNT-1];
+logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId_next[0:MASTER_COUNT-1];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 logic M_eoc[0:MASTER_COUNT-1];
@@ -102,9 +105,6 @@ logic S_last[0:SLAVE_COUNT-1];
 logic [S_ID_WIDTH+M_ID_WIDTH-1:0] a_bus_state;
 logic a_ready;
 
-logic M_external_write_sel[0:MASTER_COUNT-1];
-logic M_exteral_write_sel_next[0:MASTER_COUNT-1];
-
 logic [DATA_WIDTH-1:0]M_data_bank[0:MASTER_COUNT-1][0:MAX_MASTER_WRITE_DEPTH-1]; // used to store values to be written on masters' memories.
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_data_bank_addr, next_data_bank_addr; // used to select a location in "M_data_bank"
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]data_bank_wr_count[0:MASTER_COUNT-1];
@@ -114,6 +114,10 @@ logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr_next[0:MASTER_COUNT-1]; // slave R/W first addr
 logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr[0:MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr_next[0:MASTER_COUNT-1]; // slave R/W last addr (when burst R/W)
+
+localparam COM_START_DELAY_COUNTER_WIDTH = (COM_START_DELAY==0)? 1:$clog2(COM_START_DELAY); // if widht==0 can not synthesize
+logic [COM_START_DELAY_COUNTER_WIDTH-1:0]current_com_start_delay_count, next_com_start_delay_count;
+logic both_masters_com_started, both_masters_com_started_next; 
 
 
 //////////////////// master configuration state related logics /////////////////
@@ -263,8 +267,6 @@ always_ff @(posedge clk or negedge rstN) begin
 
         M_eoc   <= '{default:'0};
 
-        M_external_write_sel    <= '{default: '0};
-
         slave_first_addr <= '{default:'0};  
         slave_last_addr  <= '{default:'0};
 
@@ -276,6 +278,9 @@ always_ff @(posedge clk or negedge rstN) begin
 
         M_start <= '{default: '0};
         M_data  <= '{default:'0};
+
+        current_com_start_delay_count <= '0;
+        both_masters_com_started <= 1'b0;
 
         M_dataOut_reg <= '{default: '0};
 
@@ -292,8 +297,6 @@ always_ff @(posedge clk or negedge rstN) begin
 
         M_eoc   <= M_eoc_next;
 
-        M_external_write_sel    <= M_exteral_write_sel_next;
-
         slave_first_addr <= slave_first_addr_next;
         slave_last_addr  <= slave_last_addr_next;
 
@@ -307,6 +310,8 @@ always_ff @(posedge clk or negedge rstN) begin
         M_start <= M_start_next;
         M_data  <= M_data_next;
         
+        current_com_start_delay_count <= next_com_start_delay_count;
+        both_masters_com_started <= both_masters_com_started_next;
 
         M_dataOut_reg <= M_dataOut_next;
 
@@ -423,7 +428,7 @@ always_comb begin
 
                 config_start: begin
                     if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
-                        if (M_external_write_sel[current_config_master] == 1'b0) begin
+                        if (M_inEx[current_config_master] == 1'b0) begin
                             next_config_state = config_last;
                         end
                         else if ((data_bank_wr_count[current_config_master]==0) | (data_bank_wr_count[current_config_master]==1'b1) ) begin // only 1 external write
@@ -473,6 +478,12 @@ always_comb begin
             if ((M_doneCom[0] == 1'b1) & (M_doneCom[1]==1'b1)) begin
                 next_state = communication_done;
             end
+            else if ((M_slaveId[0]=='0) & (M_doneCom[1]==1'b1)) begin // only the master 1 communicates
+                next_state = communication_done;
+            end
+            else if ((M_slaveId[1]=='0) & (M_doneCom[0]==1'b1)) begin // only the master 0 communicates
+                next_state = communication_done;
+            end
         end
 
         communication_done: begin // stay within this state until reset
@@ -495,8 +506,6 @@ always_comb begin
 
     M_eoc_next       = M_eoc;
 
-    M_exteral_write_sel_next    = M_external_write_sel;
-
     next_data_bank_addr = current_data_bank_addr;
     data_bank_wr_count_next = data_bank_wr_count;
 
@@ -510,6 +519,9 @@ always_comb begin
     next_config_master = current_config_master;
     next_config_clk_count = current_config_clk_count + 1'b1;
     next_config_write_count = current_config_write_count;
+
+    next_com_start_delay_count = current_com_start_delay_count;
+    both_masters_com_started_next = both_masters_com_started;
 
     case (current_state) 
         master_slave_sel: begin
@@ -532,7 +544,7 @@ always_comb begin
 
         external_write_sel: begin
             for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
-                M_exteral_write_sel_next[ii] = SW[ii];
+                M_inEx_next[ii] = SW[ii];
             end
                       
         end 
@@ -660,11 +672,30 @@ always_comb begin
 
         communication_ready:begin
             if (!jump_stateN) begin
-                M_start_next = '{default:1'b1}; // give start signal for 1 clk cycle
+                if (COM_START_DELAY == 0) begin
+                    M_start_next = '{default:1'b1}; // give start signal for 1 clk cycle for both masters simultaneously
+                    both_masters_com_started_next = 1'b1;
+                end
+                else begin
+                    M_start_next[FIRST_START_MASTER] = 1'b1; // give start signal for 1 clk cycle for first start master only
+                end
+                
             end
         end
         communicating: begin         
             M_start_next = '{default:'0}; 
+            if (both_masters_com_started == 1'b0) begin
+                next_com_start_delay_count = current_com_start_delay_count + 1'b1;
+                if (current_com_start_delay_count == COM_START_DELAY) begin
+                    both_masters_com_started_next = 1'b1;
+                    if (FIRST_START_MASTER == 0) begin
+                        M_start_next[1] = 1'b1;
+                    end
+                    else if (FIRST_START_MASTER == 1) begin
+                        M_start_next[0] = 1'b1;
+                    end
+                end
+            end
         end  
 
         communication_done: begin
