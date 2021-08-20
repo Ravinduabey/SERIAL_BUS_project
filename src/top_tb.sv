@@ -14,6 +14,7 @@ localparam MAX_MASTER_WRITE_DEPTH = 16;  // maximum number of addresses of a mas
 localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or read all the slave address locations without loss
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
 
+
 typedef enum logic[1:0]{
     no_slave = 2'b00,
     slave_1  = 2'b01,
@@ -22,19 +23,25 @@ typedef enum logic[1:0]{
 } slave_t;
 
 typedef enum logic{
+    master_0 = 1'b0,
+    master_1 = 1'b1
+} master_t;
+
+typedef enum logic{
     read = 1'b0,
     write = 1'b1
 } operation_t;
 
 //////// set the following parameters first before run the simulation ////////
-localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
+localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_1};
 localparam logic master_RW[0:1] = '{write,read};
-localparam logic external_write[0:1] = '{1'b1, 1'b1};
+localparam logic external_write[0:1] = '{1'b1, 1'b0};
 localparam int   external_write_count[0:1] = '{3,2};
-localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{1,1};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{0,0};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_address_count[0:1] = '{1,1};
-localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr = 3;
-
+localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr = 0; // read the masters' memory after communication
+localparam FIRST_START_MASTER = master_1; // this master will start communication first
+localparam COM_START_DELAY = 1000; //gap between 2 masters communication start signal
 
 
 logic clk;
@@ -66,8 +73,9 @@ assign communication_ready = LEDG[1];
 assign communication_done  = LEDG[2];
 
 top #(.SLAVE_COUNT(SLAVE_COUNT), .MASTER_COUNT(MASTER_COUNT), .DATA_WIDTH(DATA_WIDTH), 
-    .SLAVE_DEPTHS(SLAVE_DEPTHS), .MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH))dut(.*);  // instantiate the top module
-
+    .SLAVE_DEPTHS(SLAVE_DEPTHS), .MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), 
+    .FIRST_START_MASTER(FIRST_START_MASTER), .COM_START_DELAY(COM_START_DELAY)) dut (.*);
+    
 initial begin
     @(posedge clk);
     jump_next_addr = 1'b1;  // initially at pulled up (high) state
@@ -286,11 +294,11 @@ task automatic get_data_from_masters(logic [MASTER_ADDR_WIDTH-1:0] address);
     #(CLK_PERIOD*10);
 
     @(posedge clk);
-    jump_stateN = 1'b0; // press the push button
+    jump_next_addr = 1'b0; // press the push button
     #(CLK_PERIOD*10); // hold the push button untill pass some time period
 
     @(posedge clk);
-    jump_stateN = 1'b1; // release the push button
+    jump_next_addr = 1'b1; // release the push button
 
     #(CLK_PERIOD*10); // wait some time before next KEY press / SW change 
 endtask
