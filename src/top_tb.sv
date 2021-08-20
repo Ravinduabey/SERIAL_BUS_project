@@ -30,7 +30,7 @@ typedef enum logic{
 localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
 localparam logic master_RW[0:1] = '{write,read};
 localparam logic external_write[0:1] = '{1'b1, 1'b1};
-localparam int   external_write_count[0:1] = '{2,2};
+localparam int   external_write_count[0:1] = '{3,2};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{1,1};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_address_count[0:1] = '{1,1};
 localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr = 3;
