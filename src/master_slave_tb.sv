@@ -142,8 +142,8 @@ timeunit 1ns; timeprecision 1ps;
         slaveId <= 2'b01;
 
         //===to change read-write mode===//
-        rdWr    <= Write_slave;
-        // rdWr    <= Read_slave;
+        // rdWr    <= Write_slave;
+        rdWr    <= Read_slave;
         burst   <= burst_master;
         //start adress 
         address <= 12'd3;
@@ -175,7 +175,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         start   <= 1;
         // last data    
-        address <= 12'd3;
+        address <= 12'd5;
         data    <= 16'd17;
 
         #(CLOCK_PERIOD);

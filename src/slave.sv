@@ -83,16 +83,16 @@ module slave #(
 	 
     state_ state = INIT;
 
-    typedef enum logic [CON_COUNTER-1:0] { 
-        start_s = CON,
-        start_f = CON-2,
-        id_s    = CON-3, 
-        id_f    = CON-2-S_ID_WIDTH,
-        rw_     = CON-2-S_ID_WIDTH-1,
-        burst_  = CON-2-S_ID_WIDTH-2,
-        address_s= ADDR_WIDTH-1,
-        address_f= 0
-    } control_;
+    // typedef enum logic [CON_COUNTER-1:0] { 
+    //     start_s = CON,
+    //     start_f = CON-2,
+    //     id_s    = CON-3, 
+    //     id_f    = CON-2-S_ID_WIDTH,
+    //     rw_     = CON-2-S_ID_WIDTH-1,
+    //     burst_  = CON-2-S_ID_WIDTH-2,
+    //     address_s= ADDR_WIDTH-1,
+    //     address_f= 0
+    // } control_;
 
     
     // initial begin
@@ -161,16 +161,16 @@ module slave #(
                     end
                     else begin
                         config_counter  <= 0;
-                        address         <= config_buffer[address_s:address_f];
+                        address         <= config_buffer[ADDR_WIDTH-1:0];
                         state           <= CONFIG_NEXT;
                     end
                 end
                 CONFIG_NEXT : begin
                     //if start and slave id sent by master is correct: 
                     //process the rest of the control signal
-                    if (config_buffer[start_s:start_f]==START && config_buffer[id_s:id_f]==SLAVEID ) begin
+                    if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
                         //if READ
-                        if (config_buffer[rw_] == 0) begin 
+                        if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin 
                             //if the READ is being sent after a previously failed read
                             //and slave already has the data buffered and waiting: send data directly   
                             if (address == failed_read_address) begin
@@ -190,7 +190,7 @@ module slave #(
                             end                                                
                         end
                         //if WRITE: ready is always HIGH until end of write
-                        else if (config_buffer[rw_] == 1) begin  
+                        else if (config_buffer[CON-2-S_ID_WIDTH-1] == 1) begin  
                             ready <= 1;
                             //only begin write if master sends valid HIGH
                             //start receiving first write data bit 
@@ -223,7 +223,7 @@ module slave #(
                         delay_counter   <= 0;
                         ready           <= 0;
                         //if master did not send a READ BURST
-                        if (config_buffer[burst_]==0) begin
+                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) begin
                             //make sure that the read data was read, and continue to IDLE
                             if (valid) state  <= IDLE;
                             //if read failed: prepare for the same read
@@ -308,7 +308,7 @@ module slave #(
                         wD_counter      <= 0;
                         ram[address]    <= wD_buffer;
                         //if master did not send a WRITE BURST
-                        if (config_buffer[burst_]==0) state <= IDLE;
+                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                         else begin
                             //for WRITE BURST, wait for valid HIGH
                             //before reading wD input

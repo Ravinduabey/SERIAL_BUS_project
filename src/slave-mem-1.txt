@@ -2,18 +2,9 @@
 // instance=/master_slave_tb/Slave_dut/ram
 // format=hex addressradix=h dataradix=h version=1.0 wordsperline=1 noaddress
 ff
-0e
-54
+70
+e0
 81
-09
-63
-0d
-e0
-ff
-32
-90
-90
-c1
 83
 07
 0e
@@ -91,7 +82,16 @@ c1
 0e
 1c
 38
+70
+70
+e0
+c1
+83
+07
+0e
+1c
 38
+7c
 38
 38
 38

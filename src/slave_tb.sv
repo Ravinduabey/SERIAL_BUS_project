@@ -23,7 +23,7 @@ timeunit 1ns; timeprecision 1ps;
     end
 
 
-    slave #(.ADDR_DEPTH(2048),.SLAVES(3), .DATA_WIDTH(8), .SLAVEID(1)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.rstN(resetn),.clk(clk));
+    slave #(.ADDR_DEPTH(2048),.SLAVES(3), .DATA_WIDTH(8), .SLAVEID(1), .DELAY(5)) dut (.rD(rD), .ready(ready), .control(control), .wD(wD), .valid(valid), .last(last),.rstN(resetn),.clk(clk));
 
     initial begin
         resetn <= 1;
@@ -104,7 +104,8 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD*2);
         control <= 0;
         #(CLOCK_PERIOD);
-        
+        #(CLOCK_PERIOD*3);
+        valid <= 0;
         #(CLOCK_PERIOD*8*50);      // send last HIGH after 50 words? 
         last <= 1;
 
@@ -129,19 +130,12 @@ timeunit 1ns; timeprecision 1ps;
         valid <= 0;
 
         #(CLOCK_PERIOD*3)
-        //control signal 111_01_00_00000000000 read from ram[0]
+        //control signal 111_00_00_00000000000 read from ram[0]
         control <= 1;
         #(CLOCK_PERIOD*3);
         control <= 0;
-        #(CLOCK_PERIOD);
-        control <= 1;
-        #(CLOCK_PERIOD);
-        control <= 0;
-        #(CLOCK_PERIOD*13);
-        control <= 1;           //just to make sure following bits are ignored
-        #(CLOCK_PERIOD);
-        control <= 0;
-        #(CLOCK_PERIOD);
+        #(CLOCK_PERIOD*15);
+        #(CLOCK_PERIOD*20);
 
         #(CLOCK_PERIOD*20)
         //control signal 111_01_00_00000000011 read from ram[3]
