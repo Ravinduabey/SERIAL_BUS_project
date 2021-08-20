@@ -201,8 +201,8 @@ timeunit 1ns; timeprecision 1ps;
         arbCont <= 0;
         #(CLOCK_PERIOD*5);
         arbCont <= 1;
-        #(CLOCK_PERIOD*2);
-        arbCont <= 0;
+        // #(CLOCK_PERIOD*2);
+        // arbCont <= 0;
 
         //-- master will send the control signal for 19 clock_cycles--//
         master_control();

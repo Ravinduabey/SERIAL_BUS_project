@@ -29,7 +29,7 @@ module slave #(
     localparam CON          = 3 + ADDR_WIDTH + 2 + S_ID_WIDTH-1;
     localparam CON_COUNTER  = $clog2(CON);
     localparam START        = 3'b111;
-    localparam DEL          = DELAY * DATA_WIDTH;
+    localparam DEL          = DELAY;
     localparam DEL_COUNTER  = $clog2(DEL);
 
 
@@ -73,22 +73,25 @@ module slave #(
 	 
     state_ state = INIT;
 
-    // typedef enum logic { 
-    //     start_  = CON:CON-2, 
-    //     id_     = CON-3:CON-2-S_ID_WIDTH,
-    //     rw_     = CON-2-S_ID_WIDTH-1,
-    //     burst_  = CON-2-S_ID_WIDTH-2,
-    //     address_= ADDR_WIDTH-1:0
-    // } control_;
+    typedef enum logic [CON_COUNTER-1:0] { 
+        start_s = CON,
+        start_f = CON-2,
+        id_s    = CON-3, 
+        id_f    = CON-2-S_ID_WIDTH,
+        rw_     = CON-2-S_ID_WIDTH-1,
+        burst_  = CON-2-S_ID_WIDTH-2,
+        address_s= ADDR_WIDTH-1,
+        address_f= 0
+    } control_;
 
     
     // initial begin
     // if (MEM_INIT_FILE != "") $readmemh(MEM_INIT_FILE, ram);
     // end
 
-   initial begin
-       $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
-   end
+    initial begin
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
+    end
 
     // initial begin
     //     $readmemh("slave-mem.txt",ram);
@@ -151,14 +154,13 @@ module slave #(
                     end
                     else begin
                         config_counter  <= 0;
-                        address         <= config_buffer[ADDR_WIDTH-1:0];
+                        address         <= config_buffer[address_s:address_f];
                         state           <= CONFIG_NEXT;
                     end
                 end
                 CONFIG_NEXT : begin
-                    //                  start                       slaveid
-                    if (config_buffer[CON:CON-2]== START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
-                        if (config_buffer[CON-2-S_ID_WIDTH-1]==0) begin     //read
+                    if (config_buffer[start_s:start_f]==START && config_buffer[id_s:id_f]==SLAVEID ) begin
+                        if (config_buffer[rw_]==0) begin     //read
                             if (address == prev_read_address) begin
                                 rD_temp         <= rD_buffer[DATA_WIDTH-1];
                                 state           <= READ; 
@@ -172,7 +174,7 @@ module slave #(
                                 else delay_counter <= delay_counter + 1'b1;
                             end                                                
                         end
-                        else if (config_buffer[CON-2-SLAVEID-1]==1) begin  //write
+                        else if (config_buffer[rw_]==1) begin  //write
                             ready <= 1;
                             if (valid)  begin
                                 state <= WRITE;
@@ -186,7 +188,6 @@ module slave #(
                 end 
                 READ : begin
                     // check <= 1'b1;
-                    // rD_buffer       <= ram[address];
                     rD_buffer       <= rD_buffer << 1;
                     rD_temp         <= rD_buffer[DATA_WIDTH-1];
                     rD_counter      <= rD_counter + 1'b1;
@@ -195,35 +196,40 @@ module slave #(
                         state   <= READ;
                     end 
                     else begin
-                        rD_counter  <= 0;
-                        ready       <= 0;
-                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) begin
+                        rD_counter      <= 0;
+                        delay_counter   <= 0;
+                        ready           <= 0;
+                        if (config_buffer[burst_]==0) begin
                             prev_read_address   <= address;
                             state               <= IDLE;
                         end
                         else begin
-                        address     <= address + 1'b1;
-                        state       <= READB_GET;
+                        address         <= address + 1'b1;
+                        state           <= READB_GET;
                         end
                     end
                 end                
                 READB_GET: begin
-                    rD_buffer <= ram[address];
-                    state   <= READB;
+                    if (delay_counter == DELAY) begin
+                        rD_buffer       <= ram[address];
+                        state           <= READB;
+                    end
+                    else delay_counter <= delay_counter + 1'b1;
                 end
                 READB: begin
                     ready <= 1;
                     if (last == 0) begin
                         if (rD_counter < DATA_WIDTH) begin
-                            rD_counter <= rD_counter + 1'b1;
-                            rD_buffer  <= rD_buffer << 1;
-                            rD_temp    <= rD_buffer[DATA_WIDTH-1];
+                            rD_counter  <= rD_counter + 1'b1;
+                            rD_buffer   <= rD_buffer << 1;
+                            rD_temp     <= rD_buffer[DATA_WIDTH-1];
                         end
                         else if (rD_counter == DATA_WIDTH) begin
-                            ready      <= 0;
-                            rD_counter <= 0;
-                            address    <= address + 1'b1;
-                            state      <= READB_GET;
+                            ready       <= 0;
+                            rD_counter  <= 0;
+                            delay_counter   <= 0;
+                            address     <= address + 1'b1;
+                            state       <= READB_GET;
                         end 
                     end
                     else begin
@@ -233,7 +239,8 @@ module slave #(
                             rD_temp    <= rD_buffer[DATA_WIDTH-1];
                         end
                         else if (rD_counter == DATA_WIDTH) begin
-                            state      <= IDLE;
+                            prev_read_address   <= address;
+                            state               <= IDLE;
                         end                         
                     end
                 end
@@ -246,7 +253,7 @@ module slave #(
                     else begin 
                         wD_counter <= 0;
                         ram[address] <= wD_buffer;
-                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
+                        if (config_buffer[burst_]==0) state <= IDLE;
                         else begin
                             if (last==0 && valid==1) begin
                                 wD_counter      <= 1;
