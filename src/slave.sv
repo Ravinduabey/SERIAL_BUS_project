@@ -176,14 +176,17 @@ module slave #(
                             //if the READ is being sent after a previously failed read
                             //and slave already has the data buffered and waiting: send data directly   
                             if (address == failed_read_address && read_failed) begin
+                                read_failed     <= 0;
                                 rD_temp         <= rD_buffer[DATA_WIDTH-1];
                                 state           <= READ; 
-                            end  
+                            end
+                            //if new READ  
                             else begin
                                 //once expected delay is done
                                 //access ram and start sending the first bit 
                                 //while assigning READ state in same clock cycle 
                                 if (delay_counter == DELAY) begin
+                                    read_failed <= 0;
                                     rD_buffer   <= ram[address];
                                     rD_temp     <= rD_buffer[DATA_WIDTH-1];
                                     state       <= READ;                                 
