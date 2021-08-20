@@ -57,10 +57,11 @@ module slave #(
 	// Variable to hold the registered read/write address
 	logic [ADDR_WIDTH-1:0] address;
 
-    //Variable to hold latest read address
-    //to avoid unnecessary memory access 
+    //Variable to hold read address
     //when the read was not carried out
-	logic [ADDR_WIDTH-1:0] prev_read_address;
+    //to allow next read to happen without delay
+    //after split transaction
+	logic [ADDR_WIDTH-1:0] failed_read_address;
 
     logic [DEL_COUNTER-1 :0]  delay_counter;
 
@@ -120,7 +121,7 @@ module slave #(
             case (state)
                 INIT : begin
                     address          <= 0;
-                    prev_read_address<= 0;
+                    failed_read_address<= 0;
                     config_counter   <= 0;
                     rD_counter       <= 0;
                     wD_counter       <= 0;
@@ -163,9 +164,14 @@ module slave #(
                     end
                 end
                 CONFIG_NEXT : begin
+                    //if start and slave id sent by master is correct: 
+                    //process the rest of the control signal
                     if (config_buffer[start_s:start_f]==START && config_buffer[id_s:id_f]==SLAVEID ) begin
-                        if (config_buffer[rw_] == 0) begin     //read
-                            if (address == prev_read_address) begin
+                        //if READ
+                        if (config_buffer[rw_] == 0) begin 
+                            //if the READ is being sent after a previously failed read
+                            //and slave already has the data buffered and waiting: send data directly   
+                            if (address == failed_read_address) begin
                                 rD_temp         <= rD_buffer[DATA_WIDTH-1];
                                 state           <= READ; 
                             end  
@@ -178,14 +184,20 @@ module slave #(
                                 else delay_counter <= delay_counter + 1'b1;
                             end                                                
                         end
-                        else if (config_buffer[rw_] == 1) begin  //write
+                        //if WRITE: ready is always HIGH until end of write
+                        else if (config_buffer[rw_] == 1) begin  
                             ready <= 1;
+                            //only begin write if master sends valid HIGH
                             if (valid)  begin
+                                wD_buffer       <= wD_buffer << 1;
+                                wD_buffer[0]    <= wD_temp;                    
                                 state <= WRITE;
                             end
+                            //if valid is LOW: wait
                             else  state <= CONFIG_NEXT;
                         end
                     end
+                    //if start and slave id is wrong: go to IDLE
                     else begin
                         state <= IDLE;
                     end
@@ -199,25 +211,48 @@ module slave #(
                         state   <= READ;
                     end 
                     else begin
-                        if (valid) begin
-                            rD_counter      <= 0;
-                            delay_counter   <= 0;
-                            ready           <= 0;
-                            if (config_buffer[burst_]==0) begin
-                                prev_read_address   <= address;
-                                state               <= IDLE;
-                            end
+                        rD_counter      <= 0;
+                        delay_counter   <= 0;
+                        ready           <= 0;
+                        //if master did not send a READ BURST
+                        if (config_buffer[burst_]==0) begin
+                            //make sure that the read data was read, and continue to IDLE
+                            if (valid) state  <= IDLE;
+                            //if not: prepare for the same read
+                            //by accessing ram, then wait in IDLE 
+                            //assign failed_read_address to check if next read
+                            //is the same failed read                                                        
                             else begin
-                            address         <= address + 1'b1;
-                            state           <= READB_GET;
+                                if (delay_counter == DELAY) begin
+                                    rD_buffer           <= ram[address];
+                                    failed_read_address <= address;
+                                    state               <= IDLE;
+                                end
+                                else delay_counter <= delay_counter + 1'b1;                                
                             end
                         end
                         else begin
-                            
+                            //make sure that the read data was read, and continue to READ BURST
+                            if (valid) begin
+                                address         <= address + 1'b1;
+                                state           <= READB_GET;
+                            end
+                            //if not: prepare for the same read
+                            //by accessing ram, then wait in IDLE
+                            //assign failed_read_address to check next read                             
+                            else begin
+                                if (delay_counter == DELAY) begin
+                                    rD_buffer           <= ram[address];
+                                    failed_read_address <= address;
+                                    state               <= IDLE;
+                                end
+                                else delay_counter <= delay_counter + 1'b1;
+                            end
                         end
                     end
                 end                
                 READB_GET: begin
+                    //next ram access
                     if (delay_counter == DELAY) begin
                         rD_buffer       <= ram[address];
                         state           <= READB;
@@ -226,20 +261,23 @@ module slave #(
                 end
                 READB: begin
                     ready <= 1;
-                    if (last == 0) begin
+                    //if read_burst is not over: continue burst
+                    if (!last) begin
                         if (rD_counter < DATA_WIDTH) begin
                             rD_counter  <= rD_counter + 1'b1;
                             rD_buffer   <= rD_buffer << 1;
                             rD_temp     <= rD_buffer[DATA_WIDTH-1];
                         end
+                        //after rD_buffer is completely sent
                         else if (rD_counter == DATA_WIDTH) begin
-                            ready       <= 0;
-                            rD_counter  <= 0;
+                            ready           <= 0;
+                            rD_counter      <= 0;
                             delay_counter   <= 0;
-                            address     <= address + 1'b1;
-                            state       <= READB_GET;
+                            address         <= address + 1'b1;
+                            state           <= READB_GET;
                         end 
                     end
+                    //else, if read burst is over: send final byte and stop
                     else begin
                         if (rD_counter < DATA_WIDTH) begin
                             rD_counter <= rD_counter + 1'b1;
@@ -247,7 +285,6 @@ module slave #(
                             rD_temp    <= rD_buffer[DATA_WIDTH-1];
                         end
                         else if (rD_counter == DATA_WIDTH) begin
-                            prev_read_address   <= address;
                             state               <= IDLE;
                         end                         
                     end
@@ -261,8 +298,11 @@ module slave #(
                     else begin 
                         wD_counter      <= 0;
                         ram[address]    <= wD_buffer;
+                        //if master did not send a WRITE BURST
                         if (config_buffer[burst_]==0) state <= IDLE;
                         else begin
+                            //for WRITE BURST, wait for valid HIGH
+                            //before reading wD input
                             if (last==0 && valid==1) begin
                                 wD_counter      <= 1;
                                 wD_buffer       <= wD_buffer << 1;
@@ -315,7 +355,7 @@ module slave #(
 
             // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
 
-            // $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
             // $writememh("slave-mem.txt",ram);
 
         end 
