@@ -4,6 +4,7 @@ module top import details::*;
     parameter MASTER_COUNT=2,  // number of masters
     parameter DATA_WIDTH = 16,   // width of a data word in slave & master
     parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
+    parameter int SLAVE_DELAYS[SLAVE_COUNT] = '{0,0,1200},
     parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
     parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 100 ,
     parameter FIRST_START_MASTER = 0, // this master will start communication first
@@ -166,7 +167,8 @@ generate
             .ADDR_DEPTH(SLAVE_DEPTHS[jj]),
             .SLAVES(SLAVE_COUNT),
             .DATA_WIDTH(DATA_WIDTH),
-            .SLAVEID(jj+1)
+            .SLAVEID(jj+1),
+            .DELAY(SLAVE_DELAYS[jj])
         ) slave(
             // with Master (through interconnect)
             .rD(S_rD[jj]),                  //serial read_data
@@ -620,9 +622,11 @@ always_comb begin
                         next_config_clk_count = '0;
                         next_config_write_count = current_config_write_count + 1'b1; // set the address for next state
                         M_data_next[current_config_master] = M_data_bank[current_config_master][current_config_write_count+1'b1];  //set the value for next state
+                        M_address_next[current_config_master] = slave_last_addr[current_config_master];
 
                         if (next_config_state == config_last) begin
                             M_start_next[current_config_master] = 1'b1; // set to one at the first cycle of "config_last"
+                            M_address_next[current_config_master] = slave_last_addr[current_config_master];
                         end
                     end               
                 end

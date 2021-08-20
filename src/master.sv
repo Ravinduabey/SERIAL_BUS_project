@@ -218,7 +218,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     end
                     else begin
                         addressInternalBurtstEnd    <= address;
-                        addressInternalBurtstBegin  <= address;
+                        // addressInternalBurtstBegin  <= address;
                         state                       <= startEndConfig;
                     end
                 end
