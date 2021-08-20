@@ -57,7 +57,8 @@ timeunit 1ns; timeprecision 1ps;
         .ADDR_DEPTH(4096),
         .SLAVES(3), 
         .DATA_WIDTH(DATA_WIDTH), 
-        .SLAVEID(1)
+        .SLAVEID(1),
+        .DELAY(5)
     ) Slave_dut (
         .rD(rD), 
         .ready(ready), 
