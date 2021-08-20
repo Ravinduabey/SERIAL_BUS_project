@@ -105,9 +105,6 @@ logic S_last[0:SLAVE_COUNT-1];
 logic [S_ID_WIDTH+M_ID_WIDTH-1:0] a_bus_state;
 logic a_ready;
 
-logic M_external_write_sel[0:MASTER_COUNT-1];
-logic M_exteral_write_sel_next[0:MASTER_COUNT-1];
-
 logic [DATA_WIDTH-1:0]M_data_bank[0:MASTER_COUNT-1][0:MAX_MASTER_WRITE_DEPTH-1]; // used to store values to be written on masters' memories.
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_data_bank_addr, next_data_bank_addr; // used to select a location in "M_data_bank"
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]data_bank_wr_count[0:MASTER_COUNT-1];
@@ -270,8 +267,6 @@ always_ff @(posedge clk or negedge rstN) begin
 
         M_eoc   <= '{default:'0};
 
-        M_external_write_sel    <= '{default: '0};
-
         slave_first_addr <= '{default:'0};  
         slave_last_addr  <= '{default:'0};
 
@@ -301,8 +296,6 @@ always_ff @(posedge clk or negedge rstN) begin
         M_slaveId   <= M_slaveId_next; 
 
         M_eoc   <= M_eoc_next;
-
-        M_external_write_sel    <= M_exteral_write_sel_next;
 
         slave_first_addr <= slave_first_addr_next;
         slave_last_addr  <= slave_last_addr_next;
@@ -435,7 +428,7 @@ always_comb begin
 
                 config_start: begin
                     if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
-                        if (M_external_write_sel[current_config_master] == 1'b0) begin
+                        if (M_inEx[current_config_master] == 1'b0) begin
                             next_config_state = config_last;
                         end
                         else if ((data_bank_wr_count[current_config_master]==0) | (data_bank_wr_count[current_config_master]==1'b1) ) begin // only 1 external write
@@ -513,8 +506,6 @@ always_comb begin
 
     M_eoc_next       = M_eoc;
 
-    M_exteral_write_sel_next    = M_external_write_sel;
-
     next_data_bank_addr = current_data_bank_addr;
     data_bank_wr_count_next = data_bank_wr_count;
 
@@ -553,7 +544,7 @@ always_comb begin
 
         external_write_sel: begin
             for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
-                M_exteral_write_sel_next[ii] = SW[ii];
+                M_inEx_next[ii] = SW[ii];
             end
                       
         end 
