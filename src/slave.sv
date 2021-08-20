@@ -62,6 +62,7 @@ module slave #(
     //to allow next read to happen without delay
     //after split transaction
 	logic [ADDR_WIDTH-1:0] failed_read_address;
+    logic read_failed;
 
     logic [DEL_COUNTER-1 :0]  delay_counter;
 
@@ -123,6 +124,7 @@ module slave #(
                     //initialize all counters, buffers, registers, outputs
                     address             <= 0;
                     failed_read_address <= 0;
+                    read_failed         <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
@@ -173,7 +175,7 @@ module slave #(
                         if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin 
                             //if the READ is being sent after a previously failed read
                             //and slave already has the data buffered and waiting: send data directly   
-                            if (address == failed_read_address) begin
+                            if (address == failed_read_address && read_failed) begin
                                 rD_temp         <= rD_buffer[DATA_WIDTH-1];
                                 state           <= READ; 
                             end  
@@ -225,7 +227,10 @@ module slave #(
                         //if master did not send a READ BURST
                         if (config_buffer[CON-2-S_ID_WIDTH-2]==0) begin
                             //make sure that the read data was read, and continue to IDLE
-                            if (valid) state  <= IDLE;
+                            if (valid) begin
+                                read_failed <= 0;
+                                state  <= IDLE;
+                            end
                             //if read failed: prepare for the same read
                             //by accessing ram, then wait in IDLE 
                             //assign failed_read_address to check if next read
@@ -233,6 +238,7 @@ module slave #(
                             else begin
                                 if (delay_counter == DELAY) begin
                                     rD_buffer           <= ram[address];
+                                    read_failed         <= 1;
                                     failed_read_address <= address;
                                     state               <= IDLE;
                                 end
@@ -242,6 +248,7 @@ module slave #(
                         else begin
                             //make sure that the read data was read, and continue to READ BURST
                             if (valid) begin
+                                read_failed     <= 0;
                                 address         <= address + 1'b1;
                                 state           <= READB_GET;
                             end
@@ -251,6 +258,7 @@ module slave #(
                             else begin
                                 if (delay_counter == DELAY) begin
                                     rD_buffer           <= ram[address];
+                                    read_failed         <= 1;
                                     failed_read_address <= address;
                                     state               <= IDLE;
                                 end
