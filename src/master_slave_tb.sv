@@ -175,7 +175,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         start   <= 1;
         // last data    
-        address <= 12'd6;
+        address <= 12'd3;
         data    <= 16'd17;
 
         #(CLOCK_PERIOD);

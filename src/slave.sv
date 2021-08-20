@@ -120,15 +120,17 @@ module slave #(
         else begin
             case (state)
                 INIT : begin
-                    address          <= 0;
-                    failed_read_address<= 0;
-                    config_counter   <= 0;
-                    rD_counter       <= 0;
-                    wD_counter       <= 0;
-                    delay_counter    <= 0;
-                    ready            <= 0;
-                    rD_buffer        <= 0;
-                    wD_buffer        <= 0;
+                    //initialize all counters, buffers, registers, outputs
+                    address             <= 0;
+                    failed_read_address <= 0;
+                    config_counter      <= 0;
+                    rD_counter          <= 0;
+                    wD_counter          <= 0;
+                    delay_counter       <= 0;
+                    ready               <= 1;
+                    rD_temp             <= 0;
+                    rD_buffer           <= 0;
+                    wD_buffer           <= 0;
                 end
                 IDLE : begin
                     ready           <= 1;
@@ -176,6 +178,9 @@ module slave #(
                                 state           <= READ; 
                             end  
                             else begin
+                                //once expected delay is done
+                                //access ram and start sending the first bit 
+                                //while assigning READ state in same clock cycle 
                                 if (delay_counter == DELAY) begin
                                     rD_buffer   <= ram[address];
                                     rD_temp     <= rD_buffer[DATA_WIDTH-1];
@@ -188,6 +193,8 @@ module slave #(
                         else if (config_buffer[rw_] == 1) begin  
                             ready <= 1;
                             //only begin write if master sends valid HIGH
+                            //start receiving first write data bit 
+                            //with valid HIGH in same clock cycle
                             if (valid)  begin
                                 wD_buffer       <= wD_buffer << 1;
                                 wD_buffer[0]    <= wD_temp;                    
@@ -209,7 +216,8 @@ module slave #(
                     if (rD_counter < DATA_WIDTH) begin
                         ready   <= 1;                                              
                         state   <= READ;
-                    end 
+                    end
+                    //after first read data is fully sent : 
                     else begin
                         rD_counter      <= 0;
                         delay_counter   <= 0;
@@ -218,7 +226,7 @@ module slave #(
                         if (config_buffer[burst_]==0) begin
                             //make sure that the read data was read, and continue to IDLE
                             if (valid) state  <= IDLE;
-                            //if not: prepare for the same read
+                            //if read failed: prepare for the same read
                             //by accessing ram, then wait in IDLE 
                             //assign failed_read_address to check if next read
                             //is the same failed read                                                        
@@ -237,7 +245,7 @@ module slave #(
                                 address         <= address + 1'b1;
                                 state           <= READB_GET;
                             end
-                            //if not: prepare for the same read
+                            //if read failed: prepare for the same read
                             //by accessing ram, then wait in IDLE
                             //assign failed_read_address to check next read                             
                             else begin
@@ -261,8 +269,20 @@ module slave #(
                 end
                 READB: begin
                     ready <= 1;
-                    //if read_burst is not over: continue burst
-                    if (!last) begin
+                    //if last is HIGH: send one byte and stop
+                    if (last) begin
+                        if (rD_counter < DATA_WIDTH) begin
+                            rD_counter <= rD_counter + 1'b1;
+                            rD_buffer  <= rD_buffer << 1;
+                            rD_temp    <= rD_buffer[DATA_WIDTH-1];
+                        end
+                        else if (rD_counter == DATA_WIDTH) begin
+                            state               <= IDLE;
+                        end                         
+                    end
+                    //if last is LOW: send one byte and increment address
+                    //then go to READB_GET state to get next read data
+                    else begin
                         if (rD_counter < DATA_WIDTH) begin
                             rD_counter  <= rD_counter + 1'b1;
                             rD_buffer   <= rD_buffer << 1;
@@ -276,17 +296,6 @@ module slave #(
                             address         <= address + 1'b1;
                             state           <= READB_GET;
                         end 
-                    end
-                    //else, if read burst is over: send final byte and stop
-                    else begin
-                        if (rD_counter < DATA_WIDTH) begin
-                            rD_counter <= rD_counter + 1'b1;
-                            rD_buffer  <= rD_buffer << 1;
-                            rD_temp    <= rD_buffer[DATA_WIDTH-1];
-                        end
-                        else if (rD_counter == DATA_WIDTH) begin
-                            state               <= IDLE;
-                        end                         
                     end
                 end
                 WRITE: begin
@@ -303,22 +312,23 @@ module slave #(
                         else begin
                             //for WRITE BURST, wait for valid HIGH
                             //before reading wD input
-                            if (last==0 && valid==1) begin
+                            if (valid) begin
                                 wD_counter      <= 1;
                                 wD_buffer       <= wD_buffer << 1;
                                 wD_buffer[0]    <= wD_temp;
                                 address         <= address + 1'b1;
                                 state           <= WRITEB;
                             end
-                            else if (last==0 && valid==0) begin
+                            else begin
                                 address         <= address +1'b1;
                                 state           <= WRITEB;
                             end
-                            else state <= IDLE;
                         end
                     end 
                 end
                 WRITEB: begin
+                    //if last is HIGH : receive one more byte
+                    //then go to WRITEB_END state and store byte
                     if (last) begin
                         if (wD_counter < DATA_WIDTH-1 && valid) begin
                             wD_counter      <= wD_counter + 1'b1;
@@ -332,6 +342,7 @@ module slave #(
                             config_buffer   <= 0;                           
                         end
                     end
+                    //if last is LOW: receive one byte and increment address
                     else begin
                         if (wD_counter < DATA_WIDTH && valid==1) begin
                             wD_counter      <= wD_counter + 1'b1;
@@ -346,6 +357,7 @@ module slave #(
                     end
                 end
                 WRITEB_END : begin
+                    //store last byte 
                     ram[address]    <= wD_buffer;
                     state           <= IDLE;
                 end                
