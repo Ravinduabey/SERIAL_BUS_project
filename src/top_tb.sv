@@ -41,7 +41,7 @@ localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{0,0};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_end_address[0:1] = '{10,10};
 localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr[0:9] = '{0,1,2,3,4,5,6,7,8,9}; // read the masters' memory after communication
 localparam FIRST_START_MASTER = master_1; // this master will start communication first
-localparam COM_START_DELAY = 10; //gap between 2 masters communication start signal
+localparam COM_START_DELAY = 50; //gap between 2 masters communication start signal
 
 
 logic clk;
