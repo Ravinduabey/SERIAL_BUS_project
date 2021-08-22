@@ -17,8 +17,8 @@ module masterBram #(
 	
 
 	initial begin
-		$readmemh("C:\\Users\\ravin\Documents\\GitHub\\ads1\\src\\mem.txt", ram);
-		$writememh("C:\\Users\\ravin\Documents\\GitHub\\ads1\\src\\mem.txt", ram);
+		$readmemh("m_mem.txt", ram);
+		$writememh("m_mem.txt", ram);
 //		$readmemh("masterMem.hex", ram);
 //		$writememh("masterMem.hex", ram);
 	end
