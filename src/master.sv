@@ -559,6 +559,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
 
                             else if (fromArbiter == 2'b00)begin: priorityStop
+								control 		<= 1;
                                 communicationState <= masterHold;
                                 arbSend <= 0;       // fisrt hold bit 
                                 if (burstLen == 0) begin    // single
@@ -701,6 +702,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                         masterHold:
                             begin
+                            control <= 0;
                             if (tempHold < 2'd1) begin
                                 tempHold <=  tempHold + 1'b1;
                                 arbSend  <= 0;
