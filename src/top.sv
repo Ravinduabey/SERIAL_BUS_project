@@ -353,7 +353,7 @@ always_comb begin
         read_write_sel: begin
             if(!jump_stateN) begin
                 // if(SW[1:0] == 2'b00) begin
-                //     next_state = slave_addr_sel_M1;
+                //     next_state = slave_start_addr_sel_M1;
                 // end
                 // else begin
                 //     next_state = external_write_sel;
@@ -365,12 +365,12 @@ always_comb begin
         external_write_sel: begin
             if (!jump_stateN) begin
                 case (SW[1:0])
-                    2'b00: next_state = slave_addr_sel_M1;
+                    2'b00: next_state = slave_start_addr_sel_M1;
                     2'b01: next_state = external_write_M1;
                     2'b10: next_state = external_write_M2;
                     2'b11: next_state = external_write_M1_2;
 
-                    default: next_state = slave_addr_sel_M1;  // not required as all cases are included
+                    default: next_state = slave_start_addr_sel_M1;  // not required as all cases are included
 
                 endcase
             end
@@ -378,7 +378,7 @@ always_comb begin
 
         external_write_M1: begin
             if (!jump_stateN) begin
-                next_state = slave_addr_sel_M1;
+                next_state = slave_start_addr_sel_M1;
             end
         end
 
@@ -390,29 +390,29 @@ always_comb begin
 
         external_write_M2: begin
             if (!jump_stateN) begin
-                next_state = slave_addr_sel_M1;
+                next_state = slave_start_addr_sel_M1;
             end        
         end
 
-        slave_addr_sel_M1: begin
+        slave_start_addr_sel_M1: begin
             if (!jump_stateN) begin
-                next_state = slave_addr_sel_M2;
+                next_state = slave_start_addr_sel_M2;
             end         
         end
 
-        slave_addr_sel_M2: begin
+        slave_start_addr_sel_M2: begin
             if (!jump_stateN) begin
-                next_state = addr_count_sel_M1;
+                next_state = slave_end_addr_sel_M1;
             end           
         end
 
-        addr_count_sel_M1: begin
+        slave_end_addr_sel_M1: begin
             if (!jump_stateN) begin
-                next_state = addr_count_sel_M2;
+                next_state = slave_end_addr_sel_M2;
             end          
         end
 
-        addr_count_sel_M2: begin
+        slave_end_addr_sel_M2: begin
             if (!jump_stateN) begin
                 next_state = config_masters;
                 next_config_state = config_start;
@@ -576,15 +576,15 @@ always_comb begin
             end
         end  
 
-        slave_addr_sel_M1: begin
+        slave_start_addr_sel_M1: begin
             slave_first_addr_next[0] = SW[MASTER_ADDR_WIDTH-1:0];  // slave address width is less than or equal to master address width
         end
 
-        slave_addr_sel_M2: begin
+        slave_start_addr_sel_M2: begin
             slave_first_addr_next[1] = SW[MASTER_ADDR_WIDTH-1:0]; // slave address width is less than or equal to master address width
         end 
          
-        addr_count_sel_M1: begin
+        slave_end_addr_sel_M1: begin
             // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0]) >= SLAVE_DEPTHS[M_slaveId[0]-1]) begin
                 slave_last_addr_next[0] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[0]-1'b1]); // if given length is too large select untill the last address of the slave
@@ -595,7 +595,7 @@ always_comb begin
             
         end 
 
-        addr_count_sel_M2: begin
+        slave_end_addr_sel_M2: begin
             // calculate the last address
             if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1]) >= SLAVE_DEPTHS[M_slaveId[1]-1]) begin
                 slave_last_addr_next[1] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[1]-1'b1]); // if given length is too large select untill the last address of the slave
@@ -785,22 +785,22 @@ always_comb begin
             line_2_next = '{A,d,d,r,dash,get_number(current_data_bank_addr), space, V,a,l,dash,get_number(SW[15:12]),get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
-        slave_addr_sel_M1: begin
+        slave_start_addr_sel_M1: begin
             line_1_next = '{M,num_1, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
             line_2_next = '{S,t,a,r,t, space, a,d,d,r,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
-        slave_addr_sel_M2: begin
+        slave_start_addr_sel_M2: begin
             line_1_next = '{M,num_2, space, s,l,a,v,e, space, a,d,d,r,e,s,s};
             line_2_next = '{S,t,a,r,t, space, a,d,d,r,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space};
         end
 
-        addr_count_sel_M1: begin
+        slave_end_addr_sel_M1: begin
             line_1_next = '{M,num_1, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
             line_2_next = '{C,o,u,n,t,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space,space,space,space,space,space};
         end
 
-        addr_count_sel_M2: begin
+        slave_end_addr_sel_M2: begin
             line_1_next = '{M,num_2, space, S,l,v, space, A,d,d,r,C,o,u,n,t};
             line_2_next = '{C,o,u,n,t,colon, space, get_number(SW[11:8]),get_number(SW[7:4]),get_number(SW[3:0]), space,space,space,space,space,space};
         end
