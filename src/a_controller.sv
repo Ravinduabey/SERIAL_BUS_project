@@ -229,7 +229,6 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
           old_master <= cur_master;
           old_slave <= cur_slave;
           intr <= '1;
-          bus_state <= '0;
           if (thresh) cur_cmd <= STOP_S;
           else cur_cmd <= STOP_P;
       end
@@ -237,6 +236,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
 	 DONE : begin
      if (cur_done) begin
+        bus_state <= '0;       
        intr_route <= '1;
        cur_master <= next_master;
        cur_slave <= next_slave;

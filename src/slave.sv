@@ -102,7 +102,7 @@ module slave #(
     // end
 
     initial begin
-        $readmemh("slave-mem-1.txt",ram);
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
     end
 
     
@@ -416,7 +416,7 @@ module slave #(
 
             // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
 
-            $writememh("slave-mem-1.txt",ram);
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
             // $writememh("slave-mem.txt",ram);
 
         end 
