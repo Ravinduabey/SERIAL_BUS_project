@@ -42,6 +42,7 @@ module bus_interconnect #(
     logic ready_mux; 
     logic rD_mux; 
 
+    //set up input connections 
     assign control_mux  = control_M [master_sel ];      
     assign wD_mux       = wD_M      [master_sel ];
     assign valid_mux    = valid_M   [master_sel ];
