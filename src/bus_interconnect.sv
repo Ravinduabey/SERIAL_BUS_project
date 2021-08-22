@@ -46,9 +46,11 @@ module bus_interconnect #(
     assign wD_mux       = wD_M      [master_sel ];
     assign valid_mux    = valid_M   [master_sel ];
     assign last_mux     = last_M    [master_sel ];
-    assign ready_mux    = ready_S   [slave_sel-1];
-    assign rD_mux       = rD_S      [slave_sel-1];
-
+    assign ready_mux    = (slave_sel == 0) ? ready_S[0] :ready_S[slave_sel-1];
+    assign rD_mux       = (slave_sel == 0) ? rD_S   [0] :rD_S   [slave_sel-1];
+    
+    
+    
     assign ready        = ready_mux;
     
     genvar i;

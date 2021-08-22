@@ -189,7 +189,7 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 end
 
 always_ff @( posedge clk ) begin : stateLogicDecoder
-  $display("controller state %s, CM %b, CS %b, bus %b", state, cur_master, cur_slave, bus_state);
+  // $display("controller state %s, CM %b, CS %b, bus %b", state, cur_master, cur_slave, bus_state);
     unique case (state)
 
     RST : begin 

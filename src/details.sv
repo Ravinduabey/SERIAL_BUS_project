@@ -86,20 +86,20 @@ typedef enum logic[7:0]{
 
 /////////// main states //////////////////
 typedef enum logic [3:0]{
-    master_slave_sel    = 4'd0,     // state - 0
-    read_write_sel      = 4'd1,     // state - 1
-    external_write_sel  = 4'd2,     // state - 1.5 
-    external_write_M1   = 4'd3,     // state - 1.51
-    external_write_M1_2 = 4'd4,     // state - 1.52
-    external_write_M2   = 4'd5,     // state - 1.53
-    slave_addr_sel_M1   = 4'd6,     // state - 2
-    slave_addr_sel_M2   = 4'd7,     // state - 3
-    addr_count_sel_M1   = 4'd8,     // state - 4
-    addr_count_sel_M2   = 4'd9,     // state - 5
-    config_masters      = 4'd10,    // state - 6    
-    communication_ready = 4'd11,    // state - 6.5 
-    communicating       = 4'd12,    // state - 7
-    communication_done  = 4'd13     // state - 8
+    master_slave_sel        = 4'd0,     // state - 0
+    read_write_sel          = 4'd1,     // state - 1
+    external_write_sel      = 4'd2,     // state - 1.5 
+    external_write_M1       = 4'd3,     // state - 1.51
+    external_write_M1_2     = 4'd4,     // state - 1.52
+    external_write_M2       = 4'd5,     // state - 1.53
+    slave_start_addr_sel_M1 = 4'd6,     // state - 2
+    slave_start_addr_sel_M2 = 4'd7,     // state - 3
+    slave_end_addr_sel_M1   = 4'd8,     // state - 4
+    slave_end_addr_sel_M2   = 4'd9,     // state - 5
+    config_masters          = 4'd10,    // state - 6    
+    communication_ready     = 4'd11,    // state - 6.5 
+    communicating           = 4'd12,    // state - 7
+    communication_done      = 4'd13     // state - 8
 } main_state_t;
 
 endpackage : details

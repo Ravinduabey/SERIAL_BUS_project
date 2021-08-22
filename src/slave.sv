@@ -272,11 +272,13 @@ module slave #(
                 end                
                 READB_GET: begin
                     //next ram access
-                    if (delay_counter == DELAY) begin
-                        rD_buffer       <= ram[address];
-                        state           <= READB;
-                    end
-                    else delay_counter <= delay_counter + 1'b1;
+                    //if (delay_counter == DELAY) begin
+                    //    rD_buffer       <= ram[address];
+                    //    state           <= READB;
+                    //end
+                    //else delay_counter <= delay_counter + 1'b1;
+                    rD_buffer   <= ram[address];
+                    state       <= READB;
                 end
                 READB: begin
                     ready <= 1;
