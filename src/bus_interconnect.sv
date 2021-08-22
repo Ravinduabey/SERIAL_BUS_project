@@ -42,13 +42,15 @@ module bus_interconnect #(
     logic ready_mux; 
     logic rD_mux; 
 
+    //set up input connections 
     assign control_mux  = control_M [master_sel ];      
     assign wD_mux       = wD_M      [master_sel ];
     assign valid_mux    = valid_M   [master_sel ];
     assign last_mux     = last_M    [master_sel ];
-    assign ready_mux    = ready_S   [slave_sel-1];
+    assign ready_mux    = (slave_sel) ? ready_S[0]:ready_S[slave_sel-1];
     assign rD_mux       = rD_S      [slave_sel-1];
 
+    //set up output connections
     assign ready        = ready_mux;
     
     genvar i;

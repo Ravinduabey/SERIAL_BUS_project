@@ -33,8 +33,8 @@ typedef enum logic{
 } operation_t;
 
 //////// set the following parameters first before run the simulation ////////
-localparam logic [1:0] masters_slave[0:1] = '{slave_3, slave_2};
-localparam logic master_RW[0:1] = '{read,write};
+localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
+localparam logic master_RW[0:1] = '{write,read};
 localparam logic external_write[0:1] = '{1'b1, 1'b0};
 localparam int   external_write_count[0:1] = '{10,2};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{0,0};
