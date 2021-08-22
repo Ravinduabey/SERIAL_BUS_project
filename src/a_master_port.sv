@@ -206,8 +206,6 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 	 end
 
     DONE : if (input_buf[2:0] == 3'b010) done <= '1;
-
-	  // OVER : id <= '0;
 	 
     endcase 
 end
