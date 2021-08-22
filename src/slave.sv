@@ -72,6 +72,7 @@ module slave #(
     typedef enum logic [3:0] { 
        INIT,
        IDLE,
+       TOIDLE,
        CONFIG,
        CONFIG_NEXT,
        READ,
@@ -83,7 +84,7 @@ module slave #(
     } state_;
 	 
     state_ state = INIT;
-
+    state_ prev_state;
     // typedef enum logic [CON_COUNTER-1:0] { 
     //     start_s = CON,
     //     start_f = CON-2,
@@ -215,157 +216,189 @@ module slave #(
                     end
                 end 
                 READ : begin
-                    rD_buffer       <= rD_buffer << 1;
-                    rD_temp         <= rD_buffer[DATA_WIDTH-1];
-                    rD_counter      <= rD_counter + 1'b1;
-                    if (rD_counter < DATA_WIDTH) begin
-                        ready   <= 1;                                              
-                        state   <= READ;
+                    if (control) begin
+                        prev_state   <= READ;
+                        state       <= TOIDLE;
                     end
-                    //after first read data is fully sent : 
                     else begin
-                        rD_counter      <= 0;
-                        delay_counter   <= 0;
-                        ready           <= 0;
-                        //if master did not send a READ BURST
-                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) begin
-                            //make sure that the read data was read, and continue to IDLE
-                            if (valid) begin
-                                read_failed <= 0;
-                                state  <= IDLE;
-                            end
-                            //if read failed: prepare for the same read
-                            //by accessing ram, then wait in IDLE 
-                            //assign failed_read_address to check if next read
-                            //is the same failed read                                                        
-                            else begin
-                                if (delay_counter == DELAY) begin
-                                    rD_buffer           <= ram[address];
-                                    read_failed         <= 1;
-                                    failed_read_address <= address;
-                                    state               <= IDLE;
-                                end
-                                else delay_counter <= delay_counter + 1'b1;                                
-                            end
+                        rD_buffer       <= rD_buffer << 1;
+                        rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                        rD_counter      <= rD_counter + 1'b1;
+                        if (rD_counter < DATA_WIDTH) begin
+                            ready   <= 1;                                              
+                            state   <= READ;
                         end
+                        //after first read data is fully sent : 
                         else begin
-                            //make sure that the read data was read, and continue to READ BURST
-                            if (valid) begin
-                                read_failed     <= 0;
-                                address         <= address + 1'b1;
-                                state           <= READB_GET;
-                            end
-                            //if read failed: prepare for the same read
-                            //by accessing ram, then wait in IDLE
-                            //assign failed_read_address to check next read                             
-                            else begin
-                                if (delay_counter == DELAY) begin
-                                    rD_buffer           <= ram[address];
-                                    read_failed         <= 1;
-                                    failed_read_address <= address;
-                                    state               <= IDLE;
+                            rD_counter      <= 0;
+                            delay_counter   <= 0;
+                            ready           <= 0;
+                            //if master did not send a READ BURST
+                            if (config_buffer[CON-2-S_ID_WIDTH-2]==0) begin
+                                //make sure that the read data was read, and continue to IDLE
+                                if (valid) begin
+                                    read_failed <= 0;
+                                    state  <= IDLE;
                                 end
-                                else delay_counter <= delay_counter + 1'b1;
+                                //if read failed: prepare for the same read
+                                //by accessing ram, then wait in IDLE 
+                                //assign failed_read_address to check if next read
+                                //is the same failed read                                                        
+                                else begin
+                                    if (delay_counter == DELAY) begin
+                                        rD_buffer           <= ram[address];
+                                        read_failed         <= 1;
+                                        failed_read_address <= address;
+                                        state               <= IDLE;
+                                    end
+                                    else delay_counter <= delay_counter + 1'b1;                                
+                                end
+                            end
+                            else begin
+                                //make sure that the read data was read, and continue to READ BURST
+                                if (valid) begin
+                                    read_failed     <= 0;
+                                    address         <= address + 1'b1;
+                                    state           <= READB_GET;
+                                end
+                                //if read failed: prepare for the same read
+                                //by accessing ram, then wait in IDLE
+                                //assign failed_read_address to check next read                             
+                                else begin
+                                    if (delay_counter == DELAY) begin
+                                        rD_buffer           <= ram[address];
+                                        read_failed         <= 1;
+                                        failed_read_address <= address;
+                                        state               <= IDLE;
+                                    end
+                                    else delay_counter <= delay_counter + 1'b1;
+                                end
                             end
                         end
                     end
                 end                
                 READB_GET: begin
-                    //next ram access
-                    //if (delay_counter == DELAY) begin
-                    //    rD_buffer       <= ram[address];
-                    //    state           <= READB;
-                    //end
-                    //else delay_counter <= delay_counter + 1'b1;
-                    rD_buffer   <= ram[address];
-                    state       <= READB;
+                    /* Uncomment this to let delay happen for every ram access
+                    next ram access
+                    if (delay_counter == DELAY) begin
+                       rD_buffer       <= ram[address];
+                       state           <= READB;
+                    end
+                    else delay_counter <= delay_counter + 1'b1;
+                    */
+                    if (control) begin
+                        prev_state   <= READ;
+                        state       <= TOIDLE;
+                    end
+                    else begin
+                        rD_buffer   <= ram[address];
+                        state       <= READB;
+                    end
                 end
                 READB: begin
-                    ready <= 1;
-                    //if last is HIGH: send one byte and stop
-                    if (last) begin
-                        if (rD_counter < DATA_WIDTH) begin
-                            rD_counter <= rD_counter + 1'b1;
-                            rD_buffer  <= rD_buffer << 1;
-                            rD_temp    <= rD_buffer[DATA_WIDTH-1];
-                        end
-                        else if (rD_counter == DATA_WIDTH) begin
-                            state               <= IDLE;
-                        end                         
+                    if (control) begin
+                        prev_state   <= READ;
+                        state       <= TOIDLE;
                     end
-                    //if last is LOW: send one byte and increment address
-                    //then go to READB_GET state to get next read data
                     else begin
-                        if (rD_counter < DATA_WIDTH) begin
-                            rD_counter  <= rD_counter + 1'b1;
-                            rD_buffer   <= rD_buffer << 1;
-                            rD_temp     <= rD_buffer[DATA_WIDTH-1];
+                        ready <= 1;
+                        //if last is HIGH: send one byte and stop
+                        if (last) begin
+                            if (rD_counter < DATA_WIDTH) begin
+                                rD_counter <= rD_counter + 1'b1;
+                                rD_buffer  <= rD_buffer << 1;
+                                rD_temp    <= rD_buffer[DATA_WIDTH-1];
+                            end
+                            else if (rD_counter == DATA_WIDTH) begin
+                                state               <= IDLE;
+                            end                         
                         end
-                        //after rD_buffer is completely sent
-                        else if (rD_counter == DATA_WIDTH) begin
-                            ready           <= 0;
-                            rD_counter      <= 0;
-                            delay_counter   <= 0;
-                            address         <= address + 1'b1;
-                            state           <= READB_GET;
-                        end 
+                        //if last is LOW: send one byte and increment address
+                        //then go to READB_GET state to get next read data
+                        else begin
+                            if (rD_counter < DATA_WIDTH) begin
+                                rD_counter  <= rD_counter + 1'b1;
+                                rD_buffer   <= rD_buffer << 1;
+                                rD_temp     <= rD_buffer[DATA_WIDTH-1];
+                            end
+                            //after rD_buffer is completely sent
+                            else if (rD_counter == DATA_WIDTH) begin
+                                ready           <= 0;
+                                rD_counter      <= 0;
+                                delay_counter   <= 0;
+                                address         <= address + 1'b1;
+                                state           <= READB_GET;
+                            end 
+                        end
                     end
                 end
                 WRITE: begin
-                    if (wD_counter < DATA_WIDTH-1) begin
-                        wD_counter      <= wD_counter + 1'b1;
-                        wD_buffer       <= wD_buffer << 1;
-                        wD_buffer[0]    <= wD_temp;                    //msb first
+                    if (control) begin
+                        prev_state   <= READ;
+                        state       <= TOIDLE;
                     end
-                    else begin 
-                        wD_counter      <= 0;
-                        ram[address]    <= wD_buffer;
-                        //if master did not send a WRITE BURST
-                        if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
-                        else begin
-                            //for WRITE BURST, wait for valid HIGH
-                            //before reading wD input
-                            if (valid) begin
-                                wD_counter      <= 1;
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp;
-                                address         <= address + 1'b1;
-                                state           <= WRITEB;
-                            end
-                            else begin
-                                address         <= address +1'b1;
-                                state           <= WRITEB;
-                            end
+                    else begin
+                        if (wD_counter < DATA_WIDTH-1) begin
+                            wD_counter      <= wD_counter + 1'b1;
+                            wD_buffer       <= wD_buffer << 1;
+                            wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                    end 
+                        else begin 
+                            wD_counter      <= 0;
+                            ram[address]    <= wD_buffer;
+                            //if master did not send a WRITE BURST
+                            if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
+                            else begin
+                                //for WRITE BURST, wait for valid HIGH
+                                //before reading wD input
+                                if (valid) begin
+                                    wD_counter      <= 1;
+                                    wD_buffer       <= wD_buffer << 1;
+                                    wD_buffer[0]    <= wD_temp;
+                                    address         <= address + 1'b1;
+                                    state           <= WRITEB;
+                                end
+                                else begin
+                                    address         <= address +1'b1;
+                                    state           <= WRITEB;
+                                end
+                            end
+                        end 
+                    end
                 end
                 WRITEB: begin
-                    //if last is HIGH : receive one more byte
-                    //then go to WRITEB_END state and store byte
-                    if (last) begin
-                        if (wD_counter < DATA_WIDTH-1 && valid) begin
-                            wD_counter      <= wD_counter + 1'b1;
-                            wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp;
-                        end
-                        else begin
-                            state           <= WRITEB_END;
-                            wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp; 
-                            config_buffer   <= 0;                           
-                        end
+                    if (control) begin
+                        prev_state   <= READ;
+                        state       <= TOIDLE;
                     end
-                    //if last is LOW: receive one byte and increment address
                     else begin
-                        if (wD_counter < DATA_WIDTH && valid==1) begin
-                            wD_counter      <= wD_counter + 1'b1;
-                            wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp;
+                        //if last is HIGH : receive one more byte
+                        //then go to WRITEB_END state and store byte
+                        if (last) begin
+                            if (wD_counter < DATA_WIDTH-1 && valid) begin
+                                wD_counter      <= wD_counter + 1'b1;
+                                wD_buffer       <= wD_buffer << 1;
+                                wD_buffer[0]    <= wD_temp;
+                            end
+                            else begin
+                                state           <= WRITEB_END;
+                                wD_buffer       <= wD_buffer << 1;
+                                wD_buffer[0]    <= wD_temp; 
+                                config_buffer   <= 0;                           
+                            end
                         end
-                        else if (wD_counter == DATA_WIDTH) begin
-                            ram[address]    <= wD_buffer;
-                            address         <= address + 1'b1;                            
-                            wD_counter      <= 0;
+                        //if last is LOW: receive one byte and increment address
+                        else begin
+                            if (wD_counter < DATA_WIDTH && valid==1) begin
+                                wD_counter      <= wD_counter + 1'b1;
+                                wD_buffer       <= wD_buffer << 1;
+                                wD_buffer[0]    <= wD_temp;
+                            end
+                            else if (wD_counter == DATA_WIDTH) begin
+                                ram[address]    <= wD_buffer;
+                                address         <= address + 1'b1;                            
+                                wD_counter      <= 0;
+                            end
                         end
                     end
                 end
@@ -373,6 +406,9 @@ module slave #(
                     //store last byte 
                     ram[address]    <= wD_buffer;
                     state           <= IDLE;
+                end
+                TOIDLE : begin
+                    if (!control) state <= IDLE;
                 end                
                 default: state <= IDLE;
                     
