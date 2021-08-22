@@ -46,8 +46,7 @@ typedef enum logic [2:0] {
     ALLOC2,
     ACK, 
     COM,
-    DONE, 
-    OVER
+    DONE
 } state_t;
 
 state_t state = START;
@@ -116,7 +115,7 @@ always_comb begin : stateMachine
     end
 
     ACK: begin
-      if (com_state == nak) next_state = OVER; 
+      if (com_state == nak) next_state = START; 
       else if (com_state == com) begin
         next_state = COM; 
         //send 111
@@ -128,21 +127,20 @@ always_comb begin : stateMachine
 
     COM: begin 
       if (cmd==STOP_S) begin
-        //send 000  
-        write = '1;
+        //send 010
         write_val = 3'b010;
+        write = '1;
         next_state = DONE;
       end
       else if (cmd==STOP_P) begin
-        //send 010
-        // write_val = 3'b000;  
+        //send 000  
         write = '1;
         next_state = DONE;
       end
       else if (com_state == end_com) begin
         //send 000
         write = '1;
-        next_state = OVER;
+        next_state = START; 
       end
       else begin
         next_state = COM;
@@ -154,9 +152,6 @@ always_comb begin : stateMachine
       else next_state = DONE;
     end
 	 
-    OVER: begin
-      next_state = START;
-    end
     endcase   
 end
 
@@ -212,7 +207,7 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
 
     DONE : if (input_buf[2:0] == 3'b010) done <= '1;
 
-	  OVER : id <= '0;
+	  // OVER : id <= '0;
 	 
     endcase 
 end
