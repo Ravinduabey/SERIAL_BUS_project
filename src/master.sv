@@ -374,7 +374,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                                     
                                 end  
-                                else if (controlCounter == CONTROL_LEN) begin : startSendOrReceive
+                                else if (controlCounter == CONTROL_LEN) begin
                                     controlCounter      <= controlCounter;
                                     control             <= 0;
                                     
@@ -571,7 +571,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                                     
                                 end  
-                                else if (controlCounter == CONTROL_LEN) begin : startSendOrReceive
+                                else if (controlCounter == CONTROL_LEN) begin
                                     controlCounter      <= controlCounter;
                                     control             <= 0;
 
@@ -730,7 +730,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 controlCounter      <= controlCounter + 5'd1;     
                             end 
 
-                            else if (controlCounter == CONTROL_LEN) begin : startSendOrReceive
+                            else if (controlCounter == CONTROL_LEN) begin
                                 controlCounter      <= controlCounter;
                                  control             <= 0;
 
