@@ -43,17 +43,19 @@ module bus_interconnect #(
     logic rD_mux; 
 
     //set up input connections 
-    assign control_mux  = control_M [master_sel ];      
-    assign wD_mux       = wD_M      [master_sel ];
-    assign valid_mux    = valid_M   [master_sel ];
-    assign last_mux     = last_M    [master_sel ];
-    assign ready_mux    = (slave_sel == 0) ? ready_S[0] :ready_S[slave_sel-1];
-    assign rD_mux       = (slave_sel == 0) ? rD_S   [0] :rD_S   [slave_sel-1];
+    always_comb begin : slave_select
+        control_mux  <= control_M [master_sel ];      
+        wD_mux       <= wD_M      [master_sel ];
+        valid_mux    <= valid_M   [master_sel ];
+        last_mux     <= last_M    [master_sel ];
+
+        ready_mux    <= (slave_sel == 0) ? ready_S[0] :ready_S[slave_sel-1];
+        rD_mux       <= (slave_sel == 0) ? rD_S   [0] :rD_S   [slave_sel-1];
+
+        ready        <= ready_mux;
+    end
     
-    
-    
-    assign ready        = ready_mux;
-    
+        
     genvar i;
     genvar j;
     generate 
