@@ -63,16 +63,16 @@ module slave #(
 
     typedef enum logic [2:0] {
         START       = 3'b111,
-        PRIORITY    = 3'b100,
-        SPLIT_TRANS = 3'b110,
-        SPLIT_CONT  = 3'b101
+        ABORT       = 3'b100,
+        HOLD        = 3'b110,
+        CONTINUE    = 3'b101
     } control_;
     
     typedef enum logic { 
-        CONT,
-        WAIT
-    } split_;
-    split_ split_state = CONT;
+        comm,
+        hold
+    } com_;
+    com_ com_status = comm;
 
     typedef enum logic [3:0] { 
        INIT,
@@ -155,27 +155,34 @@ module slave #(
                     control_buffer      <= 0;
                 end
                 RECONFIG : begin
-                    //priority transfer
+                    //if reconfiguration during communication
+                    // and ..010.. is received in control:
+                    //priority transfer has begun
+                    //abort current communication
                     if (con_counter == 0) begin
                         if (!control) state <= IDLE;
-                        else state <= prev_state;
+                        else          state <= prev_state;
                     end
-                    //start split or continue split 
+                    //if reconfiguration during configuration
+                    //receive the next three bits to decide next step
                     else if (con_counter < 3) begin
                         con_counter       <= con_counter + 1'b1; 
                         control_buffer    <= control_buffer << 1'b1;
                         control_buffer[0] <= temp_control;                                                
                     end 
                     else if (con_counter == 3) begin
-                        if  (control_buffer == SPLIT_TRANS) begin
-                            split_state <= WAIT;
+                        //wait for master reconnect
+                        if  (control_buffer == HOLD) begin
+                            com_status  <= hold;
                             state       <= CONFIG_NEXT;
-                        end    
-                        else if (control_buffer == SPLIT_CONT) begin
-                            split_state <= CONT;
+                        end 
+                        //or continue current configuration   
+                        else if (control_buffer == CONTINUE) begin
+                            com_status  <= comm;
                             state       <= CONFIG_NEXT;
                         end
-                        else if (control_buffer == PRIORITY) begin
+                        //or abort current configuration 
+                        else if (control_buffer == ABORT) begin
                             state       <= IDLE;
                         end
                     end
@@ -187,6 +194,7 @@ module slave #(
                     rD_counter      <= 0;
                     wD_counter      <= 0;
                     delay_counter   <= 0;
+                    //start to receive new configuration
                     if (control == 1'b1) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
@@ -215,6 +223,7 @@ module slave #(
                     end
                 end
                 CONFIG_NEXT : begin
+                    //reconfigure if master sends control HIGH
                     if (control) begin
                         con_counter         <= 1; 
                         control_buffer      <= control_buffer << 1'b1;
@@ -232,7 +241,7 @@ module slave #(
                                 //once expected delay is done
                                 //access ram and start sending the first bit 
                                 //while assigning READ state in same clock cycle 
-                                if (delay_counter == DELAY && split_state == CONT) begin                                   
+                                if (delay_counter == DELAY && com_status == comm) begin                                   
                                     rD_buffer   <= ram[address];
                                     rD_temp     <= rD_buffer[DATA_WIDTH-1];
                                     state       <= READ;                                 
@@ -250,7 +259,7 @@ module slave #(
                                     wD_buffer[0]    <= wD_temp;                    
                                     state <= WRITE;
                                 end
-                                //if valid is LOW: wait
+                                //if valid is LOW: hold
                                 else  state <= CONFIG_NEXT;
                             end
                         end
@@ -261,9 +270,10 @@ module slave #(
                     end
                 end 
                 READ : begin
+                    //reconfigure if master sends control HIGH
                     if (control) begin
                         prev_state   <= READ;
-                        state       <= RECONFIG;
+                        state        <= RECONFIG;
                     end
                     else begin
                         if (rD_counter < DATA_WIDTH && !ready) begin
@@ -297,12 +307,15 @@ module slave #(
                                     else delay_counter <= delay_counter + 1'b1;                                
                                 end
                             end
+                            //READ BURST
                             else begin
                                 //make sure that the read data was read, and continue to READ BURST
                                 if (valid) begin
                                     address         <= address + 1'b1;
                                     state           <= READB_GET;
                                 end
+                                
+                                //if read data was not read: resend data
                                 else begin
                                     if (delay_counter == DELAY) begin
                                         rD_buffer           <= ram[address];
@@ -310,14 +323,16 @@ module slave #(
                                     end
                                     else delay_counter <= delay_counter + 1'b1;
                                 end
+                                
                             end
                         end
                     end
                 end                
                 READB_GET: begin
+                    //reconfigure if master sends control HIGH
                     if (control) begin
-                        prev_state   <= READ;
-                        state       <= RECONFIG;
+                        prev_state   <= READB_GET;
+                        state        <= RECONFIG;
                     end
                     else begin                    
                     /*
@@ -335,9 +350,10 @@ module slave #(
                     end
                 end
                 READB: begin
+                    //reconfigure if master sends control HIGH
                     if (control) begin
-                        prev_state   <= READ;
-                        state       <= RECONFIG;
+                        prev_state   <= READB;
+                        state        <= RECONFIG;
                     end
                     else begin
                         ready <= 1;
@@ -372,9 +388,10 @@ module slave #(
                     end
                 end
                 WRITE: begin
+                    //reconfigure if master sends control HIGH
                     if (control) begin
-                        prev_state   <= READ;
-                        state       <= RECONFIG;
+                        prev_state   <= WRITE;
+                        state        <= RECONFIG;
                     end
                     else begin
                         if (wD_counter < DATA_WIDTH-1) begin
@@ -388,7 +405,7 @@ module slave #(
                             //if master did not send a WRITE BURST
                             if (config_buffer[CON-2-S_ID_WIDTH-2]==0) state <= IDLE;
                             else begin
-                                //for WRITE BURST, wait for valid HIGH
+                                //for WRITE BURST, hold for valid HIGH
                                 //before reading wD input
                                 if (valid) begin
                                     wD_counter      <= 1;
@@ -406,9 +423,10 @@ module slave #(
                     end
                 end
                 WRITEB: begin
+                    //reconfigure if master sends control HIGH
                     if (control) begin
-                        prev_state   <= READ;
-                        state       <= RECONFIG;
+                        prev_state   <= WRITEB;
+                        state        <= RECONFIG;
                     end
                     else begin
                         //if last is HIGH : receive one more byte
