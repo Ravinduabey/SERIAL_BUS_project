@@ -8,7 +8,6 @@ module slave #(
     parameter S_ID_WIDTH = $clog2(SLAVES+1),
     parameter SLAVEID = 1,
     parameter DELAY = 0
-    // parameter MEM_INIT_FILE = ""
 ) (
     // with Master (through interconnect)
     output logic rD,                  //serial read_data
@@ -57,17 +56,10 @@ module slave #(
 	// Variable to hold the registered read/write address
 	logic [ADDR_WIDTH-1:0] address;
 
-    //Variable to hold read address
-    //when the read was not carried out
-    //to allow next read to happen without delay
-    //after split transaction
-	logic [ADDR_WIDTH-1:0] failed_read_address;
-    logic read_failed;
-
     logic [DEL_COUNTER-1 :0]  delay_counter;
 
 
-    // logic check;
+    logic check=0;
 
     typedef enum logic [3:0] { 
        INIT,
@@ -100,13 +92,22 @@ module slave #(
     // initial begin
     // if (MEM_INIT_FILE != "") $readmemh(MEM_INIT_FILE, ram);
     // end
-    
-    // initial begin
-    //     $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
-    // end
     initial begin
-        $readmemh("slave-mem-1.txt",ram);
+        if (SLAVEID == 2'd1) 
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+        else if (SLAVEID == 2'd2) 
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+        else if (SLAVEID == 2'd3) 
+        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
     end
+    // initial begin
+    //     if (SLAVEID == 2'd1) 
+    //     $readmemh("s_slave-mem-1.txt",ram);
+    //     else if (SLAVEID == 2'd2) 
+    //     $readmemh("s_slave-mem-2.txt",ram);
+    //     else if (SLAVEID == 2'd3) 
+    //     $readmemh("s_slave-mem-3.txt",ram);
+    // end
 
     
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
@@ -127,8 +128,6 @@ module slave #(
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
                     address             <= 0;
-                    failed_read_address <= 0;
-                    read_failed         <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
@@ -139,7 +138,8 @@ module slave #(
                     wD_buffer           <= 0;
                 end
                 TO_IDLE : begin
-                    if (!control) state <= IDLE;
+                    if (!control)   state <= IDLE;
+                    else            state <= prev_state;
                 end                
                 IDLE : begin
                     ready           <= 1;
@@ -175,56 +175,39 @@ module slave #(
                     end
                 end
                 CONFIG_NEXT : begin
-                    if (control) begin
-                        prev_state   <= READ;
-                        state       <= TO_IDLE;
+                    //if start and slave id sent by master is correct: 
+                    //process the rest of the control signal
+                    if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
+                        //if READ
+                        if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin 
+                            //once expected delay is done
+                            //access ram and start sending the first bit 
+                            //while assigning READ state in same clock cycle 
+                            if (delay_counter == DELAY) begin
+                                rD_buffer   <= ram[address];
+                                rD_temp     <= rD_buffer[DATA_WIDTH-1];
+                                state       <= READ;                                 
+                            end
+                            else delay_counter <= delay_counter + 1'b1;
+                        end
+                        //if WRITE: ready is always HIGH until end of write
+                        else if (config_buffer[CON-2-S_ID_WIDTH-1] == 1) begin  
+                            ready <= 1;
+                            //only begin write if master sends valid HIGH
+                            //start receiving first write data bit 
+                            //with valid HIGH in same clock cycle
+                            if (valid)  begin
+                                wD_buffer       <= wD_buffer << 1;
+                                wD_buffer[0]    <= wD_temp;                    
+                                state <= WRITE;
+                            end
+                            //if valid is LOW: wait
+                            else  state <= CONFIG_NEXT;
+                        end
                     end
+                    //if start and slave id is wrong: go to IDLE
                     else begin
-                        //if start and slave id sent by master is correct: 
-                        //process the rest of the control signal
-                        if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
-                            //if READ
-                            if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin 
-                                //if the READ is being sent after a previously failed read
-                                //and slave already has the data buffered and waiting: send data directly   
-                                if (address == failed_read_address && read_failed) begin
-                                    read_failed     <= 0;
-                                    rD_temp         <= rD_buffer[DATA_WIDTH-1];
-                                    state           <= READ; 
-                                end
-                                //if new READ  
-                                else begin
-                                    //once expected delay is done
-                                    //access ram and start sending the first bit 
-                                    //while assigning READ state in same clock cycle 
-                                    if (delay_counter == DELAY) begin
-                                        read_failed <= 0;
-                                        rD_buffer   <= ram[address];
-                                        rD_temp     <= rD_buffer[DATA_WIDTH-1];
-                                        state       <= READ;                                 
-                                    end
-                                    else delay_counter <= delay_counter + 1'b1;
-                                end                                                
-                            end
-                            //if WRITE: ready is always HIGH until end of write
-                            else if (config_buffer[CON-2-S_ID_WIDTH-1] == 1) begin  
-                                ready <= 1;
-                                //only begin write if master sends valid HIGH
-                                //start receiving first write data bit 
-                                //with valid HIGH in same clock cycle
-                                if (valid)  begin
-                                    wD_buffer       <= wD_buffer << 1;
-                                    wD_buffer[0]    <= wD_temp;                    
-                                    state <= WRITE;
-                                end
-                                //if valid is LOW: wait
-                                else  state <= CONFIG_NEXT;
-                            end
-                        end
-                        //if start and slave id is wrong: go to IDLE
-                        else begin
-                            state <= IDLE;
-                        end
+                        state <= IDLE;
                     end
                 end 
                 READ : begin
@@ -233,15 +216,22 @@ module slave #(
                         state       <= TO_IDLE;
                     end
                     else begin
-                        rD_buffer       <= rD_buffer << 1;
-                        rD_temp         <= rD_buffer[DATA_WIDTH-1];
-                        rD_counter      <= rD_counter + 1'b1;
-                        if (rD_counter < DATA_WIDTH) begin
-                            ready   <= 1;                                              
-                            state   <= READ;
+                        if (rD_counter < DATA_WIDTH && !ready) begin
+                            rD_buffer       <= rD_buffer << 1;
+                            rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                            check           <= 1;
+                            ready           <= 1;
+                                              
+                        end
+                        else if (rD_counter < DATA_WIDTH && ready) begin
+                            rD_buffer       <= rD_buffer << 1;
+                            rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                            rD_counter      <= rD_counter + 1'b1;                       
+                            ready <= 1;
+                            check <= 0;
                         end
                         //after first read data is fully sent : 
-                        else begin
+                        else if (rD_counter == DATA_WIDTH && ready) begin
                             rD_counter      <= 0;
                             delay_counter   <= 0;
                             ready           <= 0;
@@ -249,18 +239,11 @@ module slave #(
                             if (config_buffer[CON-2-S_ID_WIDTH-2]==0) begin
                                 //make sure that the read data was read, and continue to IDLE
                                 if (valid) begin
-                                    read_failed <= 0;
                                     state  <= IDLE;
                                 end
-                                //if read failed: prepare for the same read
-                                //by accessing ram, then wait in IDLE 
-                                //assign failed_read_address to check if next read
-                                //is the same failed read                                                        
                                 else begin
                                     if (delay_counter == DELAY) begin
                                         rD_buffer           <= ram[address];
-                                        read_failed         <= 1;
-                                        failed_read_address <= address;
                                         state               <= IDLE;
                                     end
                                     else delay_counter <= delay_counter + 1'b1;                                
@@ -269,18 +252,12 @@ module slave #(
                             else begin
                                 //make sure that the read data was read, and continue to READ BURST
                                 if (valid) begin
-                                    read_failed     <= 0;
                                     address         <= address + 1'b1;
                                     state           <= READB_GET;
                                 end
-                                //if read failed: prepare for the same read
-                                //by accessing ram, then wait in IDLE
-                                //assign failed_read_address to check next read                             
                                 else begin
                                     if (delay_counter == DELAY) begin
                                         rD_buffer           <= ram[address];
-                                        read_failed         <= 1;
-                                        failed_read_address <= address;
                                         state               <= IDLE;
                                     end
                                     else delay_counter <= delay_counter + 1'b1;
@@ -425,10 +402,20 @@ module slave #(
                     
             endcase
 
-            // if (MEM_INIT_FILE != "") $writememh(MEM_INIT_FILE, ram);
+            if (SLAVEID == 2'd1) 
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+            else if (SLAVEID == 2'd2) 
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+            else if (SLAVEID == 2'd3) 
+            $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
 
-            // $writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\slave-mem-1.txt",ram);
-            $writememh("slave-mem-1.txt",ram);
+            //     if (SLAVEID == 2'd1) 
+            //     $writememh("s_slave-mem-1.txt",ram);
+            //     else if (SLAVEID == 2'd2) 
+            //     $writememh("s_slave-mem-2.txt",ram);
+            //     else if (SLAVEID == 2'd3) 
+            //     $writememh("s_slave-mem-3.txt",ram);
+
 
         end 
     end
