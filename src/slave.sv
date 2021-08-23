@@ -63,6 +63,7 @@ module slave #(
 
     typedef enum logic [2:0] {
         START       = 3'b111,
+        PRIORITY    = 3'b100,
         SPLIT_TRANS = 3'b110,
         SPLIT_CONT  = 3'b101
     } control_;
@@ -161,14 +162,22 @@ module slave #(
                     end
                     //start split or continue split 
                     else if (con_counter < 3) begin
-                        con_counter      <= con_counter + 1'b1; 
+                        con_counter       <= con_counter + 1'b1; 
                         control_buffer    <= control_buffer << 1'b1;
                         control_buffer[0] <= temp_control;                                                
                     end 
                     else if (con_counter == 3) begin
-                        if  (control_buffer == SPLIT_TRANS ) split_state <= WAIT;
-                        else if (control_buffer == SPLIT_CONT  ) split_state <= CONT;
-                        state   <= CONFIG_NEXT;
+                        if  (control_buffer == SPLIT_TRANS) begin
+                            split_state <= WAIT;
+                            state       <= CONFIG_NEXT;
+                        end    
+                        else if (control_buffer == SPLIT_CONT) begin
+                            split_state <= CONT;
+                            state       <= CONFIG_NEXT;
+                        end
+                        else if (control_buffer == PRIORITY) begin
+                            state       <= IDLE;
+                        end
                     end
                 end                
                 IDLE : begin
