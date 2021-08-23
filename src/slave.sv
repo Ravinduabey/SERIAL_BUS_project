@@ -129,6 +129,7 @@ module slave #(
             rD_counter      <= 0;
             wD_counter      <= 0;
             con_counter     <= 0;
+            config_counter  <= 0;
             delay_counter   <= 0;
             rD_buffer       <= 0;
             wD_buffer       <= 0;
@@ -172,32 +173,33 @@ module slave #(
                 IDLE : begin
                     ready           <= 1;
                     con_counter     <= 0;
+                    config_counter  <= 0;
                     rD_counter      <= 0;
                     wD_counter      <= 0;
                     delay_counter   <= 0;
                     if (control == 1'b1) begin
-                        con_counter      <= con_counter + 1'b1; 
+                        config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;                        
                         state            <= CONFIG;                   
                     end
                 end
                 CONFIG : begin
-                    if (con_counter < CON) begin
-                        con_counter      <= con_counter + 1'b1;                                        
+                    if (config_counter < CON) begin
+                        config_counter   <= config_counter + 1'b1;                                        
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
                         state            <= CONFIG;
                     end
-                    else if (con_counter == CON) begin
-                        con_counter      <= con_counter + 1'b1;                                        
+                    else if (config_counter == CON) begin
+                        config_counter   <= config_counter + 1'b1;                                        
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
                         state            <= CONFIG;
                         ready            <= 0;                        
                     end
                     else begin
-                        con_counter     <= 0;
+                        config_counter  <= 0;
                         address         <= config_buffer[ADDR_WIDTH-1:0];
                         state           <= CONFIG_NEXT;
                     end
