@@ -845,6 +845,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 wr                 <= 0;
                                 valid              <= 0;
                                 control            <= 0;
+                                tempControl_2[ADDRESS_WIDTH-1 : 0]    <= addressInternalBurtstBegin;
                                 clock_counter <= clock_counter + 1'b1;
                             end
                             else if (clock_counter < 2'd2) begin
