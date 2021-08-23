@@ -67,12 +67,11 @@ module slave #(
         SPLIT_CONT  = 3'b101
     } control_;
     
-    typedef enum logic [1:0] { 
-        NO_SPLIT,
-        TRANS, 
-        CONT
+    typedef enum logic { 
+        CONT,
+        WAIT
     } split_;
-    split_ split_state = NO_SPLIT;
+    split_ split_state = CONT;
 
     typedef enum logic [3:0] { 
        INIT,
@@ -167,7 +166,7 @@ module slave #(
                         control_buffer[0] <= temp_control;                                                
                     end 
                     else if (con_counter == 3) begin
-                        if  (control_buffer == SPLIT_TRANS ) split_state <= TRANS;
+                        if  (control_buffer == SPLIT_TRANS ) split_state <= WAIT;
                         else if (control_buffer == SPLIT_CONT  ) split_state <= CONT;
                         state   <= CONFIG_NEXT;
                     end
@@ -216,38 +215,40 @@ module slave #(
                     end
                     //if start and slave id sent by master is correct: 
                     //process the rest of the control signal
-                    else if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
-                        //if READ
-                        if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin 
-                            //once expected delay is done
-                            //access ram and start sending the first bit 
-                            //while assigning READ state in same clock cycle 
-                            if (delay_counter == DELAY && split_state == CONT) begin
-                                rD_buffer   <= ram[address];
-                                rD_temp     <= rD_buffer[DATA_WIDTH-1];
-                                state       <= READ;                                 
-                            end
-                            // else if (delay_counter == DELAY && split_state == TRANS) state <= RECONFIG;
-                            else if (delay_counter < DELAY) delay_counter <= delay_counter + 1'b1;
-                        end
-                        //if WRITE: ready is always HIGH until end of write
-                        else if (config_buffer[CON-2-S_ID_WIDTH-1] == 1) begin  
-                            ready <= 1;
-                            //only begin write if master sends valid HIGH
-                            //start receiving first write data bit 
-                            //with valid HIGH in same clock cycle
-                            if (valid)  begin
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp;                    
-                                state <= WRITE;
-                            end
-                            //if valid is LOW: wait
-                            else  state <= CONFIG_NEXT;
-                        end
-                    end
-                    //if start and slave id is wrong: go to IDLE
                     else begin
-                        state <= IDLE;
+                        if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
+                            //if READ
+                            if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin
+                                check <= 1;  
+                                //once expected delay is done
+                                //access ram and start sending the first bit 
+                                //while assigning READ state in same clock cycle 
+                                if (delay_counter == DELAY && split_state == CONT) begin                                   
+                                    rD_buffer   <= ram[address];
+                                    rD_temp     <= rD_buffer[DATA_WIDTH-1];
+                                    state       <= READ;                                 
+                                end
+                                else if (delay_counter < DELAY) delay_counter <= delay_counter + 1'b1;
+                            end
+                            //if WRITE: ready is always HIGH until end of write
+                            else if (config_buffer[CON-2-S_ID_WIDTH-1] == 1) begin  
+                                ready <= 1;
+                                //only begin write if master sends valid HIGH
+                                //start receiving first write data bit 
+                                //with valid HIGH in same clock cycle
+                                if (valid)  begin
+                                    wD_buffer       <= wD_buffer << 1;
+                                    wD_buffer[0]    <= wD_temp;                    
+                                    state <= WRITE;
+                                end
+                                //if valid is LOW: wait
+                                else  state <= CONFIG_NEXT;
+                            end
+                        end
+                        //if start and slave id is wrong: go to IDLE
+                        else begin
+                            state <= IDLE;
+                        end
                     end
                 end 
                 READ : begin
@@ -259,7 +260,6 @@ module slave #(
                         if (rD_counter < DATA_WIDTH && !ready) begin
                             rD_buffer       <= rD_buffer << 1;
                             rD_temp         <= rD_buffer[DATA_WIDTH-1];
-                            check           <= 1;
                             ready           <= 1;
                                               
                         end
@@ -268,7 +268,6 @@ module slave #(
                             rD_temp         <= rD_buffer[DATA_WIDTH-1];
                             rD_counter      <= rD_counter + 1'b1;                       
                             ready <= 1;
-                            check <= 0;
                         end
                         //after first read data is fully sent : 
                         else if (rD_counter == DATA_WIDTH && ready) begin
