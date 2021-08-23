@@ -355,6 +355,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 controlCounter      <= controlCounter + 5'd1;
                                 if (splitOnot == 1)begin
                                     communicationState <= splitComContinue;
+                                    clock_counter      <= 0;
+                                    // control            <= 1;
                                 end
                                 else begin
                                 communicationState  <= masterCom;
@@ -561,139 +563,150 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             else if (fromArbiter == 2'b00)begin: priorityStop
 								// control 		<= 1;
                                 communicationState <= masterHold;
-                                arbSend <= 0;       // fisrt hold bit 
-                                if (burstLen == 0) begin    // single
-                                    if (tempRdWr == 0) begin   // read single 
-                                        if (ready) begin
-                                            if (i < DATA_WIDTH) begin
-                                                tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                i                            <= i + 1'b1;
-                                            end
-                                            else if (i == DATA_WIDTH) begin
-                                            dataInternal        <= tempReadData;
-                                            addressInternal     <= addressInternalBurtstBegin;
-                                            wr                  <= 1;
-                                            i                   <= i + 1'b1;     
-                                            end
-                                            else if (~ready && i <= DATA_WIDTH) begin
-                                                wr <= 0;
-                                            end
-                                            else if (i > DATA_WIDTH) begin
-                                                i <= 0;
-                                                wr <=0;
-                                                communicationState <= over;
-                                            end
-                                        end
-                                    end
-                                    else begin  // single write 
-                                        if (i < DATA_WIDTH) begin
-                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
-                                            addressInternal     <= addressInternalBurtstBegin;
-                                            i                   <= i + 1'b1;
-                                            valid               <= 1;
-                                        end
-                                        
-                                        else begin
-                                            valid               <= 0;
-                                            i                   <= 0;
-                                            communicationState  <= over;
-                                            last                <= 0;
-                                        end
-                                    end
-                                end
-                                else begin // burst
-                                    if (tempRdWr == 0)begin  // burst read   
-                                        if(burstLen > 1 ) begin
-                                            if (i < DATA_WIDTH && ready) begin
-                                                tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                i               <= i + 1'b1;
-                                                wr              <= 0;
-                                                valid           <= 1;
-                                            end
-                                            else if (i == DATA_WIDTH || ready) begin
-                                                tempReadData[i]             <= rD;
-                                                dataInternal                <= tempReadData;
-                                                addressInternal             <= addressInternalBurtstBegin;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                wr                  <= 1;
-                                                i                   <= 0; 
-                                                valid               <= 0;
-                                                burstLen            <= burstLen - 1'b1;   
-                                                communicationState  <= masterDone;   
-                                            end
-                                            else if (~ready) begin
-                                                wr <= 0;
-                                            end
-                                        end
-                                         else if( burstLen == 1 ) begin
-                                            if (i < DATA_WIDTH && ready) begin
-                                                tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                i               <= i + 1'b1;
-                                                wr              <= 0;
-                                                valid           <= 1;
-                                                last            <= 1;
-                                            end
-                                            else if (i == DATA_WIDTH || ready ) begin
-                                                tempReadData[i]             <= rD;
-                                                dataInternal                <= tempReadData;
-                                                addressInternal             <= addressInternalBurtstBegin;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                wr                  <= 1;
-                                                i                   <= 0; 
-                                                last                <= 1;
-                                                valid               <= 0;
-                                                burstLen            <= burstLen - 1'b1;  
-                                                communicationState  <= over; 
-                                            end
-                                            else if (~ready) begin
-                                                wr <= 0;
-                                            end
-                                        end
-                                    end
+                                arbSend <= 0;       // fisrt hold bit
+                                if (controlCounter < CONTROL_LEN) begin
+                                    control             <= tempControl[18];
+                                    tempControl         <= {tempControl[17:0] ,1'b0};
+                                    controlCounter      <= controlCounter + 5'd1;
 
-                                    else begin: burstWriteMode
-                                        if(burstLen > 1) begin
+                                    
+                                end  
+                                else if (controlCounter == CONTROL_LEN) begin : startSendOrReceive
+                                    controlCounter      <= controlCounter;
+                                    control             <= 0;
+
+                                
+                                    if (burstLen == 0) begin    // single
+                                        if (tempRdWr == 0) begin   // read single 
+                                            if (ready) begin
+                                                if (i < DATA_WIDTH) begin
+                                                    tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                    i                            <= i + 1'b1;
+                                                end
+                                                else if (i == DATA_WIDTH) begin
+                                                dataInternal        <= tempReadData;
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                wr                  <= 1;
+                                                i                   <= i + 1'b1;     
+                                                end
+                                                else if (~ready && i <= DATA_WIDTH) begin
+                                                    wr <= 0;
+                                                end
+                                                else if (i > DATA_WIDTH) begin
+                                                    i <= 0;
+                                                    wr <=0;
+                                                    communicationState <= over;
+                                                end
+                                            end
+                                        end
+                                        else begin  // single write 
                                             if (i < DATA_WIDTH) begin
                                                 wrD                 <= tempReadData[DATA_WIDTH-1-i];
                                                 addressInternal     <= addressInternalBurtstBegin;
                                                 i                   <= i + 1'b1;
                                                 valid               <= 1;
                                             end
-                                            else if (i == DATA_WIDTH) begin
-                                                i                           <= 0;
-                                                burstLen                    <= burstLen - 1'b1;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                tempReadData                <= internalDataOut;
-                                                valid                       <= 0;
-                                                communicationState          <= masterDone;
+                                            
+                                            else begin
+                                                valid               <= 0;
+                                                i                   <= 0;
+                                                communicationState  <= over;
+                                                last                <= 0;
                                             end
                                         end
-                                        else if (burstLen == 1) begin
-                                            if (i < DATA_WIDTH-1) begin
-                                                wrD                 <= tempReadData[DATA_WIDTH-1-i];
-                                                addressInternal     <= addressInternalBurtstBegin;
-                                                i                   <= i + 1'b1;
-                                                valid               <= 1;
-                                                last                <= 1;
+                                    end
+                                    else begin // burst
+                                        if (tempRdWr == 0)begin  // burst read   
+                                            if(burstLen > 1 ) begin
+                                                if (i < DATA_WIDTH && ready) begin
+                                                    tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                    i               <= i + 1'b1;
+                                                    wr              <= 0;
+                                                    valid           <= 1;
+                                                end
+                                                else if (i == DATA_WIDTH || ready) begin
+                                                    tempReadData[i]             <= rD;
+                                                    dataInternal                <= tempReadData;
+                                                    addressInternal             <= addressInternalBurtstBegin;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                    wr                  <= 1;
+                                                    i                   <= 0; 
+                                                    valid               <= 0;
+                                                    burstLen            <= burstLen - 1'b1;   
+                                                    communicationState  <= masterDone;   
+                                                end
+                                                else if (~ready) begin
+                                                    wr <= 0;
+                                                end
                                             end
-                                            else if (i == DATA_WIDTH-1) begin
-                                                i                           <= 0;
-                                                wrD                         <= tempReadData[DATA_WIDTH-1-i];
-                                                burstLen                    <= burstLen - 1'b1;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                tempReadData                <= internalDataOut;
-                                                valid                       <= 1;
-                                                last                        <= 1;
-                                                communicationState          <= over;
+                                            else if( burstLen == 1 ) begin
+                                                if (i < DATA_WIDTH && ready) begin
+                                                    tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                    i               <= i + 1'b1;
+                                                    wr              <= 0;
+                                                    valid           <= 1;
+                                                    last            <= 1;
+                                                end
+                                                else if (i == DATA_WIDTH || ready ) begin
+                                                    tempReadData[i]             <= rD;
+                                                    dataInternal                <= tempReadData;
+                                                    addressInternal             <= addressInternalBurtstBegin;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                    wr                  <= 1;
+                                                    i                   <= 0; 
+                                                    last                <= 1;
+                                                    valid               <= 0;
+                                                    burstLen            <= burstLen - 1'b1;  
+                                                    communicationState  <= over; 
+                                                end
+                                                else if (~ready) begin
+                                                    wr <= 0;
+                                                end
                                             end
                                         end
-                                    end: burstWriteMode
+
+                                        else begin: burstWriteMode
+                                            if(burstLen > 1) begin
+                                                if (i < DATA_WIDTH) begin
+                                                    wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                    addressInternal     <= addressInternalBurtstBegin;
+                                                    i                   <= i + 1'b1;
+                                                    valid               <= 1;
+                                                end
+                                                else if (i == DATA_WIDTH) begin
+                                                    i                           <= 0;
+                                                    burstLen                    <= burstLen - 1'b1;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                    tempReadData                <= internalDataOut;
+                                                    valid                       <= 0;
+                                                    communicationState          <= masterDone;
+                                                end
+                                            end
+                                            else if (burstLen == 1) begin
+                                                if (i < DATA_WIDTH-1) begin
+                                                    wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                    addressInternal     <= addressInternalBurtstBegin;
+                                                    i                   <= i + 1'b1;
+                                                    valid               <= 1;
+                                                    last                <= 1;
+                                                end
+                                                else if (i == DATA_WIDTH-1) begin
+                                                    i                           <= 0;
+                                                    wrD                         <= tempReadData[DATA_WIDTH-1-i];
+                                                    burstLen                    <= burstLen - 1'b1;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                    tempReadData                <= internalDataOut;
+                                                    valid                       <= 1;
+                                                    last                        <= 1;
+                                                    communicationState          <= over;
+                                                end
+                                            end
+                                        end: burstWriteMode
+                                    end
                                 end
-
-
-
 
                             end
+
                             else if (fromArbiter == 2'b01)begin: splitStop
                                 communicationState <= masterSplit; 
                                 splitOnot          <= 1;                               
@@ -710,174 +723,19 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             else if (tempHold == 2'd1) begin
                                 arbSend <= 1;
                             end 
-                            if (burstLen == 0) begin: singleMode
-                                if (tempRdWr == 0) begin    // single read
-                                    if (i < DATA_WIDTH && ready) begin
-                                        tempReadData[DATA_WIDTH-1-i] <= rD;
-                                        i                            <= i + 1'b1;
-                                    end
-                                    else if (i == DATA_WIDTH) begin
-                                        dataInternal        <= tempReadData;
-                                        addressInternal     <= addressInternalBurtstBegin;
-                                        wr                  <= 1;
-                                        i                   <= i + 1'b1;    
-                                    end
-                                    else if (~ready && i <= DATA_WIDTH) begin
-                                        wr <= 0;
-                                    end
-                                    else if (i > DATA_WIDTH) begin
-                                        i <= 0;
-                                        wr <=0;
-                                        communicationState <= over;
-                                    end
-                                end
-                                else begin
-                                    if (i < DATA_WIDTH) begin
-                                        wrD                 <= tempReadData[DATA_WIDTH-1-i];
-                                        addressInternal     <= addressInternalBurtstBegin;
-                                        i                   <= i + 1'b1;
-                                        valid               <= 1;
-                                    end
-                                    else begin
-                                        valid               <= 0;
-                                        i                   <= 0;
-                                        communicationState  <= over;
-                                        last                <= 0;
-                                    end
-                                end
-                            end
-                            else begin: burstMode
-                                if (tempRdWr == 0)begin: burstReadMode  
-                                    if(burstLen > 1 ) begin
-                                        if (i < DATA_WIDTH && ready) begin
-                                            tempReadData[DATA_WIDTH-1-i] <= rD;
-                                            i               <= i + 1'b1;
-                                            wr              <= 0;
-                                            valid           <= 1;
-                                        end
-                                        else if (i == DATA_WIDTH || ready) begin
-                                            tempReadData[i]             <= rD;
-                                            dataInternal                <= tempReadData;
-                                            addressInternal             <= addressInternalBurtstBegin;
-                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                            wr                          <= 1;
-                                            i                           <= 0; 
-                                            valid                       <= 0;
-                                            burstLen                    <= burstLen - 1'b1;   
-                                            communicationState          <= masterDone; 
-                                            arbSend                     <= 0;  
-                                            clock_counter               <= 0;
-                                        end
-                                        else if (~ready) begin
-                                            wr <= 0;
-                                        end
-                                    end
-                                    else if (burstLen == 1)begin
-                                        if (i < DATA_WIDTH && ready) begin
-                                                tempReadData[DATA_WIDTH-1-i] <= rD;
-                                                i               <= i + 1'b1;
-                                                wr              <= 0;
-                                                valid           <= 1;
-                                                last            <= 1;
-                                            end
-                                            else if (i == DATA_WIDTH || ready ) begin
-                                                tempReadData[i]             <= rD;
-                                                dataInternal                <= tempReadData;
-                                                addressInternal             <= addressInternalBurtstBegin;
-                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                wr                  <= 1;
-                                                i                   <= 0; 
-                                                last                <= 1;
-                                                valid               <= 0;
-                                                burstLen            <= burstLen - 1'b1;   
-                                            end
-                                            else if (~ready) begin
-                                                wr <= 0;
-                                            end
-                                    end
-                                end: burstReadMode
 
-                                else begin: burstWriteMode
-                                    if(burstLen > 1) begin
-                                        if (i < DATA_WIDTH) begin
-                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
-                                            addressInternal     <= addressInternalBurtstBegin;
-                                            i                   <= i + 1'b1;
-                                            valid               <= 1;
-                                        end
-                                        else if (i == DATA_WIDTH) begin
-                                            i                           <= 0;
-                                            burstLen                    <= burstLen - 1'b1;
-                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                            tempReadData                <= internalDataOut;
-                                            valid                       <= 0;
-                                            communicationState          <= masterDone;
-                                            arbSend                     <= 0;
-                                            clock_counter               <= 0;
-                                        end
-                                    end
-                                    else if (burstLen == 1) begin
-                                        if (i < DATA_WIDTH) begin
-                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
-                                            addressInternal     <= addressInternalBurtstBegin;
-                                            i                   <= i + 1'b1;
-                                            valid               <= 1;
-                                            last                <= 1;
-                                        end
-                                        else if (i == DATA_WIDTH) begin
-                                            i                           <= 0;
-                                            wrD                         <= tempReadData[DATA_WIDTH-1-i];
-                                            burstLen                    <= burstLen - 1'b1;
-                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                            tempReadData                <= internalDataOut;
-                                            valid                       <= 0;
-                                            last                        <= 0;
-                                            communicationState          <= over;
-                                        end
-                                    end
-                                end: burstWriteMode
-                            end
-                        end
+                            if (controlCounter < CONTROL_LEN) begin
+                                control             <= tempControl[18];
+                                tempControl         <= {tempControl[17:0] ,1'b0};
+                                controlCounter      <= controlCounter + 5'd1;     
+                            end 
 
-                        masterDone: begin
-                            if (clock_counter < 2'd1) begin
-                                arbSend            <= 1;
-                                wr                 <= 0;
-                                valid              <= 0;
-                                control            <= 0;
-                                tempControl_2[ADDRESS_WIDTH-1 : 0]    <= addressInternalBurtstBegin;
-                                clock_counter <= clock_counter + 1'b1;
-                            end
-                            else if (clock_counter < 2'd2) begin
-                                arbSend <= 0;
-                                control <= 1;
-                                clock_counter <= clock_counter + 1'b1;
-                            end
-                            else if (clock_counter == 2'd2) begin
-                                communicationState <= idleCom;
-                                control            <= 0;
-                            end
-                        end 
-                        /*
-                        if arbiter needs to set everything from scratch: masteridle
-                        else masterAckownledgement
-                        */
-                        
-                        masterSplit:
-                        begin
-                            communicationState <= masterDone; // what should i send here
-                            arbSend            <= 0;
-                        end 
-                        
-                        //=======================================//
-                        //   Split Communication continue state  //
-                        //=======================================//
-                        splitComContinue: 
-                            if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
-                                fromArbiter[1]      <= fromArbiter[0];
-                                fromArbiter[0]      <= arbCont;
-                                if (burstLen == 0) begin 
-                                    if (tempRdWr == 0) begin  // single read
+                            else if (controlCounter == CONTROL_LEN) begin : startSendOrReceive
+                                controlCounter      <= controlCounter;
+                                 control             <= 0;
+
+                                if (burstLen == 0) begin: singleMode
+                                    if (tempRdWr == 0) begin    // single read
                                         if (i < DATA_WIDTH && ready) begin
                                             tempReadData[DATA_WIDTH-1-i] <= rD;
                                             i                            <= i + 1'b1;
@@ -897,56 +755,254 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             communicationState <= over;
                                         end
                                     end
-                                end
-                                else begin // burst read
-                                    if(burstLen > 1 ) begin
-                                        if (i < DATA_WIDTH && ready) begin
-                                            tempReadData[DATA_WIDTH-1-i] <= rD;
-                                            i               <= i + 1'b1;
-                                            wr              <= 0;
-                                            valid           <= 1;
-                                        end
-                                        else if (i == DATA_WIDTH || ready) begin
-                                            tempReadData[i]             <= rD;
-                                            dataInternal                <= tempReadData;
-                                            addressInternal             <= addressInternalBurtstBegin;
-                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                            wr                          <= 1;
-                                            i                           <= 0; 
-                                            valid                       <= 0;
-                                            burstLen                    <= burstLen - 1'b1;   
-                                        end
-                                        else if (~ready) begin
-                                            wr <= 0;
-                                        end
-                                    end
-                                    else if( burstLen == 1 ) begin
-                                        if (i < DATA_WIDTH && ready) begin
-                                            tempReadData[DATA_WIDTH-1-i] <= rD;
-                                            i               <= i + 1'b1;
-                                            wr              <= 0;
-                                            valid           <= 1;
-                                            last            <= 1;
-                                        end
-                                        else if (i == DATA_WIDTH || ready ) begin
-                                            tempReadData[i]             <= rD;
-                                            dataInternal                <= tempReadData;
-                                            addressInternal             <= addressInternalBurtstBegin;
-                                            addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                            wr                  <= 1;
-                                            i                   <= 0; 
-                                            last                <= 1;
-                                            valid               <= 0;
-                                            burstLen            <= burstLen - 1'b1;   
-                                        end
-                                        else if (~ready) begin
-                                            wr <= 0;
-                                        end
-                                    end
                                     else begin
-                                        last                <= 0;
-                                        wr <= 0;
-                                        communicationState <= over;
+                                        if (i < DATA_WIDTH) begin
+                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                            addressInternal     <= addressInternalBurtstBegin;
+                                            i                   <= i + 1'b1;
+                                            valid               <= 1;
+                                        end
+                                        else begin
+                                            valid               <= 0;
+                                            i                   <= 0;
+                                            communicationState  <= over;
+                                            last                <= 0;
+                                        end
+                                    end
+                                end
+                                else begin: burstMode
+                                    if (tempRdWr == 0)begin: burstReadMode  
+                                        if(burstLen > 1 ) begin
+                                            if (i < DATA_WIDTH && ready) begin
+                                                tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                i               <= i + 1'b1;
+                                                wr              <= 0;
+                                                valid           <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH || ready) begin
+                                                tempReadData[i]             <= rD;
+                                                dataInternal                <= tempReadData;
+                                                addressInternal             <= addressInternalBurtstBegin;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                wr                          <= 1;
+                                                i                           <= 0; 
+                                                valid                       <= 0;
+                                                burstLen                    <= burstLen - 1'b1;   
+                                                communicationState          <= masterDone; 
+                                                arbSend                     <= 0;  
+                                                clock_counter               <= 0;
+                                            end
+                                            else if (~ready) begin
+                                                wr <= 0;
+                                            end
+                                        end
+                                        else if (burstLen == 1)begin
+                                            if (i < DATA_WIDTH && ready) begin
+                                                    tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                    i               <= i + 1'b1;
+                                                    wr              <= 0;
+                                                    valid           <= 1;
+                                                    last            <= 1;
+                                                end
+                                                else if (i == DATA_WIDTH || ready ) begin
+                                                    tempReadData[i]             <= rD;
+                                                    dataInternal                <= tempReadData;
+                                                    addressInternal             <= addressInternalBurtstBegin;
+                                                    addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                    wr                  <= 1;
+                                                    i                   <= 0; 
+                                                    last                <= 1;
+                                                    valid               <= 0;
+                                                    burstLen            <= burstLen - 1'b1;   
+                                                end
+                                                else if (~ready) begin
+                                                    wr <= 0;
+                                                end
+                                        end
+                                    end: burstReadMode
+
+                                    else begin: burstWriteMode
+                                        if(burstLen > 1) begin
+                                            if (i < DATA_WIDTH) begin
+                                                wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                i                   <= i + 1'b1;
+                                                valid               <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH) begin
+                                                i                           <= 0;
+                                                burstLen                    <= burstLen - 1'b1;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                tempReadData                <= internalDataOut;
+                                                valid                       <= 0;
+                                                communicationState          <= masterDone;
+                                                arbSend                     <= 0;
+                                                clock_counter               <= 0;
+                                            end
+                                        end
+                                        else if (burstLen == 1) begin
+                                            if (i < DATA_WIDTH) begin
+                                                wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                i                   <= i + 1'b1;
+                                                valid               <= 1;
+                                                last                <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH) begin
+                                                i                           <= 0;
+                                                wrD                         <= tempReadData[DATA_WIDTH-1-i];
+                                                burstLen                    <= burstLen - 1'b1;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                tempReadData                <= internalDataOut;
+                                                valid                       <= 0;
+                                                last                        <= 0;
+                                                communicationState          <= over;
+                                            end
+                                        end
+                                    end: burstWriteMode
+                                end
+                            end
+                        end
+
+                        masterDone: begin
+                            if (clock_counter < 2'd1 && splitOnot == 0) begin
+                                arbSend            <= 1;
+                                wr                 <= 0;
+                                valid              <= 0;
+                                control            <= 0;
+                                tempControl_2[ADDRESS_WIDTH-1 : 0]    <= addressInternalBurtstBegin;
+                                clock_counter <= clock_counter + 1'b1;
+                            end
+                            else if (clock_counter < 2'd2 && splitOnot == 0 ) begin
+                                arbSend <= 0;
+                                control <= 1;
+                                clock_counter <= clock_counter + 1'b1;
+                            end
+                            else if (clock_counter == 2'd2 && splitOnot == 0 ) begin
+                                communicationState <= idleCom;
+                                control            <= 0;
+                            end
+                            
+                            else if (clock_counter < 2'd1 && splitOnot == 1) begin
+                                arbSend            <= 1;
+                                wr                 <= 0;
+                                valid              <= 0;
+                                control            <= 1;
+                                tempControl_2[ADDRESS_WIDTH-1 : 0]    <= addressInternalBurtstBegin;
+                                clock_counter <= clock_counter + 1'b1;
+                            end
+                            else if (clock_counter < 2'd2 && splitOnot == 1 ) begin
+                                arbSend <= 0;
+                                control <= 1;
+                                clock_counter <= clock_counter + 1'b1;
+                            end
+                            else if (clock_counter == 2'd2 && splitOnot == 1 ) begin
+                                communicationState <= idleCom;
+                                control            <= 0;
+                            end
+                        end
+                        
+                        masterSplit:
+                        begin
+                            communicationState <= masterDone; 
+                            arbSend            <= 0;
+                        end 
+                        
+                        //=======================================//
+                        //   Split Communication continue state  //
+                        //=======================================//
+                        splitComContinue: 
+                            if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
+                                fromArbiter[1]      <= fromArbiter[0];
+                                fromArbiter[0]      <= arbCont;
+                                if (clock_counter < 2'd1) begin
+                                    control         <= 1;
+                                    clock_counter   <= clock_counter + 1'b1;
+                                end
+                                else if (clock_counter < 2'd2) begin
+                                    control         <= 0;
+                                    clock_counter   <= clock_counter + 1'b1;
+                                end
+                                else if (clock_counter < 2'd3) begin
+                                    control         <= 1;
+                                    clock_counter   <= clock_counter + 1'b1;
+                                end
+                                else if (clock_counter == 2'd3) begin
+                                    control         <= 0;
+                                    clock_counter   <= clock_counter;
+                                    
+                                    if (burstLen == 0) begin 
+                                        if (tempRdWr == 0) begin  // single read
+                                            if (i < DATA_WIDTH && ready) begin
+                                                tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                i                            <= i + 1'b1;
+                                            end
+                                            else if (i == DATA_WIDTH) begin
+                                                dataInternal        <= tempReadData;
+                                                addressInternal     <= addressInternalBurtstBegin;
+                                                wr                  <= 1;
+                                                i                   <= i + 1'b1;    
+                                            end
+                                            else if (~ready && i <= DATA_WIDTH) begin
+                                                wr <= 0;
+                                            end
+                                            else if (i > DATA_WIDTH) begin
+                                                i <= 0;
+                                                wr <=0;
+                                                communicationState <= over;
+                                            end
+                                        end
+                                    end
+                                    else begin // burst read
+                                        if(burstLen > 1 ) begin
+                                            if (i < DATA_WIDTH && ready) begin
+                                                tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                i               <= i + 1'b1;
+                                                wr              <= 0;
+                                                valid           <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH || ready) begin
+                                                tempReadData[i]             <= rD;
+                                                dataInternal                <= tempReadData;
+                                                addressInternal             <= addressInternalBurtstBegin;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                wr                          <= 1;
+                                                i                           <= 0; 
+                                                valid                       <= 0;
+                                                burstLen                    <= burstLen - 1'b1;   
+                                            end
+                                            else if (~ready) begin
+                                                wr <= 0;
+                                            end
+                                        end
+                                        else if( burstLen == 1 ) begin
+                                            if (i < DATA_WIDTH && ready) begin
+                                                tempReadData[DATA_WIDTH-1-i] <= rD;
+                                                i               <= i + 1'b1;
+                                                wr              <= 0;
+                                                valid           <= 1;
+                                                last            <= 1;
+                                            end
+                                            else if (i == DATA_WIDTH || ready ) begin
+                                                tempReadData[i]             <= rD;
+                                                dataInternal                <= tempReadData;
+                                                addressInternal             <= addressInternalBurtstBegin;
+                                                addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
+                                                wr                  <= 1;
+                                                i                   <= 0; 
+                                                last                <= 1;
+                                                valid               <= 0;
+                                                burstLen            <= burstLen - 1'b1;   
+                                            end
+                                            else if (~ready) begin
+                                                wr <= 0;
+                                            end
+                                        end
+                                        else begin
+                                            last                <= 0;
+                                            wr <= 0;
+                                            communicationState <= over;
+                                        end
                                     end
                                 end
                             end

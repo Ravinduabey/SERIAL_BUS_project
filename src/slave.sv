@@ -138,6 +138,7 @@ module slave #(
                     //initialize all counters, buffers, registers, outputs
                     address             <= 0;
                     con_counter         <= 0;
+                    config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
                     delay_counter       <= 0;
