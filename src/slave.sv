@@ -30,12 +30,10 @@ module slave #(
     localparam DEL          = DELAY;
     localparam DEL_COUNTER  = $clog2(DEL);
 
-    localparam START        = 3'b111;
-    localparam PRIORITY     = 
     // logic [S_ID_WIDTH-1:0] reg_slave_ID;
 
     logic [CON           :0] config_buffer;
-    logic [CON_COUNTER-1 :0] con_counter;
+    logic [CON_COUNTER-1 :0] config_counter;
     logic                    temp_control;
 
     //data out fifo buffer for READ  RAM -->|_|_|_|_|_..._|--> |rD_temp|
@@ -61,14 +59,20 @@ module slave #(
     logic check=0;
 
     logic [2:0] control_buffer;
+    logic [1:0] con_counter;
 
-    typedef enum logic [3:0] {
+    typedef enum logic [2:0] {
         START       = 3'b111,
         SPLIT_TRANS = 3'b110,
         SPLIT_CONT  = 3'b101
     } control_;
     
-    typedef enum logic { TRANS, CONT } split_state;
+    typedef enum logic [1:0] { 
+        NO_SPLIT,
+        TRANS, 
+        CONT
+    } split_;
+    split_ split_state = NO_SPLIT;
 
     typedef enum logic [3:0] { 
        INIT,
