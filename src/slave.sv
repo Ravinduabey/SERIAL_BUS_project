@@ -151,6 +151,8 @@ module slave #(
                     rD_temp             <= 0;
                     rD_buffer           <= 0;
                     wD_buffer           <= 0;
+                    config_buffer       <= 0;
+                    control_buffer      <= 0;
                 end
                 RECONFIG : begin
                     //priority transfer
@@ -206,7 +208,7 @@ module slave #(
                 end
                 CONFIG_NEXT : begin
                     if (control) begin
-                        con_counter         <= con_counter + 1'b1; 
+                        con_counter         <= 1; 
                         control_buffer      <= control_buffer << 1'b1;
                         control_buffer[0]   <= temp_control;                                                
                         prev_state          <= CONFIG_NEXT;
@@ -214,17 +216,18 @@ module slave #(
                     end
                     //if start and slave id sent by master is correct: 
                     //process the rest of the control signal
-                    if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
+                    else if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
                         //if READ
                         if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin 
                             //once expected delay is done
                             //access ram and start sending the first bit 
                             //while assigning READ state in same clock cycle 
-                            if (delay_counter == DELAY && split_state) begin
+                            if (delay_counter == DELAY && split_state == CONT) begin
                                 rD_buffer   <= ram[address];
                                 rD_temp     <= rD_buffer[DATA_WIDTH-1];
                                 state       <= READ;                                 
                             end
+                            // else if (delay_counter == DELAY && split_state == TRANS) state <= RECONFIG;
                             else if (delay_counter < DELAY) delay_counter <= delay_counter + 1'b1;
                         end
                         //if WRITE: ready is always HIGH until end of write

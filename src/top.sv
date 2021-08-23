@@ -4,9 +4,9 @@ module top import details::*;
     parameter MASTER_COUNT=2,  // number of masters
     parameter DATA_WIDTH = 16,   // width of a data word in slave & master
     parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
-    parameter int SLAVE_DELAYS[SLAVE_COUNT] = '{0,0,1200},
+    parameter int SLAVE_DELAYS[SLAVE_COUNT] = '{0,0,100},
     parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
-    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 100 ,
+    parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 1200 ,
     parameter FIRST_START_MASTER = 0, // this master will start communication first
     parameter COM_START_DELAY = 0 //gap between 2 masters communication start signal
 
