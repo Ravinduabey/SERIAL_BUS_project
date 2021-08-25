@@ -52,7 +52,7 @@ initial begin
     $stop;
 end
 
-/////////  Receier test
+/////////  Receiver test
 initial begin
     #(CLK_PERIOD*2); // to initialize
 
