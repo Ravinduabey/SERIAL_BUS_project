@@ -2,25 +2,25 @@ module uart_slave_system_tb ();
 timeunit 1ns; timeprecision 1ps;
 
 
-    localparam DATA_WIDTH = 8;
-    localparam ADDRESS_WIDTH = $clog2(4096);
-    
-    logic rD;                  //serial read_data
-    logic ready;               //default HIGh
+logic rD;                  //serial read_data
+logic ready;               //default HIGh
 
-    logic control=0;              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
-    logic wrD=0;                   //serial write_data
-    logic valid=0;                //default LOW
-    logic last=1;                 //default LOW
+logic control=0;              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
+logic wrD=0;                   //serial write_data
+logic valid=0;                //default LOW
+logic last=1;                 //default LOW
 
-    //with Top Module
-    logic [1:0]slave_ID;
-    logic clk = 0;
-    logic rstN; 
+//with Top Module
+logic [1:0]slave_ID;
+logic clk = 0;
+logic rstN; 
 
-    logic [DATA_WIDTH-1:0] byteForTx
-    logic txByteStart
-    localparam CLOCK_PERIOD = 20;
+logic tx_ready;
+logic rx_ready;
+
+localparam DATA_WIDTH = 8;
+localparam BAUD_RATE = 19200;
+localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
    initial begin
        clk <= 0;
            forever begin

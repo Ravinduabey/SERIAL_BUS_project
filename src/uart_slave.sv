@@ -20,25 +20,25 @@ module uart_slave
     input logic rstN, 
 
     //with uart receiver
-    input   logic rx_new_byte_indicate,
+    input   logic rxStart,
     input   logic [DATA_WIDTH-1:0] byteFromRx,
 
 
     //with uart transmitter
-    output  logic txByteStart,
+    output  logic txStart,
     output  logic [DATA_WIDTH-1:0] byteForTx
   
 );
     /*                         |-------------------------------------------------      
-    |===================|      | |=================|           |===============|
-    |   Int. Master     | ---> | |   uart slave    |   --->    |   uart tx     |
-    |===================|      | |=================|           |===============|
+    |===================|      |  |=================|           |===============|
+    |   Int. Master   []| ---> |O |   uart slave    |   --->    |   uart tx     |
+    |===================|      |  |=================|           |===============|
                                |-------------------------------------------------
 
                                |-------------------------------------------------
-    |===================|      | |=================|           |===============|
-    |   Int. Master     | <--- | |   uart slave    |   <---    |   uart rx     |
-    |===================|      | |=================|           |===============|
+    |===================|      |  |=================|           |===============|
+    |   Int. Master   []| <--- |O |   uart slave    |   <---    |   uart rx     |
+    |===================|      |  |=================|           |===============|
                                |------------------------------------------------- 
     
     if rx     sends data : send to master
@@ -52,7 +52,7 @@ module uart_slave
     if master sends data : send to tx
     -- slave in WRITE mode
     -1- if valid : write for DATA_WIDTH clock cycles
-    -2--- if wD_buffer full : assign txData and send txStart
+    -2--- if wD_buffer full : assign byteForTx and send txStart
     -3--if burst : repeat 1 & 2
     -4--- if last: repeat 1 & 2 once, then stop
 
@@ -124,6 +124,8 @@ module uart_slave
     
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
         if (!rstN) begin
+            txStart         <= 0;
+            byteForTx       <= 0;
             config_buffer   <= 0;
             rD_counter      <= 0;
             wD_counter      <= 0;
@@ -138,6 +140,8 @@ module uart_slave
             case (state)
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
+                    txStart             <= 0;
+                    byteForTx           <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
@@ -148,6 +152,8 @@ module uart_slave
                     config_buffer       <= 0;
                 end
                 IDLE : begin
+                    txStart         <= 0;
+                    byteForTx       <= 0;                    
                     ready           <= 1;
                     config_counter  <= 0;
                     rD_counter      <= 0;
@@ -229,7 +235,7 @@ module uart_slave
                     else if (config_buffer[1] == 0) begin
                         //receive data from uart rx
                         if (rxStart) begin
-                            rD_buffer <= rxData;
+                            rD_buffer <= byteFromRx;
                             state     <= READ;
                         end
                     end
@@ -288,7 +294,7 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     else if (rxStart) begin                    
-                        rD_buffer   <= rxData;
+                        rD_buffer   <= byteFromRx;
                         state       <= READB;
                     end
                 end
@@ -348,7 +354,8 @@ module uart_slave
                         end
                         else begin 
                             wD_counter      <= 0;
-                            txData          <= wD_buffer;
+                            txStart         <= 1;
+                            byteForTx       <= wD_buffer;
                             //if master did not send a WRITE BURST
                             if (config_buffer[0]==0) state <= IDLE;
                             else begin
@@ -400,17 +407,17 @@ module uart_slave
                                 wD_buffer[0]    <= wD_temp;
                             end
                             else if (wD_counter == DATA_WIDTH) begin
-                                txData          <= wD_buffer;
+                                byteForTx       <= wD_buffer;
                                 wD_counter      <= 0;
                             end
                         end
-                        if (txData == wD_buffer) txStart <= 1;
+                        if (byteForTx == wD_buffer) txStart <= 1;
                     end
                 end
                 WRITEB_END : begin
                     //store last byte 
-                    txData <= wD_buffer;
-                    state  <= IDLE;
+                    byteForTx   <= wD_buffer;
+                    state       <= IDLE;
                 end
                 default: state <= IDLE;
                     

@@ -2,7 +2,7 @@ module uart_slave_system
 #(
     parameter BAUD_RATE = 19200,
     parameter SLAVES = 4,
-    parameter DATA_WIDTH = 32,
+    parameter DATA_WIDTH = 8,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
     parameter SLAVEID = 1
 )(
@@ -20,19 +20,21 @@ module uart_slave_system
     input logic rstN, 
 
     //external receiver
-    input logic rxData,
-    input logic rxStart,
+    input  logic rx,
+    output logic rx_ready,
 
     //external transmitter
-    output logic txData,
-    output logic txStart
+    output logic tx,
+    output logic tx_ready
 );
     logic txByteStart;
     logic [DATA_WIDTH-1:0] byteForTx;
     logic rx_new_byte_indicate;
     logic [DATA_WIDTH-1:0] byteFromRx;
 
+
 logic baudTick;
+
 
 uart_slave #(
     .SLAVES(4),
@@ -47,9 +49,9 @@ uart_slave #(
     .last(last),
     .clk(clk),
     .rstN(rstN), 
-    .txByteStart(txByteStart),
+    .txStart(txByteStart),
     .byteForTx(byteForTx),
-    .rx_new_byte_indicate(rx_new_byte_indicate),
+    .rxStart(rx_new_byte_indicate),
     .byteFromRx(byteFromRx)
 );
 
