@@ -104,8 +104,8 @@ module uart_slave
        IDLE,        //wait for control signal
 
        //control
-       RECONFIG,    //new instruction received from master
-       CONFIG_NEXT, //process control signal for next state
+       RECONFIG,    
+       CONFIG_NEXT, 
 
        //data from rx --> internal master
        READ,        
