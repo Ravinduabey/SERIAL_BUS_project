@@ -4,7 +4,7 @@ module uart_slave_system
     parameter SLAVES = 4,
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
-    parameter SLAVEID = 1,
+    parameter SLAVEID = 1
 )(
     // with Master (through interconnect)
     output logic rD,                  //serial read_data
@@ -17,13 +17,20 @@ module uart_slave_system
 
     //with Top Module
     input logic clk,
-    input logic rstN 
+    input logic rstN, 
 
-    input  logic clk, rstN,txByteStart,rx,
-    input  logic [DATA_WIDTH-1:0]byteForTx,
-    output logic tx,tx_ready,rx_ready,rx_new_byte_indicate,
-    output logic [DATA_WIDTH-1:0]byteFromRx
+    //external receiver
+    input logic rxData,
+    input logic rxStart,
+
+    //external transmitter
+    output logic txData,
+    output logic txStart
 );
+    logic txByteStart;
+    logic [DATA_WIDTH-1:0] byteForTx;
+    logic rx_new_byte_indicate;
+    logic [DATA_WIDTH-1:0] byteFromRx;
 
 logic baudTick;
 
@@ -39,21 +46,29 @@ uart_slave #(
     .valid(valid),
     .last(last),
     .clk(clk),
-    .rstN(rstN) 
-    .rxData(rxData),
-    .rxStar(rxStart),
-    .txData(txData),
-    .txStart(txStart)
+    .rstN(rstN), 
+    .txByteStart(txByteStart),
+    .byteForTx(byteForTx),
+    .rx_new_byte_indicate(rx_new_byte_indicate),
+    .byteFromRx(byteFromRx)
 );
 
 uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.clk, .rstN, .baudTick);
 
 uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) transmitter(
-                    .dataIn(byteForTx), .clk, .baudTick, .rstN, .txStart(txByteStart), .tx, .tx_ready
+                    .dataIn(byteForTx),
+                    .clk, .baudTick, .rstN, 
+                    .txStart(txByteStart), 
+                    .tx(tx), 
+                    .tx_ready(tx_ready)
                     );
 
 uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) receiver (
-                .rx, .clk, .rstN, .baudTick, .rx_ready, .dataOut(byteFromRx), .new_byte_indicate(rx_new_byte_indicate)
+                .rx(rx), 
+                .clk, .rstN, .baudTick, 
+                .rx_ready(rx_ready), 
+                .dataOut(byteFromRx), 
+                .new_byte_indicate(rx_new_byte_indicate)
                 );
 
 endmodule:uart_slave_system

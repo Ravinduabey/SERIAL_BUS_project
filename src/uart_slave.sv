@@ -3,7 +3,7 @@ module uart_slave
     parameter SLAVES = 4,
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
-    parameter SLAVEID = 1,
+    parameter SLAVEID = 1
 )(
 
     // with Master (through interconnect)
@@ -20,13 +20,13 @@ module uart_slave
     input logic rstN, 
 
     //with uart receiver
-    input   logic [DATA_WIDTH-1:0] rxData,
-    input   logic rxStart,
+    input   logic rx_new_byte_indicate,
+    input   logic [DATA_WIDTH-1:0] byteFromRx,
+
 
     //with uart transmitter
-    output  logic [DATA_WIDTH-1:0] txData,
-    output  logic txStart
-
+    output  logic txByteStart,
+    output  logic [DATA_WIDTH-1:0] byteForTx
   
 );
     /*                         |-------------------------------------------------      
@@ -42,8 +42,9 @@ module uart_slave
                                |------------------------------------------------- 
     
     if rx     sends data : send to master
+    == input from rx
     -- slave in READ mode : ready LOW
-    -1- if rxStart : read rxData
+    -1- if rxStart : read byteFromRx
     -2--- for DATA_WIDTH clock cycles : ready and send rD
     -3- if burst : repeat 1 & 2
     -4--- if last : repeat 1 & 2 once, then stop 
@@ -98,7 +99,7 @@ module uart_slave
     } com_;
     com_ com_status = comm;
     
-    /
+  
     typedef enum logic [3:0] { 
        INIT,        //initialize
        IDLE,        //wait for control signal
@@ -137,11 +138,9 @@ module uart_slave
             case (state)
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
-                    address             <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
-                    // delay_counter       <= 0;
                     ready               <= 1;
                     rD_temp             <= 0;
                     rD_buffer           <= 0;
@@ -159,7 +158,7 @@ module uart_slave
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;                        
-                        state            <= CONFIG;                   
+                        state            <= RECONFIG;                   
                     end
                 end
                 RECONFIG : begin
@@ -206,6 +205,7 @@ module uart_slave
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
+								end
                     //if start and slave id sent by master is correct: 
                     //process the rest of the control signal
                     else if (config_buffer == CON) begin
@@ -216,8 +216,7 @@ module uart_slave
                         else state <= IDLE;
                     end                                              
 
-                    end
-                end                
+               end                
                 CONFIG_NEXT : begin
                     //reconfigure if master sends control HIGH
                     if (control) begin
@@ -416,7 +415,6 @@ module uart_slave
                 default: state <= IDLE;
                     
             endcase
-
 
         end 
     end
