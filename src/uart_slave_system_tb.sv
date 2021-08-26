@@ -108,7 +108,7 @@ logic ext_rx_ready;
         end
 
         #(CLOCK_PERIOD*10);
-        //control = 11110001
+        //control = 11110000
         control <= 1;
         valid <= 1;
         wrD <= 0;
@@ -120,24 +120,26 @@ logic ext_rx_ready;
         control <= 0;
         #(CLOCK_PERIOD);
 
-        rx <= 1;
-        #(CLOCK_PERIOD*3);
-        rx <= 0;
-        #(CLOCK_PERIOD);
-        rx <= 1;       
-        // repeat(10) begin
-        // @(posedge clk);
-        // tx = $urandom();
-        // @(posedge clk);
-        // end
+        repeat(10) begin
+            rx <= 1'b0;
+            #(BAUD_TIME_PERIOD);
+            for (int i=0;i<DATA_WIDTH;i++) begin:data  //data
+                @(posedge clk);
+                rx = $urandom();
+                #(BAUD_TIME_PERIOD);
+            end
+            @(posedge clk);  // end delimiter
+            rx <= 1'b1;
+            #(BAUD_TIME_PERIOD);
+        end
 
         // @(posedge clk);
-        $stop;
+        // $stop;
 
       
         
 
-        #(CLOCK_PERIOD*100);
+        #(CLOCK_PERIOD*1000);
         $stop;
     end
 

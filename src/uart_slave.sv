@@ -237,7 +237,7 @@ module uart_slave
                     else if (config_buffer[1] == 0) begin
                         //receive data from uart rx
                         // check <= 1;
-                        if (rxStart) begin
+                        if (rxDone) begin
                             rD_buffer <= byteFromRx;
                             state     <= READ;
                         end
@@ -299,7 +299,7 @@ module uart_slave
                         prev_state          <= READB_GET;
                         state               <= RECONFIG;
                     end
-                    else if (rxStart) begin                    
+                    else if (rxDone) begin                    
                         rD_buffer   <= byteFromRx;
                         state       <= READB;
                     end
