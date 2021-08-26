@@ -6,7 +6,7 @@ module uart_receiver
     input  logic rx, clk, rstN, baudTick,
     output logic rx_ready, 
     output logic [DATA_WIDTH-1:0]dataOut,
-    output logic new_byte_indicate
+    output logic new_byte_start, new_byte_received
 );
 
 typedef enum logic [1:0]{
@@ -97,6 +97,7 @@ end
 
 assign dataOut = currentData;
 assign rx_ready = (currentState == idle)? 1'b1: 1'b0;
-assign new_byte_indicate = ((currentState == start) && (baudTick) && (currentTick == 4'd7) && (~rx))? 1'b1:1'b0; //start of new data_receive byte
+assign new_byte_start = ((currentState == start) && (baudTick) && (currentTick == 4'd7) && (~rx))? 1'b1:1'b0; //start of new data_receive byte
+assign new_byte_received = ((currentState == stop) && (nextState == idle))? 1'b1: 1'b0;
 
 endmodule //uart_receiver

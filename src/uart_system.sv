@@ -5,7 +5,7 @@ module uart_system
 )(
     input  logic clk, rstN,txByteStart,rx,
     input  logic [DATA_WIDTH-1:0]byteForTx,
-    output logic tx,tx_ready,rx_ready,rx_new_byte_indicate,
+    output logic tx,tx_ready,rx_ready,rx_new_byte_started, rx_new_byte_received,
     output logic [DATA_WIDTH-1:0]byteFromRx
 );
 
@@ -18,7 +18,8 @@ uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) transmitter(
                     );
 
 uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) receiver (
-                .rx, .clk, .rstN, .baudTick, .rx_ready, .dataOut(byteFromRx), .new_byte_indicate(rx_new_byte_indicate)
+                .rx, .clk, .rstN, .baudTick, .rx_ready, .dataOut(byteFromRx), .new_byte_start(rx_new_byte_started), 
+                .new_byte_received(rx_new_byte_received)
                 );
 
 endmodule:uart_system
