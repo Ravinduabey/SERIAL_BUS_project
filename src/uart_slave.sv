@@ -65,8 +65,10 @@ module uart_slave
     */
 
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
-    localparam CON          = 2 + S_ID_WIDTH + 2;  //start|slaveid|R/W -- 111|SLAVEID|1
-    localparam CON_COUNTER  = $clog2(CON);
+
+    //control signal length: start|slaveid|R/W -- 111|SLAVEID|1
+    localparam CON          = 3 + S_ID_WIDTH + 2;  
+    localparam CON_COUNTER  = $clog2(CON+1);
 
     logic [CON-1         :0] config_buffer;
     logic [CON_COUNTER-1 :0] config_counter;
@@ -86,11 +88,11 @@ module uart_slave
     
     logic check=0;
 
-    typedef enum logic [1:0] {
-        ABORT       = 2'b00,
-        CONTINUE    = 2'b01,
-        HOLD        = 2'b10,
-        START       = 2'b11
+    typedef enum logic [2:0] {
+        ABORT       = 3'b100,
+        CONTINUE    = 3'b101,
+        HOLD        = 3'b110,
+        START       = 3'b111
     } control_;
     
     //when com_status is comm: data or control transmission can happen
@@ -127,10 +129,9 @@ module uart_slave
     state_ prev_state;
 
     genvar i;
-
     generate 
         for (i = 0; i<DATA_WIDTH; i++) begin : uart_data
-            assign byteForTx[i] = wD_buffer[i];
+            assign byteForTx    [i] = wD_buffer[i];
         end
     endgenerate
 
@@ -179,14 +180,14 @@ module uart_slave
                 RECONFIG : begin
                     //if reconfiguration during configuration
                     //receive the next three bits to decide next step
-                    if (config_counter < 2) begin
+                    if (config_counter < 3) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;                                                
                     end 
-                    else if (config_counter == 2) begin
+                    else if (config_counter == 3) begin
                         //if communication is starting
-                        if (config_buffer[1:0] == START) begin
+                        if (config_buffer[2:0] == START) begin
                             config_counter   <= config_counter + 1'b1; 
                             config_buffer    <= config_buffer << 1'b1;
                             config_buffer[0] <= temp_control; 
@@ -194,21 +195,17 @@ module uart_slave
                             state       <= RECONFIG; 
                         end
                         //or wait for master reconnect
-                        else if  (config_buffer[1:0] == HOLD) begin
-                            config_counter   <= config_counter + 1'b1; 
-                            config_buffer    <= config_buffer << 1'b1;
-                            config_buffer[0] <= temp_control; 
-                            
+                        else if  (config_buffer[2:0] == HOLD) begin
                             com_status  <= hold;
                             state       <= RECONFIG;
                         end 
                         //or continue current configuration   
-                        else if (config_buffer[1:0] == CONTINUE) begin
+                        else if (config_buffer[2:0] == CONTINUE) begin
                             com_status  <= comm;
                             state       <= prev_state;
                         end
                         //or abort current configuration 
-                        else if (config_buffer[1:0] == ABORT) begin
+                        else if (config_buffer[2:0] == ABORT) begin
                             state       <= IDLE;
                         end
                     end
@@ -361,7 +358,8 @@ module uart_slave
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                        else begin 
+                        else begin
+                            check <= 1; 
                             if (txReady) begin
                                 wD_counter <= 0;
                                 check <= 1;

@@ -21,6 +21,20 @@ localparam BAUD_RATE = 19200;
 localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
 localparam CLOCK_PERIOD = 20;
 
+
+logic baudTick;
+
+logic ext_txByteStart;
+logic [DATA_WIDTH-1:0] ext_byteForTx;
+logic ext_tx_ready;
+
+logic ext_new_byte_start;
+logic ext_new_byte_received;
+logic [DATA_WIDTH-1:0] ext_byteFromRx;
+logic ext_rx_ready;
+
+
+
    initial begin
        clk <= 0;
            forever begin
@@ -43,13 +57,34 @@ localparam CLOCK_PERIOD = 20;
         .rstN(rstN),
         .clk(clk),
         .rx(rx),
-        .rx_ready(rx_ready),
-        .tx(tx),
-        .tx_ready(tx_ready)       
+        .tx(tx)
     );
+    uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) ext_baudRateGen(.clk, .rstN, .baudTick);
+
+    uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) ext_transmitter(
+                        .dataIn(ext_byteForTx),
+                        .txStart(ext_txByteStart), 
+                        .clk(clk), .rstN(rstN), .baudTick(baudTick),                     
+                        .tx(rx), 
+                        .tx_ready(ext_tx_ready)
+                        );
+
+    uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) ext_receiver (
+                .rx(tx), 
+                .clk(clk), .rstN(rstN), .baudTick(baudTick), 
+                .rx_ready(ext_rx_ready), 
+                .dataOut(ext_byteFromRx), 
+                .new_byte_start(ext_new_byte_start),
+                .new_byte_received(ext_new_byte_received)
+                );
+
+                
+
 
     initial begin
         @(posedge clk);
+        control <= 0;
+        #(CLOCK_PERIOD*3)
         //control = 11110010
         control <= 1;
         valid <= 1;
@@ -72,16 +107,31 @@ localparam CLOCK_PERIOD = 20;
  
         end
 
-        repeat(10) begin
-        @(posedge clk);
-        wait(tx_ready);
-        @(posedge clk);
-        tx = $urandom();
-        @(posedge clk);
-        end
+        #(CLOCK_PERIOD*10);
+        //control = 11110001
+        control <= 1;
+        valid <= 1;
+        wrD <= 0;
+        #(CLOCK_PERIOD*4);
+        control <= 0;
+        #(CLOCK_PERIOD*3);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
 
-        @(posedge clk);
-        wait(tx_ready);
+        rx <= 1;
+        #(CLOCK_PERIOD*3);
+        rx <= 0;
+        #(CLOCK_PERIOD);
+        rx <= 1;       
+        // repeat(10) begin
+        // @(posedge clk);
+        // tx = $urandom();
+        // @(posedge clk);
+        // end
+
+        // @(posedge clk);
         $stop;
 
       

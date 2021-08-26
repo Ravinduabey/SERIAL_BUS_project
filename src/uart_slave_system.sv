@@ -59,7 +59,7 @@ uart_slave #(
     .rxReady(rx_ready)
 );
 
-uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.clk, .rstN, .baudTick);
+uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.clk(clk), .rstN(rstN), .baudTick(baudTick));
 
 uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) transmitter(
                     .dataIn(byteForTx),
