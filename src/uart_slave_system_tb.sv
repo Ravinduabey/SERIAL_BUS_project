@@ -10,17 +10,17 @@ logic wrD=0;                   //serial write_data
 logic valid=0;                //default LOW
 logic last=1;                 //default LOW
 
-//with Top Module
-logic [1:0]slave_ID;
 logic clk = 0;
 logic rstN; 
 
-logic tx_ready;
-logic rx_ready;
+logic tx;
+logic rx;
 
 localparam DATA_WIDTH = 8;
 localparam BAUD_RATE = 19200;
 localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
+localparam CLOCK_PERIOD = 20;
+
    initial begin
        clk <= 0;
            forever begin
@@ -28,20 +28,10 @@ localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
            end
    end
 
-    typedef enum logic  {
-        Read_slave  = 1'b0,
-        Write_slave = 1'b1
-    } Read_write_slave;
-
-    typedef enum logic  {
-        non_burst       = 1'b0,
-        burst_master    = 1'b1
-    } top_master_burst;
-
     uart_slave_system #(
-        .SLAVES(3), 
+        .SLAVES(4), 
         .DATA_WIDTH(DATA_WIDTH), 
-        .SLAVEID(1),
+        .SLAVEID(4),
         .BAUD_RATE(19200)
     ) Slave_dut (
         .rD(rD), 
@@ -51,29 +41,43 @@ localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
         .valid(valid), 
         .last(last),
         .rstN(rstN),
-        .clk(clk)
+        .clk(clk),
+        .rx(rx),
+        .rx_ready(rx_ready),
+        .tx(tx),
+        .tx_ready(tx_ready)       
     );
 
     initial begin
         @(posedge clk);
-        //control = 1110110
+        //control = 11110010
         control <= 1;
-        #(CLOCK_PERIOD*3);
+        valid <= 1;
+        wrD <= 0;
+        #(CLOCK_PERIOD*4);
+        control <= 0;
+        #(CLOCK_PERIOD*2);
+        control <= 1;
+        #(CLOCK_PERIOD);
         control <= 0;
         #(CLOCK_PERIOD);
-        control <= 1;
-        #(CLOCK_PERIOD*2);
-        control <= 0;
-
+        if (ready) begin
+            @(posedge clk);
+            wrD <= 1;
+            valid <= 1;
+            #(CLOCK_PERIOD*2);
+            wrD <= 0;
+            #(CLOCK_PERIOD*3);
+            wrD <= 1;
+ 
+        end
 
         repeat(10) begin
         @(posedge clk);
         wait(tx_ready);
         @(posedge clk);
-        byteForTx = $urandom();
-        txByteStart = 1'b1;
+        tx = $urandom();
         @(posedge clk);
-        txByteStart = 1'b0;
         end
 
         @(posedge clk);

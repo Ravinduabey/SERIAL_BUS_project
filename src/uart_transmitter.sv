@@ -18,10 +18,10 @@ typedef enum logic [1:0]{
 localparam COUNTER_WIDTH = $clog2(DATA_WIDTH);
 
 state_t currentState, nextState;
-logic [DATA_WIDTH-1:0]currentData, nextData;
+logic [DATA_WIDTH-1:0] currentData, nextData;
 logic currentBit, nextBit;
-logic [COUNTER_WIDTH-1:0]currentCount, nextCount;
-logic [3:0]currentTick, nextTick;
+logic [COUNTER_WIDTH-1:0] currentCount, nextCount;
+logic [3:0] currentTick, nextTick;
 
 
 always_ff @(posedge clk) begin
