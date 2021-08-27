@@ -114,7 +114,7 @@ module uart_slave
     //    READB_GET,   
 
        //data from internal master --> tx      
-       WRITE,
+       WRITE
     //    WRITEB_END 
     } state_;
 	 
