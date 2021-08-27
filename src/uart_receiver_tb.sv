@@ -20,7 +20,7 @@ localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
 logic rstN,baudTick;
 logic rx, rx_ready;
 logic [DATA_WIDTH-1:0]dataOut;
-logic new_byte_indicate;
+logic new_byte_start,new_byte_received;
 
 uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.*);
 uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) receiver(.*);

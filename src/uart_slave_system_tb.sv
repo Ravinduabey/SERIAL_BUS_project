@@ -10,17 +10,31 @@ logic wrD=0;                   //serial write_data
 logic valid=0;                //default LOW
 logic last=1;                 //default LOW
 
-//with Top Module
-logic [1:0]slave_ID;
 logic clk = 0;
 logic rstN; 
 
-logic tx_ready;
-logic rx_ready;
+logic tx;
+logic rx;
 
 localparam DATA_WIDTH = 8;
 localparam BAUD_RATE = 19200;
 localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
+localparam CLOCK_PERIOD = 20;
+
+
+logic baudTick;
+
+logic ext_txByteStart;
+logic [DATA_WIDTH-1:0] ext_byteForTx;
+logic ext_tx_ready;
+
+logic ext_new_byte_start;
+logic ext_new_byte_received;
+logic [DATA_WIDTH-1:0] ext_byteFromRx;
+logic ext_rx_ready;
+
+
+
    initial begin
        clk <= 0;
            forever begin
@@ -28,20 +42,10 @@ localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
            end
    end
 
-    typedef enum logic  {
-        Read_slave  = 1'b0,
-        Write_slave = 1'b1
-    } Read_write_slave;
-
-    typedef enum logic  {
-        non_burst       = 1'b0,
-        burst_master    = 1'b1
-    } top_master_burst;
-
     uart_slave_system #(
-        .SLAVES(3), 
+        .SLAVES(4), 
         .DATA_WIDTH(DATA_WIDTH), 
-        .SLAVEID(1),
+        .SLAVEID(4),
         .BAUD_RATE(19200)
     ) Slave_dut (
         .rD(rD), 
@@ -51,39 +55,91 @@ localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
         .valid(valid), 
         .last(last),
         .rstN(rstN),
-        .clk(clk)
+        .clk(clk),
+        .rx(rx),
+        .tx(tx)
     );
+    uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) ext_baudRateGen(.clk, .rstN, .baudTick);
+
+    uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) ext_transmitter(
+                        .dataIn(ext_byteForTx),
+                        .txStart(ext_txByteStart), 
+                        .clk(clk), .rstN(rstN), .baudTick(baudTick),                     
+                        .tx(rx), 
+                        .tx_ready(ext_tx_ready)
+                        );
+
+    uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) ext_receiver (
+                .rx(tx), 
+                .clk(clk), .rstN(rstN), .baudTick(baudTick), 
+                .rx_ready(ext_rx_ready), 
+                .dataOut(ext_byteFromRx), 
+                .new_byte_start(ext_new_byte_start),
+                .new_byte_received(ext_new_byte_received)
+                );
+
+                
+
 
     initial begin
         @(posedge clk);
-        //control = 1110110
+        control <= 0;
+        #(CLOCK_PERIOD*3)
+        //control = 11110010
         control <= 1;
-        #(CLOCK_PERIOD*3);
+        valid <= 1;
+        wrD <= 0;
+        #(CLOCK_PERIOD*4);
+        control <= 0;
+        #(CLOCK_PERIOD*2);
+        control <= 1;
+        #(CLOCK_PERIOD);
         control <= 0;
         #(CLOCK_PERIOD);
-        control <= 1;
-        #(CLOCK_PERIOD*2);
-        control <= 0;
-
-
-        repeat(10) begin
-        @(posedge clk);
-        wait(tx_ready);
-        @(posedge clk);
-        byteForTx = $urandom();
-        txByteStart = 1'b1;
-        @(posedge clk);
-        txByteStart = 1'b0;
+        if (ready) begin
+            @(posedge clk);
+            wrD <= 1;
+            valid <= 1;
+            #(CLOCK_PERIOD*2);
+            wrD <= 0;
+            #(CLOCK_PERIOD*3);
+            wrD <= 1;
+ 
         end
 
-        @(posedge clk);
-        wait(tx_ready);
-        $stop;
+        #(CLOCK_PERIOD*10);
+        //control = 11110000
+        control <= 1;
+        valid <= 1;
+        wrD <= 0;
+        #(CLOCK_PERIOD*4);
+        control <= 0;
+        #(CLOCK_PERIOD*3);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
+
+        repeat(10) begin
+            rx <= 1'b0;
+            #(BAUD_TIME_PERIOD);
+            for (int i=0;i<DATA_WIDTH;i++) begin:data  //data
+                @(posedge clk);
+                rx = $urandom();
+                #(BAUD_TIME_PERIOD);
+            end
+            @(posedge clk);  // end delimiter
+            rx <= 1'b1;
+            #(BAUD_TIME_PERIOD);
+        end
+
+        // @(posedge clk);
+        // $stop;
 
       
         
 
-        #(CLOCK_PERIOD*100);
+        #(CLOCK_PERIOD*1000);
         $stop;
     end
 

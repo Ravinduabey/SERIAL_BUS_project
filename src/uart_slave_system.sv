@@ -1,7 +1,7 @@
 module uart_slave_system
 #(
     parameter BAUD_RATE = 19200,
-    parameter SLAVES = 4,
+    parameter SLAVES = 3,
     parameter DATA_WIDTH = 8,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
     parameter SLAVEID = 1
@@ -21,19 +21,20 @@ module uart_slave_system
 
     //external receiver
     input  logic rx,
-    output logic rx_ready,
 
     //external transmitter
-    output logic tx,
-    output logic tx_ready
+    output logic tx
 );
     logic txByteStart;
     logic [DATA_WIDTH-1:0] byteForTx;
-    logic rx_new_byte_indicate;
+    logic tx_ready;
+    logic new_byte_start;
+    logic new_byte_received;
     logic [DATA_WIDTH-1:0] byteFromRx;
+    logic rx_ready;
 
 
-logic baudTick;
+    logic baudTick;
 
 
 uart_slave #(
@@ -51,26 +52,30 @@ uart_slave #(
     .rstN(rstN), 
     .txStart(txByteStart),
     .byteForTx(byteForTx),
-    .rxStart(rx_new_byte_indicate),
-    .byteFromRx(byteFromRx)
+    .txReady(tx_ready),
+    .rxStart(new_byte_start),
+    .rxDone(new_byte_received),
+    .byteFromRx(byteFromRx),
+    .rxReady(rx_ready)
 );
 
-uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.clk, .rstN, .baudTick);
+uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.clk(clk), .rstN(rstN), .baudTick(baudTick));
 
 uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) transmitter(
                     .dataIn(byteForTx),
-                    .clk, .baudTick, .rstN, 
                     .txStart(txByteStart), 
+                    .clk(clk), .rstN(rstN), .baudTick(baudTick),                     
                     .tx(tx), 
                     .tx_ready(tx_ready)
                     );
 
 uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) receiver (
                 .rx(rx), 
-                .clk, .rstN, .baudTick, 
+                .clk(clk), .rstN(rstN), .baudTick(baudTick), 
                 .rx_ready(rx_ready), 
                 .dataOut(byteFromRx), 
-                .new_byte_indicate(rx_new_byte_indicate)
+                .new_byte_start(new_byte_start),
+                .new_byte_received(new_byte_received)
                 );
 
 endmodule:uart_slave_system
