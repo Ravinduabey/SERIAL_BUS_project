@@ -239,8 +239,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             else if (arbiterCounnter == 4'd12) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
-                                control             <= tempControl[18];
-                                tempControl         <= {tempControl[17:0] ,1'b0};
+                                control             <= tempControl[6];
+                                tempControl         <= {tempControl[5:0] ,1'b0};
                                 controlCounter      <= controlCounter + 5'd1;
                                 if (splitOnot == 1)begin
                                     communicationState <= splitComContinue;
@@ -548,8 +548,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             else if (arbiterCounnter == 4'd12) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
-                                control             <= tempControl[18];
-                                tempControl         <= {tempControl[17:0] ,1'b0};
+                                control             <= tempControl[6];
+                                tempControl         <= {tempControl[5:0] ,1'b0};
                                 controlCounter      <= controlCounter + 5'd1;
                                 communicationState  <= masterCom;
                             end
