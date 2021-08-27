@@ -141,8 +141,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         assign the arbiter request
                     */
                     state                       <= write_data;
-                    tempControl                 <= {3'b111, slaveId, rdWr};
-                    tempControl_2               <= {3'b111, slaveId, rdWr};
+                    tempControl                 <= {3'b111, slaveId, 2'b00};
+                    tempControl_2               <= {3'b111, slaveId, 2'b00};
                     arbiterRequest              <= {3'b111, slaveId};
                     tempArbiterRequest          <= {3'b111, slaveId};
                     
@@ -239,8 +239,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             else if (arbiterCounnter == 4'd12) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
-                                control             <= tempControl[18];
-                                tempControl         <= {tempControl[17:0] ,1'b0};
+                                control             <= tempControl[6];
+                                tempControl         <= {tempControl[5:0] ,1'b0};
                                 controlCounter      <= controlCounter + 5'd1;
                                 if (splitOnot == 1)begin
                                     communicationState <= splitComContinue;
@@ -280,23 +280,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         communicationState  <= over;
                                     end
                                     
-
-
-                                    
-                                    
-                                    singleWrite:
-                                        if (i < DATA_WIDTH) begin
-                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
-                                            addressInternal     <= addressInternalBurtstBegin;
-                                            i                   <= i + 1'b1;
-                                            valid               <= 1;
-                                        end
-                                        
-                                        else begin
-                                            valid               <= 0;
-                                            i                   <= 0;
-                                            communicationState  <= over;
-                                        end  
+      
                                 end
                             end
 
@@ -496,7 +480,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         tempReadData <= tempReadData + 1'b1;
                         dataOut      <= tempReadData;
                     end
-                    else if (clock < clk*5)begin
+                    else if (clock_ < clk*5)begin
                         clock_ <= clock_ + 1'b1;
                         dataOut      <= tempReadData;
                     end
@@ -518,6 +502,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     case (communicationState) 
                         idleCom:
                             if (~arbCont) begin
+										  tempControl                 <= {3'b111, slaveId, 2'b01};
+										  tempControl_2               <= {3'b111, slaveId, 2'b01};
                                 communicationState  <= reqCom;
                                 tempHold            <= 0;
                                 arbiterCounnter     <= 0;
@@ -562,8 +548,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             else if (arbiterCounnter == 4'd12) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
-                                control             <= tempControl[18];
-                                tempControl         <= {tempControl[17:0] ,1'b0};
+                                control             <= tempControl[6];
+                                tempControl         <= {tempControl[5:0] ,1'b0};
                                 controlCounter      <= controlCounter + 5'd1;
                                 communicationState  <= masterCom;
                             end
