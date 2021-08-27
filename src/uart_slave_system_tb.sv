@@ -5,10 +5,9 @@ timeunit 1ns; timeprecision 1ps;
 logic rD;                  //serial read_data
 logic ready;               //default HIGh
 
-logic control=0;              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
+logic control=0;              //serial control setup info  start|slaveid|R/W|
 logic wrD=0;                   //serial write_data
 logic valid=0;                //default LOW
-logic last=1;                 //default LOW
 
 logic clk = 0;
 logic rstN; 
@@ -53,7 +52,6 @@ logic ext_rx_ready;
         .control(control), 
         .wD(wrD), 
         .valid(valid), 
-        .last(last),
         .rstN(rstN),
         .clk(clk),
         .rx(rx),

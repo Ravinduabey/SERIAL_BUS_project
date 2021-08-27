@@ -13,7 +13,6 @@ module uart_slave
     input logic control,              //serial control setup info  
     input logic wD,                   //serial write_data
     input logic valid,                //default LOW
-    input logic last,                 //default LOW
 
     //with Top Module
     input logic clk,
@@ -50,8 +49,6 @@ module uart_slave
     -- send ack
     -1- if rxStart : read byteFromRx
     -2--- for DATA_WIDTH clock cycles : ready and send rD
-    -3- if burst : repeat 1 & 2
-    -4--- if last : repeat 1 & 2 once, then stop 
 
     if master sends data : send to tx
     -- slave in WRITE mode
@@ -59,15 +56,13 @@ module uart_slave
     -- receive ack 
     -1- if valid : write for DATA_WIDTH clock cycles
     -2--- if wD_buffer full : assign byteForTx and send txStart
-    -3--if burst : repeat 1 & 2
-    -4--- if last: repeat 1 & 2 once, then stop
 
     */
 
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
 
     //control signal length: start|slaveid|R/W -- 111|SLAVEID|1
-    localparam CON          = 3 + S_ID_WIDTH + 2;  
+    localparam CON          = 3 + S_ID_WIDTH + 1;  
     localparam CON_COUNTER  = $clog2(CON+1);
 
     logic [CON-1         :0] config_buffer;
@@ -116,13 +111,11 @@ module uart_slave
 
        //data from rx --> internal master
        READ,        
-       READB_GET,   
-       READB,
+    //    READB_GET,   
 
        //data from internal master --> tx      
        WRITE,
-       WRITEB,
-       WRITEB_END 
+    //    WRITEB_END 
     } state_;
 	 
     state_ state = INIT;
@@ -278,71 +271,26 @@ module uart_slave
                         else if (rD_counter == DATA_WIDTH && ready) begin
                             rD_counter      <= 0;
                             ready           <= 0;
-                            //if master did not send a READ BURST
-                            if (config_buffer[0]==0) begin
-                                //make sure that the read data was read, and continue to IDLE
-                                if (valid) begin
-                                    state  <= IDLE;
-                                end
+                            if (valid) begin
+                                state  <= IDLE;
                             end
-                            //READ BURST
-                            else state     <= READB_GET;
                         end
                     end
                 end                
-                READB_GET: begin
-                    //reconfigure if master sends control HIGH
-                    if (control) begin
-                        config_counter      <= 1; 
-                        config_buffer       <= config_buffer << 1'b1;
-                        config_buffer[0]    <= temp_control;
-                        prev_state          <= READB_GET;
-                        state               <= RECONFIG;
-                    end
-                    else if (rxDone) begin                    
-                        rD_buffer   <= byteFromRx;
-                        state       <= READB;
-                    end
-                end
-                READB: begin
-                    //reconfigure if master sends control HIGH
-                    if (control) begin
-                        config_counter      <= 1; 
-                        config_buffer       <= config_buffer << 1'b1;
-                        config_buffer[0]    <= temp_control;
-                        prev_state          <= READB;
-                        state               <= RECONFIG;
-                    end
-                    else begin
-                        ready <= 1;
-                        //if last is HIGH: send one byte and stop
-                        if (last) begin
-                            if (rD_counter < DATA_WIDTH) begin
-                                rD_counter <= rD_counter + 1'b1;
-                                rD_buffer  <= rD_buffer << 1;
-                                rD_temp    <= rD_buffer[DATA_WIDTH-1];
-                            end
-                            else if (rD_counter == DATA_WIDTH) begin
-                                state      <= IDLE;
-                            end                         
-                        end
-                        //if last is LOW: send one byte and increment address
-                        //then go to READB_GET state to get next read data
-                        else begin
-                            if (rD_counter < DATA_WIDTH) begin
-                                rD_counter  <= rD_counter + 1'b1;
-                                rD_buffer   <= rD_buffer << 1;
-                                rD_temp     <= rD_buffer[DATA_WIDTH-1];
-                            end
-                            //after rD_buffer is completely sent
-                            else if (rD_counter == DATA_WIDTH) begin
-                                ready           <= 0;
-                                rD_counter      <= 0;
-                                state           <= READB_GET;
-                            end 
-                        end
-                    end
-                end
+                // READB_GET: begin
+                //     //reconfigure if master sends control HIGH
+                //     if (control) begin
+                //         config_counter      <= 1; 
+                //         config_buffer       <= config_buffer << 1'b1;
+                //         config_buffer[0]    <= temp_control;
+                //         prev_state          <= READB_GET;
+                //         state               <= RECONFIG;
+                //     end
+                //     else if (rxDone) begin                    
+                //         rD_buffer   <= byteFromRx;
+                //         state       <= READB;
+                //     end
+                // end
                 WRITE: begin
                     //reconfigure if master sends control HIGH
                     if (control) begin
@@ -364,75 +312,16 @@ module uart_slave
                                 wD_counter <= 0;
                                 check <= 1;
                                 txStart         <= 1;
-                                // byteForTx       <= wD_buffer;
-                                //if master did not send a WRITE BURST
-                                if (config_buffer[0]==0) begin
-                                    state <= IDLE;
-                                    // check <= 1;
-                                end
-                                else begin
-                                    //for WRITE BURST, hold for valid HIGH
-                                    //before reading wD input
-                                    if (valid) begin
-                                        wD_counter      <= 1;
-                                        wD_buffer       <= wD_buffer << 1;
-                                        wD_buffer[0]    <= wD_temp;
-                                        state           <= WRITEB;
-                                    end
-                                    else begin
-                                        state           <= WRITEB;
-                                    end  
-                                end
                             end
                         end 
                     end
                 end
-                WRITEB: begin
-                    //reconfigure if master sends control HIGH
-                    if (control) begin
-                        config_counter      <= 1; 
-                        config_buffer       <= config_buffer << 1'b1;
-                        config_buffer[0]    <= temp_control;
-                        prev_state   <= WRITEB;
-                        state        <= RECONFIG;
-                    end
-                    else begin
-                        //if last is HIGH : receive one more byte
-                        //then go to WRITEB_END state and store byte
-                        if (last) begin
-                            if (wD_counter < DATA_WIDTH-1 && valid) begin
-                                wD_counter      <= wD_counter + 1'b1;
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp;
-                            end
-                            else begin
-                                state           <= WRITEB_END;
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp; 
-                                config_buffer   <= 0;                           
-                            end
-                        end
-                        //if last is LOW: receive one byte and increment address
-                        else begin
-                            if (wD_counter < DATA_WIDTH && valid==1) begin
-                                wD_counter      <= wD_counter + 1'b1;
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp;
-                            end
-                            else if (wD_counter == DATA_WIDTH) begin
-                                // byteForTx       <= wD_buffer;
-                                wD_counter      <= 0;
-                            end
-                        end
-                        if (byteForTx == wD_buffer) txStart <= 1;
-                    end
-                end
-                WRITEB_END : begin
-                    //store last byte 
-                    // byteForTx   <= wD_buffer;
-                    state       <= IDLE;
-                end
-                default: state <= IDLE;
+                // WRITEB_END : begin
+                //     //store last byte 
+                //     // byteForTx   <= wD_buffer;
+                //     state       <= IDLE;
+                // end
+                // default: state <= IDLE;
                     
             endcase
 

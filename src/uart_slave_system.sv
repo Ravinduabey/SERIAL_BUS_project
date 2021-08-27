@@ -13,7 +13,6 @@ module uart_slave_system
     input logic control,              //serial control setup info  
     input logic wD,                   //serial write_data
     input logic valid,                //default LOW
-    input logic last,                 //default LOW
 
     //with Top Module
     input logic clk,
@@ -47,7 +46,6 @@ uart_slave #(
     .control(control),
     .wD(wD),
     .valid(valid),
-    .last(last),
     .clk(clk),
     .rstN(rstN), 
     .txStart(txByteStart),
