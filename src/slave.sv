@@ -107,7 +107,7 @@ module slave #(
     // end
     initial begin
         if (SLAVEID == 2'd1) 
-        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+        $readmemh("s_slave-mem-1.txt",ram);
         else if (SLAVEID == 2'd2) 
         $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
         else if (SLAVEID == 2'd3) 
