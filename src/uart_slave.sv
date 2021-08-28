@@ -13,23 +13,32 @@ module uart_slave
     input logic control,              //serial control setup info  
     input logic wD,                   //serial write_data
     input logic valid,                //default LOW
-    input logic last,                 //default LOW
 
     //with Top Module
     input logic clk,
     input logic rstN, 
 
-    //with uart receiver
-    input   logic rxStart,
-    input   logic rxDone,
-    input   logic [DATA_WIDTH-1:0] byteFromRx,
-    input   logic rxReady,
+    //with uart transmitter_get
+    output logic g_txStart,
+    output logic [DATA_WIDTH-1:0] g_byteForTx,
+    input  logic g_txReady,  
 
+    //with uart receiver_get
+    input   logic g_rxStart,
+    input   logic g_rxDone,
+    input   logic [DATA_WIDTH-1:0] g_byteFromRx,
+    input   logic g_rxReady,
 
-    //with uart transmitter
-    output  logic txStart,
-    output  logic [DATA_WIDTH-1:0] byteForTx,
-    input   logic txReady
+    //with uart receiver_send
+    input logic s_rxStart,
+    input logic s_rxDone,
+    input logic [DATA_WIDTH-1:0] s_byteFromRx,
+    input logic s_rxReady,
+
+    //with uart transmitter_send
+    output  logic s_txStart,
+    output  logic [DATA_WIDTH-1:0] s_byteForTx,
+    input   logic s_txReady
   
 );
     /*                         |----------------------------------------------      
@@ -48,26 +57,22 @@ module uart_slave
     -- input from rx
     -- slave in READ mode : ready LOW
     -- send ack
-    -1- if rxStart : read byteFromRx
+    -1- if g_rxStart : read g_byteFromRx
     -2--- for DATA_WIDTH clock cycles : ready and send rD
-    -3- if burst : repeat 1 & 2
-    -4--- if last : repeat 1 & 2 once, then stop 
 
     if master sends data : send to tx
     -- slave in WRITE mode
     -- output to rx
     -- receive ack 
     -1- if valid : write for DATA_WIDTH clock cycles
-    -2--- if wD_buffer full : assign byteForTx and send txStart
-    -3--if burst : repeat 1 & 2
-    -4--- if last: repeat 1 & 2 once, then stop
+    -2--- if wD_buffer full : assign s_byteForTx and send s_txStart
 
     */
 
     localparam DATA_COUNTER = $clog2(DATA_WIDTH);
 
     //control signal length: start|slaveid|R/W -- 111|SLAVEID|1
-    localparam CON          = 3 + S_ID_WIDTH + 2;  
+    localparam CON          = 3 + S_ID_WIDTH + 1;  
     localparam CON_COUNTER  = $clog2(CON+1);
 
     logic [CON-1         :0] config_buffer;
@@ -116,13 +121,11 @@ module uart_slave
 
        //data from rx --> internal master
        READ,        
-       READB_GET,   
-       READB,
+    //    READB_GET,   
 
        //data from internal master --> tx      
-       WRITE,
-       WRITEB,
-       WRITEB_END 
+       WRITE
+    //    WRITEB_END 
     } state_;
 	 
     state_ state = INIT;
@@ -131,13 +134,13 @@ module uart_slave
     genvar i;
     generate 
         for (i = 0; i<DATA_WIDTH; i++) begin : uart_data
-            assign byteForTx    [i] = wD_buffer[i];
+            assign s_byteForTx    [i] = wD_buffer[i];
         end
     endgenerate
 
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
         if (!rstN) begin
-            txStart         <= 0;
+            s_txStart         <= 0;
             config_buffer   <= 0;
             rD_counter      <= 0;
             wD_counter      <= 0;
@@ -152,7 +155,7 @@ module uart_slave
             case (state)
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
-                    txStart             <= 0;
+                    s_txStart             <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
@@ -165,7 +168,7 @@ module uart_slave
                 end
                 IDLE : begin
                     com_status      <= comm;
-                    txStart         <= 0;
+                    s_txStart         <= 0;
                     ready           <= 1;
                     config_counter  <= 0;
                     rD_counter      <= 0;
@@ -217,14 +220,13 @@ module uart_slave
                     //if start and slave id sent by master is correct: 
                     //process the rest of the control signal
                     else if (config_counter == CON) begin
-                        if  (config_buffer[S_ID_WIDTH+1:2] == SLAVEID) begin
+                        if  (config_buffer[S_ID_WIDTH:1] == SLAVEID) begin
                             ready <= 0;
                             state <= CONFIG_NEXT;
                         end
                         else state <= IDLE;
                     end                                              
-
-               end                
+                end                
                 CONFIG_NEXT : begin
                     //reconfigure if master sends control HIGH
                     if (control) begin
@@ -234,17 +236,15 @@ module uart_slave
                         prev_state          <= CONFIG_NEXT;
                         state               <= RECONFIG;
                     end
-                    else if (config_buffer[1] == 0) begin
+                    else if (config_buffer[0] == 0) begin
                         //receive data from uart rx
-                        // check <= 1;
-                        if (rxDone) begin
-                            rD_buffer <= byteFromRx;
+                        if (g_rxDone) begin
+                            rD_buffer <= g_byteFromRx;
                             state     <= READ;
                         end
                     end
-                    else if (config_buffer[1] == 1) begin
+                    else if (config_buffer[0] == 1) begin
                         //send data to uart tx
-                        // check <= 1;
                         ready <= 1;
                         if (valid)  begin
                             wD_buffer       <= wD_buffer << 1;
@@ -263,86 +263,41 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     else begin
-                        if (rD_counter < DATA_WIDTH && !ready) begin
+                        if (rD_counter < DATA_WIDTH-1 && !ready) begin
                             rD_buffer       <= rD_buffer << 1;
                             rD_temp         <= rD_buffer[DATA_WIDTH-1];
                             ready           <= 1;
                         end
-                        else if (rD_counter < DATA_WIDTH && ready) begin
+                        else if (rD_counter < DATA_WIDTH-1 && ready) begin
                             rD_buffer       <= rD_buffer << 1;
                             rD_temp         <= rD_buffer[DATA_WIDTH-1];
                             rD_counter      <= rD_counter + 1'b1;                       
                             ready           <= 1;
                         end
                         //after first read data is fully sent : 
-                        else if (rD_counter == DATA_WIDTH && ready) begin
+                        else if (rD_counter == DATA_WIDTH-1 && ready) begin
                             rD_counter      <= 0;
                             ready           <= 0;
-                            //if master did not send a READ BURST
-                            if (config_buffer[0]==0) begin
-                                //make sure that the read data was read, and continue to IDLE
-                                if (valid) begin
-                                    state  <= IDLE;
-                                end
+                            if (valid) begin
+                                state  <= IDLE;
                             end
-                            //READ BURST
-                            else state     <= READB_GET;
                         end
                     end
                 end                
-                READB_GET: begin
-                    //reconfigure if master sends control HIGH
-                    if (control) begin
-                        config_counter      <= 1; 
-                        config_buffer       <= config_buffer << 1'b1;
-                        config_buffer[0]    <= temp_control;
-                        prev_state          <= READB_GET;
-                        state               <= RECONFIG;
-                    end
-                    else if (rxDone) begin                    
-                        rD_buffer   <= byteFromRx;
-                        state       <= READB;
-                    end
-                end
-                READB: begin
-                    //reconfigure if master sends control HIGH
-                    if (control) begin
-                        config_counter      <= 1; 
-                        config_buffer       <= config_buffer << 1'b1;
-                        config_buffer[0]    <= temp_control;
-                        prev_state          <= READB;
-                        state               <= RECONFIG;
-                    end
-                    else begin
-                        ready <= 1;
-                        //if last is HIGH: send one byte and stop
-                        if (last) begin
-                            if (rD_counter < DATA_WIDTH) begin
-                                rD_counter <= rD_counter + 1'b1;
-                                rD_buffer  <= rD_buffer << 1;
-                                rD_temp    <= rD_buffer[DATA_WIDTH-1];
-                            end
-                            else if (rD_counter == DATA_WIDTH) begin
-                                state      <= IDLE;
-                            end                         
-                        end
-                        //if last is LOW: send one byte and increment address
-                        //then go to READB_GET state to get next read data
-                        else begin
-                            if (rD_counter < DATA_WIDTH) begin
-                                rD_counter  <= rD_counter + 1'b1;
-                                rD_buffer   <= rD_buffer << 1;
-                                rD_temp     <= rD_buffer[DATA_WIDTH-1];
-                            end
-                            //after rD_buffer is completely sent
-                            else if (rD_counter == DATA_WIDTH) begin
-                                ready           <= 0;
-                                rD_counter      <= 0;
-                                state           <= READB_GET;
-                            end 
-                        end
-                    end
-                end
+                // READB_GET: begin
+                //     //reconfigure if master sends control HIGH
+                //     if (control) begin
+                //         config_counter      <= 1; 
+                //         config_buffer       <= config_buffer << 1'b1;
+                //         config_buffer[0]    <= temp_control;
+                //         prev_state          <= READB_GET;
+                //         state               <= RECONFIG;
+                //     end
+                //     else if (g_rxDone) begin                    
+                //         rD_buffer   <= g_byteFromRx;
+                //         state       <= READB;
+                //     end
+                // end
                 WRITE: begin
                     //reconfigure if master sends control HIGH
                     if (control) begin
@@ -353,86 +308,25 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     else begin
-                        if (wD_counter < DATA_WIDTH-1) begin
+                        if (wD_counter < DATA_WIDTH-1 && valid) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                        else begin
-                            check <= 1; 
-                            if (txReady) begin
-                                wD_counter <= 0;
-                                check <= 1;
-                                txStart         <= 1;
-                                // byteForTx       <= wD_buffer;
-                                //if master did not send a WRITE BURST
-                                if (config_buffer[0]==0) begin
-                                    state <= IDLE;
-                                    // check <= 1;
-                                end
-                                else begin
-                                    //for WRITE BURST, hold for valid HIGH
-                                    //before reading wD input
-                                    if (valid) begin
-                                        wD_counter      <= 1;
-                                        wD_buffer       <= wD_buffer << 1;
-                                        wD_buffer[0]    <= wD_temp;
-                                        state           <= WRITEB;
-                                    end
-                                    else begin
-                                        state           <= WRITEB;
-                                    end  
-                                end
-                            end
+                        else if (wD_counter == DATA_WIDTH-1 && s_txReady) begin
+                                wD_counter      <= 0;
+                                check           <= 1;
+                                s_txStart         <= 1;
+                                state           <= IDLE;
                         end 
                     end
                 end
-                WRITEB: begin
-                    //reconfigure if master sends control HIGH
-                    if (control) begin
-                        config_counter      <= 1; 
-                        config_buffer       <= config_buffer << 1'b1;
-                        config_buffer[0]    <= temp_control;
-                        prev_state   <= WRITEB;
-                        state        <= RECONFIG;
-                    end
-                    else begin
-                        //if last is HIGH : receive one more byte
-                        //then go to WRITEB_END state and store byte
-                        if (last) begin
-                            if (wD_counter < DATA_WIDTH-1 && valid) begin
-                                wD_counter      <= wD_counter + 1'b1;
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp;
-                            end
-                            else begin
-                                state           <= WRITEB_END;
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp; 
-                                config_buffer   <= 0;                           
-                            end
-                        end
-                        //if last is LOW: receive one byte and increment address
-                        else begin
-                            if (wD_counter < DATA_WIDTH && valid==1) begin
-                                wD_counter      <= wD_counter + 1'b1;
-                                wD_buffer       <= wD_buffer << 1;
-                                wD_buffer[0]    <= wD_temp;
-                            end
-                            else if (wD_counter == DATA_WIDTH) begin
-                                // byteForTx       <= wD_buffer;
-                                wD_counter      <= 0;
-                            end
-                        end
-                        if (byteForTx == wD_buffer) txStart <= 1;
-                    end
-                end
-                WRITEB_END : begin
-                    //store last byte 
-                    // byteForTx   <= wD_buffer;
-                    state       <= IDLE;
-                end
-                default: state <= IDLE;
+                // WRITEB_END : begin
+                //     //store last byte 
+                //     // s_byteForTx   <= wD_buffer;
+                //     state       <= IDLE;
+                // end
+                // default: state <= IDLE;
                     
             endcase
 

@@ -5,10 +5,9 @@ timeunit 1ns; timeprecision 1ps;
 logic rD;                  //serial read_data
 logic ready;               //default HIGh
 
-logic control=0;              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
+logic control=0;              //serial control setup info  start|slaveid|R/W|
 logic wrD=0;                   //serial write_data
 logic valid=0;                //default LOW
-logic last=1;                 //default LOW
 
 logic clk = 0;
 logic rstN; 
@@ -53,41 +52,19 @@ logic ext_rx_ready;
         .control(control), 
         .wD(wrD), 
         .valid(valid), 
-        .last(last),
         .rstN(rstN),
         .clk(clk),
         .rx(rx),
         .tx(tx)
     );
-    uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) ext_baudRateGen(.clk, .rstN, .baudTick);
-
-    uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) ext_transmitter(
-                        .dataIn(ext_byteForTx),
-                        .txStart(ext_txByteStart), 
-                        .clk(clk), .rstN(rstN), .baudTick(baudTick),                     
-                        .tx(rx), 
-                        .tx_ready(ext_tx_ready)
-                        );
-
-    uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) ext_receiver (
-                .rx(tx), 
-                .clk(clk), .rstN(rstN), .baudTick(baudTick), 
-                .rx_ready(ext_rx_ready), 
-                .dataOut(ext_byteFromRx), 
-                .new_byte_start(ext_new_byte_start),
-                .new_byte_received(ext_new_byte_received)
-                );
-
-                
-
 
     initial begin
         @(posedge clk);
         control <= 0;
-        #(CLOCK_PERIOD*3)
+        #(CLOCK_PERIOD*3);
         //control = 11110010
         control <= 1;
-        valid <= 1;
+        valid <= 0;
         wrD <= 0;
         #(CLOCK_PERIOD*4);
         control <= 0;
@@ -96,16 +73,15 @@ logic ext_rx_ready;
         #(CLOCK_PERIOD);
         control <= 0;
         #(CLOCK_PERIOD);
-        if (ready) begin
+        repeat (5) begin
             @(posedge clk);
             wrD <= 1;
             valid <= 1;
             #(CLOCK_PERIOD*2);
-            wrD <= 0;
-            #(CLOCK_PERIOD*3);
-            wrD <= 1;
- 
+            wrD <= $random();;
+    
         end
+        wrD <= 0;
 
         #(CLOCK_PERIOD*10);
         //control = 11110000
@@ -139,7 +115,7 @@ logic ext_rx_ready;
       
         
 
-        #(CLOCK_PERIOD*1000);
+        #(CLOCK_PERIOD*100);
         $stop;
     end
 
