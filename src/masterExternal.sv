@@ -1,6 +1,8 @@
 module masterExternal #(
-    parameter DATA_WIDTH    = 8,
-    parameter DATA_FROM_TOP = 8'd10
+    parameter DATA_WIDTH    = 8,        // datawidth of the sent data
+    parameter DATA_FROM_TOP = 8'd10,    // initial start data
+    parameter CLK_FREQ     = 500000, // internal clock frequency
+    parameter CLOCK_DERATION = 1 // how long the data should be displayed in seconds
     // parameter SLAVES        = 4,
     // parameter SLAVE_WIDTH   = $clog2(SLAVES + 1)
 )( 
@@ -65,7 +67,7 @@ logic [4:0]                 arbiterRequest, tempArbiterRequest;
 logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
 logic [DATA_WIDTH-1:0]      tempReadData;
 logic [$clog2(DATA_WIDTH):0] i;
-logic [17:0]                clock_;
+logic [$clog2(CLK_FREQ*CLOCK_DERATION)-1:0]                clock_;
 // define states for the top module
 typedef enum logic [2:0]{
     idle,
@@ -189,7 +191,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         dataOut      <= tempReadData;
                         clock_       <= clock_ + 1'b1;
                     end
-                    else if (clock_ < clk*5)begin
+                    else if (clock_ < CLK_FREQ*CLOCK_DERATION)begin
                         clock_       <= clock_ + 1'b1;
                         dataOut      <= tempReadData;
                     end
