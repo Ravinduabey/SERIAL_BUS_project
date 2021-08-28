@@ -1,7 +1,7 @@
 module masterExternal #(
     parameter DATA_WIDTH    = 8,        // datawidth of the sent data
     parameter DATA_FROM_TOP = 8'd10,    // initial start data
-    parameter CLK_FREQ     = 500000, // internal clock frequency
+    parameter CLK_FREQ     = 5, // internal clock frequency
     parameter CLOCK_DURATION = 1 // how long the data should be displayed in seconds
     // parameter SLAVES        = 4,
     // parameter SLAVE_WIDTH   = $clog2(SLAVES + 1)
@@ -20,7 +20,7 @@ module masterExternal #(
 		  
 	    output  logic [1:0]                       doneCom,  // used to notify the top module the end of external communication
         output  logic [DATA_WIDTH-1:0]            dataOut,  // to send data to the top module to display
-        output  logic                             disData   // to notify the top module whether to display data or not 
+        output  logic                             disData,   // to notify the top module whether to display data or not 
 		  
 	    ///////////////////////
         //===================//
@@ -49,8 +49,8 @@ module masterExternal #(
 
 
 localparam CONTROL_LEN = 7;
-localparam slaveId = 3'b100 ;
-
+localparam slaveId = 3'b101 ;
+localparam ACK = 8'b11001100;
 
 
 logic [1:0]                 tempHold;
@@ -62,12 +62,13 @@ logic [1:0]                 fromArbiter;
 logic [4:0]                 arbiterCounnter;
 
 logic [4:0]                 controlCounter;
-logic [4:0]                 arbiterRequest, tempArbiterRequest;
+logic [5:0]                 arbiterRequest, tempArbiterRequest;
 
 logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
-logic [DATA_WIDTH-1:0]      tempReadData;
+logic [DATA_WIDTH*2-1:0]      tempReadWriteData;
+logic [DATA_WIDTH-1:0]      tempDataAck;
 logic [$clog2(DATA_WIDTH):0] i;
-logic [$clog2(CLK_FREQ*CLOCK_DERATION)-1:0]    clock_;
+logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]    clock_;
 // define states for the top module
 typedef enum logic [2:0]{
     idle,
@@ -92,21 +93,12 @@ typedef enum logic [3:0]{
     masterDone,
     masterSplit,
     splitComContinue,
-	over
+	over,
+    checkAck
 } comStates;
 
 comStates communicationState;
 
-typedef enum logic [2:0]{
-    checkState,
-    controlSignal,
-    singleRead, 
-    burstRead,
-    singleWrite,
-    burstWrite
-} internalComStates;
-
-internalComStates internalComState;
 
 
 //==========================================//
@@ -118,7 +110,7 @@ logic communicationDone;
 always_ff @( posedge clk or negedge rstN) begin : topModule
     if (~rstN) begin
         fromArbiter         <= 0;
-        tempReadData        <= 0;
+        tempReadWriteData   <= 0;
         i                   <= 0;
         control             <= 0;
         valid               <= 0;
@@ -167,7 +159,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         from another board 
                     */
                     fromArbiter         <= 0;
-                    tempReadData        <= 0;
+                    tempReadWriteData        <= 0;
                     i                   <= 0;
                     control             <= 0;
                     valid               <= 0;
@@ -180,6 +172,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     splitOnot           <= 0;
                     state               <= read_data;
                     communicationState  <= idleCom;
+                    arbiterRequest      <= {3'b111, slaveId};
+                    tempArbiterRequest  <= {3'b111, slaveId};
                 end
 
             //==========================//
@@ -188,17 +182,21 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             displayData:
                 begin
                     if (clock_ == 0)begin
-                        dataOut      <= tempReadData;
+                        dataOut      <= tempReadWriteData[DATA_WIDTH*0 +:DATA_WIDTH];
                         clock_       <= clock_ + 1'b1;
+                        doneCom      <= 2'b11;
+                        disData      <= 1;
                     end
-                    else if (clock_ < CLK_FREQ*CLOCK_DERATION)begin
+                    else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
                         clock_       <= clock_ + 1'b1;
-                        dataOut      <= tempReadData;
+                        dataOut      <= tempReadWriteData;
+                        disData      <= 1;
                     end
                     else begin
                         clock_      <= 1'b0;
-                        dataOut     <= tempReadData;
+                        dataOut     <= tempReadWriteData;
                         state       <= write_data;
+                        disData     <= 0;
                     end
                 end
 
@@ -226,8 +224,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                             reqCom:
                                 if (arbiterCounnter < 4'd6) begin
-                                    arbSend                 <= arbiterRequest[4];
-                                    arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
+                                    arbSend                 <= arbiterRequest[5];
+                                    arbiterRequest          <= {arbiterRequest[4:0], 1'b0};
                                     arbiterCounnter         <= arbiterCounnter + 1'b1;
                                 end
 
@@ -287,7 +285,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========= Write ========//
                                         //========================//
                                         if (i < DATA_WIDTH) begin
-                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                            doneCom             <= 2'b11;
+                                            wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
                                             i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
@@ -318,7 +317,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========= Write ========//
                                         //========================//
                                         if (i < DATA_WIDTH) begin
-                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                            wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
                                             i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
@@ -357,7 +356,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========= Write ========//
                                         //========================//
                                         if (i < DATA_WIDTH) begin
-                                            wrD                 <= tempReadData[DATA_WIDTH-1-i];
+                                            wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
                                             i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
@@ -394,10 +393,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     valid           <= 0;
                                     if (clock_counter < 2'd1) begin
                                         arbSend <= 0;
+                                        control <= 1;
                                         clock_counter <= clock_counter + 1'b1;
                                     end
                                     else if (clock_counter < 2'd3) begin
                                         arbSend <= 1;
+                                        control <= 0;
                                         clock_counter <= clock_counter + 1'b1;
                                     end
                                     else if (clock_counter == 2'd3) begin
@@ -416,7 +417,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 end
 
             //=====================================//
-            //=========start Communication=========// 
+            //==========Read Communication=========// 
             //=====================================//
             read_data:
                 begin 
@@ -436,12 +437,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 end
 
                             reqCom:
-                                if (arbiterCounnter < 4'd6) begin
-                                    arbSend                 <= arbiterRequest[4];
-                                    arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
+                                if (arbiterCounnter < 4'd7) begin
+                                    arbSend                 <= arbiterRequest[5];
+                                    arbiterRequest          <= {arbiterRequest[4:0], 1'b0};
                                     arbiterCounnter         <= arbiterCounnter + 1'b1;
                                 end
-                                else if (arbiterCounnter == 4'd6) begin
+                                else if (arbiterCounnter == 4'd7) begin
                                     arbiterCounnter     <= arbiterCounnter;
                                     if (fromArbiter == 2'b11) begin
                                         arbSend             <= 1'b1;            // first ack
@@ -460,20 +461,20 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 end
                             
                             reqAck:
-                                if (arbiterCounnter < 4'd7) begin
+                                if (arbiterCounnter < 4'd8) begin
                                     arbSend             <= 1'b0;        // second ack
                                     arbiterCounnter     <= arbiterCounnter + 3'd1;
                                     communicationState  <= reqAck;
                                 end
-                                else if (arbiterCounnter < 4'd8) begin
+                                else if (arbiterCounnter < 4'd9) begin
                                     arbSend             <= 1'b1;        // 3rd ack
                                     arbiterCounnter     <= arbiterCounnter + 3'd1;
                                     communicationState  <= reqAck;
                                 end
-                                else if (arbiterCounnter < 4'd12) begin
+                                else if (arbiterCounnter < 4'd13) begin
                                     arbiterCounnter     <= arbiterCounnter + 3'd1;
                                 end
-                                else if (arbiterCounnter == 4'd12) begin
+                                else if (arbiterCounnter == 4'd13) begin
                                     arbSend             <= 1'b1;
                                     arbiterCounnter     <= 3'd0;
                                     control             <= tempControl[6];
@@ -508,11 +509,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========================//
                                         //========= Read =========//
                                         //========================//
-                                        if (i < DATA_WIDTH && ready) begin
-                                            tempReadData[DATA_WIDTH-1-i] <= rD;
+                                        if (i < 2*DATA_WIDTH && ready) begin
+                                            doneCom                   <= 2'b11;
+                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == DATA_WIDTH) begin
+                                        else if (i == 2*DATA_WIDTH) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end
@@ -535,11 +537,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
 
-                                        if (i < DATA_WIDTH && ready) begin
-                                            tempReadData[DATA_WIDTH-1-i] <= rD;
+                                        if (i < 2*DATA_WIDTH && ready) begin
+                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == DATA_WIDTH) begin
+                                        else if (i == 2*DATA_WIDTH) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end
@@ -573,11 +575,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
                                         if (arbCont == 1 || fromArbiter == 2'b11) begin
-                                            if (i < DATA_WIDTH && ready) begin
-                                                tempReadData[DATA_WIDTH-1-i] <= rD;
+                                            if (i < 2*DATA_WIDTH && ready) begin
+                                                tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
                                                 i                            <= i + 1'b1;
                                             end
-                                            else if (i == DATA_WIDTH) begin
+                                            else if (i == 2*DATA_WIDTH) begin
                                                 i <= 0;;
                                                 communicationState <= masterDone;
                                             end
@@ -651,11 +653,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========================//
                                         //========= Read =========//
                                         //========================//
-                                        if (i < DATA_WIDTH && ready) begin
-                                            tempReadData[DATA_WIDTH-1-i] <= rD;
+                                        if (i < 2*DATA_WIDTH && ready) begin
+                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == DATA_WIDTH) begin
+                                        else if (i == 2*DATA_WIDTH) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end       
@@ -675,11 +677,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
 
-                                        if (i < DATA_WIDTH && ready) begin
-                                            tempReadData[DATA_WIDTH-1-i] <= rD;
+                                        if (i < 2*DATA_WIDTH && ready) begin
+                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == DATA_WIDTH) begin
+                                        else if (i == 2*DATA_WIDTH) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end
@@ -693,29 +695,48 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     valid           <= 0;
                                     if (clock_counter < 2'd1) begin
                                         arbSend <= 0;
+                                        control <= 1;
                                         clock_counter <= clock_counter + 1'b1;
                                     end
                                     else if (clock_counter < 2'd3) begin
                                         arbSend <= 1;
+                                        control <= 0;
                                         clock_counter <= clock_counter + 1'b1;
                                     end
                                     else if (clock_counter == 2'd3) begin
                                         arbSend         <= 0;
-                                        state           <= displayData;
-                                        communicationState <= idleCom;
+                                        communicationState <= checkAck;
                                     end
+                                end
+                            
+                            checkAck:
+                                begin
+                                    if (tempReadWriteData[(DATA_WIDTH*2-1) -: DATA_WIDTH] == ACK) begin
+                                        /* 
+                                        acknowledgement received correctly
+                                        */
+                                        state              <= displayData;
+                                        communicationState <= idleCom;
+                                        doneCom            <= 2'b11;
+                                    end
+                                    else begin
+                                        state              <= end_com;
+                                        communicationState <= idleCom;
+                                        doneCom            <= 2'b01;
+                                        end
                                 end
 
                         endcase
                     end
                     else if (start && ~eoc)begin
-                        state <= displayData;
+                        state              <= displayData;
                         communicationState <= idleCom;
-                        tempReadData <= DATA_FROM_TOP;
+                        tempReadWriteData  <= DATA_FROM_TOP;
                     end
                     else if (~start && eoc) begin
-                        state <= end_com;
+                        state              <= end_com;
                         communicationState <= idleCom;
+                        doneCom            <= 2'b01;
                     end
                 end
 
@@ -730,7 +751,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             end_com: 
                 begin
                     doneCom         <= 1;
-                    dataOut         <= tempReadData;    
+                    dataOut         <= tempReadWriteData;    
                 end   
         endcase
     end
