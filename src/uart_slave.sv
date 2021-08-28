@@ -107,15 +107,11 @@ module uart_slave
     logic check=0;
 
     //ack for uart
-    logic [DATA_WIDTH-1              :0] gAck_buffer;
+    logic [DATA_WIDTH-1              :0] sAck_buffer;
     logic [$clog2(ACK_TIMEOUT)-1     :0] ack_counter;
     logic [$clog2(RETRANSMIT_TIMES)-1:0] reTx_counter;
     logic [DATA_WIDTH-1              :0] reTx_data;
-    //ack for tx uart
-    logic [DATA_WIDTH-1              :0] sAck_buffer;
-    logic master_ack;
-    // logic [$clog2(ACK_TIMEOUT)-1     :0] sAck_counter;
-
+    
     typedef enum logic [2:0] {
         ABORT       = 3'b100,
         CONTINUE    = 3'b101,
@@ -175,7 +171,6 @@ module uart_slave
             s_byteForTx     <= 0;
             ack_counter     <= 0;
             reTx_counter    <= 0;
-            gAck_buffer     <= 0;
             config_buffer   <= 0;
             masterAck_buffer<= 0;
             rD_counter      <= 0;
@@ -200,7 +195,6 @@ module uart_slave
                     wD_counter          <= 0;
                     ready               <= 1;
                     rD_temp             <= 0;
-                    gAck_buffer         <= 0;
                     masterAck_buffer    <= 0;
                     rD_buffer           <= 0;
                     wD_buffer           <= 0;
@@ -423,11 +417,9 @@ module uart_slave
                         state               <= RECONFIG;
                     end                    
                     if (sAck_buffer == ACK) begin
-                        master_ack          <= 1;
                         masterAck_buffer    <= ACK[7:4];
                     end
                     else begin
-                        master_ack          <= 0;
                         masterAck_buffer    <= NAK[7:4];
                     end
                     state       <= IDLE;
