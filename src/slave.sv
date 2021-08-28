@@ -56,7 +56,7 @@ module slave #(
 
     logic [DEL_COUNTER-1 :0]  delay_counter;
     
-    logic check=0;
+    // logic check=0;
 
     logic [2:0] control_buffer;
     logic [1:0] con_counter;
@@ -238,7 +238,6 @@ module slave #(
                         if (config_buffer[CON:CON-2]==START && config_buffer[CON-3:CON-2-S_ID_WIDTH]==SLAVEID ) begin
                             //if READ
                             if (config_buffer[CON-2-S_ID_WIDTH-1] == 0) begin
-                                check <= 1;  
                                 //once expected delay is done
                                 //access ram and start sending the first bit 
                                 //while assigning READ state in same clock cycle 

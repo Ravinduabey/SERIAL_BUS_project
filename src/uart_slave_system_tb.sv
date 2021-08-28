@@ -79,7 +79,7 @@ logic baudTick;
         end
         wrD <= 0;
         //50000 clock cycles = 2 retransmits
-        #(CLOCK_PERIOD*45342);
+        #(CLOCK_PERIOD*2000000);
         
         repeat(1) begin
         @(posedge clk);  //starting delimiter
