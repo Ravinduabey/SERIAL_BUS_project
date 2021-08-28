@@ -25,16 +25,6 @@ localparam CLOCK_PERIOD = 20;
 
 logic baudTick;
 
-logic ext_txByteStart;
-logic [DATA_WIDTH-1:0] ext_byteForTx;
-logic ext_tx_ready;
-
-logic ext_new_byte_start;
-logic ext_new_byte_received;
-logic [DATA_WIDTH-1:0] ext_byteFromRx;
-logic ext_rx_ready;
-
-
 
    initial begin
        clk <= 0;

@@ -19,7 +19,7 @@ localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
 
 logic rstN,txByteStart,rx;
 logic [DATA_WIDTH-1:0]byteForTx;
-logic tx,tx_ready,rx_ready,rx_new_byte_indicate;
+logic tx,tx_ready,rx_ready,rx_new_byte_started,rx_new_byte_received;
 logic [DATA_WIDTH-1:0]byteFromRx;
 
 uart_system #(.DATA_WIDTH(DATA_WIDTH), .BAUD_RATE(BAUD_RATE)) dut(.*);
