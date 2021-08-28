@@ -4,7 +4,7 @@ module uart_slave
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
     parameter SLAVEID = 1,
-    parameter ACK_TIMEOUT = 1000,
+    parameter ACK_TIMEOUT = 1000000,
     parameter RETRANSMIT_TIMES = 5
 )(
 
@@ -387,14 +387,14 @@ module uart_slave
                         prev_state          <= GET_ACK;
                         state               <= RECONFIG;
                     end
+                    else if (s_rxDone) begin
+                                    sAck_buffer     <= s_byteFromRx;
+                                    state           <= CHECK_ACK;
+                    end
                     else begin
                         if (reTx_counter < RETRANSMIT_TIMES) begin
                             if (ack_counter < ACK_TIMEOUT) begin
                                 s_txStart           <= 0;
-                                if (s_rxDone) begin
-                                    sAck_buffer     <= s_byteFromRx;
-                                    state           <= CHECK_ACK;
-                                end
                                 ack_counter         <= ack_counter + 1'b1;
                             end
                             else if (ack_counter == ACK_TIMEOUT) begin

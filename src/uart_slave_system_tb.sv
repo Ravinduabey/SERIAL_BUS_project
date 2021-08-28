@@ -22,6 +22,7 @@ localparam BAUD_RATE = 19200;
 localparam BAUD_TIME_PERIOD = 10**9 / BAUD_RATE;
 localparam CLOCK_PERIOD = 20;
 
+logic [7:0]test_vector = 8'b11001100;
 
 logic baudTick;
 
@@ -72,12 +73,35 @@ logic baudTick;
             wrD <= 1;
             valid <= 1;
             #(CLOCK_PERIOD*2);
-            wrD <= $random();;
+            wrD <= $random();
+            #(CLOCK_PERIOD*2);
     
         end
         wrD <= 0;
+        //50000 clock cycles = 2 retransmits
+        #(CLOCK_PERIOD*45342);
+        
+        repeat(1) begin
+        @(posedge clk);  //starting delimiter
+        s_rx <= 1'b0;
+        #(BAUD_TIME_PERIOD);
+        // for (int i=0;i<DATA_WIDTH;i++) begin:data  //data
+        //     @(posedge clk);
+        //     s_rx = $urandom();
+        //     #(BAUD_TIME_PERIOD);
+        // end
+        for (int i=0;i<8;i++) begin:data  //data
+            @(posedge clk);
+            s_rx = test_vector[i];
+            #(BAUD_TIME_PERIOD);
+        end
+        @(posedge clk);  // end delimiter
+        s_rx <= 1'b1;
+        #(BAUD_TIME_PERIOD);
+        end
 
-        #(CLOCK_PERIOD*500000);
+        #(CLOCK_PERIOD*400000);        
+
         // control = 11110000
         control <= 1;
         valid <= 1;
