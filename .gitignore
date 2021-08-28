@@ -4,3 +4,4 @@
 *.rpt
 *.bak
 *.qsf
+/image/*
