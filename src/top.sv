@@ -20,7 +20,7 @@ module top import top_details::*;
     input logic [17:0]SW,
     output logic [17:0]LEDR,
     output logic [3:0]LEDG,
-    // output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
+    output logic [6:0]HEX0, HEX1,
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON,
 
@@ -37,12 +37,14 @@ localparam S_ID_WIDTH = $clog2(INT_SLAVE_COUNT+1);
 localparam M_ID_WIDTH = $clog2(INT_MASTER_COUNT);
 
 
-logic rstN, clk, jump_stateN, jump_next_addr;
+logic rstN, clk, jump_stateN, jump_next_addr, start_ext_com;
 logic [3:0]KEY_OUT;
 
 assign rstN = KEY_OUT[0];
 assign jump_stateN = KEY_OUT[1];
 assign jump_next_addr = KEY_OUT[2];
+assign start_ext_com = KEY_OUT[3];
+
 assign clk = CLOCK_50;
 
 ///////////// debouncing (start) //////////////
@@ -78,6 +80,7 @@ logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 logic M_eoc[0:MASTER_COUNT-1];
 logic M_eoc_next[0:MASTER_COUNT-1];
+logic ext_M_disData; // indicate by masterExternal module that new data to display
 
 logic M_doneCom[0:MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
@@ -246,7 +249,7 @@ masterExternal #(
     .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
     .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
     .CLK_FREQ(50_000_000), // internal clock frequency
-    .CLOCK_DERATION(EXT_DISPLAY_DURATION) // how long the data should be displayed in seconds
+    .CLOCK_DURATION(EXT_DISPLAY_DURATION) // how long the data should be displayed in seconds
 ) masterExternal( 
 
         //  with topModule   //
@@ -258,6 +261,7 @@ masterExternal #(
 		  
 	    .doneCom(M_doneCom[MASTER_COUNT-1]),  // used to notify the top module the end of external communication
         .dataOut(M_dataOut[MASTER_COUNT-1]),  // to send data to the top module to display
+        .disData(ext_M_disData),   // to notify the top module whether to display data or not 
 
         //    with slave     //
 
@@ -281,7 +285,7 @@ uart_slave_system #(
     .SLAVES(SLAVE_COUNT),
     .DATA_WIDTH(UART_WIDTH),   // *********** NOT SURE ASK FROM NUSHA **********
     .SLAVEID(SLAVE_COUNT) // last slave is the external_com. slave
-)uart_slave_system(
+) uart_slave_system(
     // with Master (through interconnect)
     .rD(S_rD[SLAVE_COUNT-1]),                  //serial read_data
     .ready(S_ready[SLAVE_COUNT-1]),               //default HIGH
@@ -306,17 +310,9 @@ uart_slave_system #(
 
 main_state_t current_state, next_state;
 
-//////////////////// master configuration state related logics /////////////////
-typedef enum logic [2:0] {
-    // config_ready = 3'd0,
-    config_start = 3'd1,
-    config_middle = 3'd2,
-    config_last = 3'd3,  // last stream of configuration
-    config_done = 3'd4
-} config_sub_state_t;
-
 config_sub_state_t current_config_state, next_config_state;
 
+external_com_state_t current_ext_com_state, next_ext_com_state;
 
 always_ff @(posedge clk or negedge rstN) begin
     if (!rstN) begin
@@ -346,6 +342,9 @@ always_ff @(posedge clk or negedge rstN) begin
         current_com_start_delay_count <= '0;
         both_masters_com_started <= 1'b0;
 
+        /////// external communication ////
+        current_ext_com_state <= idle;
+
     end
     else begin
         current_state <= next_state;
@@ -374,6 +373,9 @@ always_ff @(posedge clk or negedge rstN) begin
         
         current_com_start_delay_count <= next_com_start_delay_count;
         both_masters_com_started <= both_masters_com_started_next;
+
+        /////// external communication ////
+        current_ext_com_state <= next_ext_com_state;
 
     end
 end
@@ -581,6 +583,9 @@ always_comb begin
     next_com_start_delay_count = current_com_start_delay_count;
     both_masters_com_started_next = both_masters_com_started;
 
+    /////// external communication ////
+    next_ext_com_state = current_ext_com_state;
+
     case (current_state) 
         master_slave_sel: begin
 
@@ -738,6 +743,7 @@ always_comb begin
                 end
                 else begin
                     M_start_next[FIRST_START_MASTER] = 1'b1; // give start signal for 1 clk cycle for first start master only
+                    M_start_next[MASTER_COUNT-1] = 1'b1; // give start signal to external_com_master
                 end
                 
             end
@@ -756,11 +762,38 @@ always_comb begin
                     end
                 end
             end
+            
+            /// set external communication state ///
+            M_eoc_next = '{default: '0};
+            if (!start_ext_com) begin
+                if (current_ext_com_state == idle) begin
+                    next_ext_com_state = ext_communicating;  
+                    M_start_next[MASTER_COUNT-1] = 1'b1; // set start signal for 1 clk cycle                  
+                end
+                else if (current_ext_com_state == ext_communicating) begin
+                    next_ext_com_state = idle;
+                    M_eoc_next[MASTER_COUNT-1] = 1'b1; // set end signal for 1 clk cycle
+                end
+            end
         end  
 
         communication_done: begin
             for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1) begin
                 M_address_next[ii] = SW[MASTER_ADDR_WIDTH-1:0];
+            end
+
+            /// set external communication state ///
+            M_start_next = '{default:'0};
+            M_eoc_next = '{default: '0};
+            if (!start_ext_com) begin
+                if (current_ext_com_state == idle) begin
+                    next_ext_com_state = ext_communicating;  
+                    M_start_next[MASTER_COUNT-1] = 1'b1; // set start signal for 1 clk cycle                  
+                end
+                else if (current_ext_com_state == ext_communicating) begin
+                    next_ext_com_state = idle;
+                    M_eoc_next[MASTER_COUNT-1] = 1'b1; // set end signal for 1 clk cycle
+                end
             end          
         end   
     endcase
@@ -782,6 +815,9 @@ LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DAT
                         .current_data_bank_addr, .next_data_bank_addr, .M_dataOut(M_dataOut[0:INT_MASTER_COUNT-1]),
                         .LCD_DATA, .LCD_RW, .LCD_EN, .LCD_RS, .LCD_BLON, .LCD_ON);
 
+///////// HEX display control ////////
 
+top_seven_segment segment_0(.in(M_dataOut[MASTER_COUNT-1][3:0]), .show(ext_M_disData), .out(HEX0));
+top_seven_segment segment_1(.in(M_dataOut[MASTER_COUNT-1][7:4]), .show(ext_M_disData), .out(HEX1));
 
 endmodule : top

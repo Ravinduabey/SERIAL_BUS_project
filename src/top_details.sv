@@ -102,4 +102,18 @@ typedef enum logic [3:0]{
     communication_done      = 4'd13     // state - 8
 } main_state_t;
 
+//////////////////// master configuration state related logics /////////////////
+typedef enum logic [2:0] {
+    config_start = 3'd1,
+    config_middle = 3'd2,
+    config_last = 3'd3,  // last stream of configuration
+    config_done = 3'd4
+} config_sub_state_t;
+
+/////// external communication states //////////
+typedef enum logic {
+    idle = 1'b0,
+    ext_communicating = 1'b1
+}external_com_state_t;
+
 endpackage : top_details
