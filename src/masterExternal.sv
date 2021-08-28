@@ -67,7 +67,7 @@ logic [5:0]                 arbiterRequest, tempArbiterRequest;
 logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
 logic [DATA_WIDTH*2-1:0]      tempReadWriteData;
 logic [DATA_WIDTH-1:0]      tempDataAck;
-logic [$clog2(DATA_WIDTH):0] i;
+logic [$clog2(2*DATA_WIDTH):0] i;
 logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]    clock_;
 // define states for the top module
 typedef enum logic [2:0]{
@@ -172,6 +172,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     splitOnot           <= 0;
                     state               <= read_data;
                     communicationState  <= idleCom;
+                    tempControl         <= {3'b111, slaveId, 1'b0};
+                    tempControl_2       <= {3'b111, slaveId, 1'b0};
                     arbiterRequest      <= {3'b111, slaveId};
                     tempArbiterRequest  <= {3'b111, slaveId};
                 end
@@ -195,6 +197,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     else begin
                         clock_      <= 1'b0;
                         dataOut     <= tempReadWriteData;
+                        tempReadWriteData <= tempReadWriteData +1'b1;
                         state       <= write_data;
                         disData     <= 0;
                     end
@@ -434,6 +437,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     controlCounter      <= 0;
                                     clock_counter       <= 0;
                                     arbiterRequest      <= tempArbiterRequest;
+                                    tempControl         <= {3'b111, slaveId, 1'b0};
+                                    tempControl_2       <= {3'b111, slaveId, 1'b0};
                                 end
 
                             reqCom:
@@ -518,8 +523,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             i <= 0;
                                             communicationState  <= over;
                                         end
-                                        
-        
                                     end
                                 end
 
