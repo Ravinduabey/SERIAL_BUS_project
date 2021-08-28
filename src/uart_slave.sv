@@ -18,17 +18,27 @@ module uart_slave
     input logic clk,
     input logic rstN, 
 
-    //with uart receiver
-    input   logic rxStart,
-    input   logic rxDone,
-    input   logic [DATA_WIDTH-1:0] byteFromRx,
-    input   logic rxReady,
+    //with uart transmitter_get
+    output logic g_txStart,
+    output logic [DATA_WIDTH-1:0] g_byteForTx,
+    input  logic g_txReady,  
 
+    //with uart receiver_get
+    input   logic g_rxStart,
+    input   logic g_rxDone,
+    input   logic [DATA_WIDTH-1:0] g_byteFromRx,
+    input   logic g_rxReady,
 
-    //with uart transmitter
-    output  logic txStart,
-    output  logic [DATA_WIDTH-1:0] byteForTx,
-    input   logic txReady
+    //with uart receiver_send
+    input logic s_rxStart,
+    input logic s_rxDone,
+    input logic [DATA_WIDTH-1:0] s_byteFromRx,
+    input logic s_rxReady,
+
+    //with uart transmitter_send
+    output  logic s_txStart,
+    output  logic [DATA_WIDTH-1:0] s_byteForTx,
+    input   logic s_txReady
   
 );
     /*                         |----------------------------------------------      
@@ -47,7 +57,7 @@ module uart_slave
     -- input from rx
     -- slave in READ mode : ready LOW
     -- send ack
-    -1- if rxStart : read byteFromRx
+    -1- if g_rxStart : read g_byteFromRx
     -2--- for DATA_WIDTH clock cycles : ready and send rD
 
     if master sends data : send to tx
@@ -55,7 +65,7 @@ module uart_slave
     -- output to rx
     -- receive ack 
     -1- if valid : write for DATA_WIDTH clock cycles
-    -2--- if wD_buffer full : assign byteForTx and send txStart
+    -2--- if wD_buffer full : assign s_byteForTx and send s_txStart
 
     */
 
@@ -124,13 +134,13 @@ module uart_slave
     genvar i;
     generate 
         for (i = 0; i<DATA_WIDTH; i++) begin : uart_data
-            assign byteForTx    [i] = wD_buffer[i];
+            assign s_byteForTx    [i] = wD_buffer[i];
         end
     endgenerate
 
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
         if (!rstN) begin
-            txStart         <= 0;
+            s_txStart         <= 0;
             config_buffer   <= 0;
             rD_counter      <= 0;
             wD_counter      <= 0;
@@ -145,7 +155,7 @@ module uart_slave
             case (state)
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
-                    txStart             <= 0;
+                    s_txStart             <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
@@ -158,7 +168,7 @@ module uart_slave
                 end
                 IDLE : begin
                     com_status      <= comm;
-                    txStart         <= 0;
+                    s_txStart         <= 0;
                     ready           <= 1;
                     config_counter  <= 0;
                     rD_counter      <= 0;
@@ -216,8 +226,7 @@ module uart_slave
                         end
                         else state <= IDLE;
                     end                                              
-
-               end                
+                end                
                 CONFIG_NEXT : begin
                     //reconfigure if master sends control HIGH
                     if (control) begin
@@ -229,8 +238,8 @@ module uart_slave
                     end
                     else if (config_buffer[0] == 0) begin
                         //receive data from uart rx
-                        if (rxDone) begin
-                            rD_buffer <= byteFromRx;
+                        if (g_rxDone) begin
+                            rD_buffer <= g_byteFromRx;
                             state     <= READ;
                         end
                     end
@@ -284,8 +293,8 @@ module uart_slave
                 //         prev_state          <= READB_GET;
                 //         state               <= RECONFIG;
                 //     end
-                //     else if (rxDone) begin                    
-                //         rD_buffer   <= byteFromRx;
+                //     else if (g_rxDone) begin                    
+                //         rD_buffer   <= g_byteFromRx;
                 //         state       <= READB;
                 //     end
                 // end
@@ -304,17 +313,17 @@ module uart_slave
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                        else if (wD_counter == DATA_WIDTH-1 && txReady) begin
+                        else if (wD_counter == DATA_WIDTH-1 && s_txReady) begin
                                 wD_counter      <= 0;
                                 check           <= 1;
-                                txStart         <= 1;
+                                s_txStart         <= 1;
                                 state           <= IDLE;
                         end 
                     end
                 end
                 // WRITEB_END : begin
                 //     //store last byte 
-                //     // byteForTx   <= wD_buffer;
+                //     // s_byteForTx   <= wD_buffer;
                 //     state       <= IDLE;
                 // end
                 // default: state <= IDLE;

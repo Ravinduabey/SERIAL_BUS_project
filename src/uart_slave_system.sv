@@ -18,20 +18,32 @@ module uart_slave_system
     input logic clk,
     input logic rstN, 
 
-    //external receiver
-    input  logic rx,
+    //get
+    input logic g_rx,
+    output logic g_tx,
 
-    //external transmitter
-    output logic tx
+    //send
+    input  logic s_rx,
+    output logic s_tx
+
 );
-    logic txByteStart;
-    logic [DATA_WIDTH-1:0] byteForTx;
-    logic tx_ready;
-    logic new_byte_start;
-    logic new_byte_received;
-    logic [DATA_WIDTH-1:0] byteFromRx;
-    logic rx_ready;
+    //get uart
+    logic g_txByteStart;
+    logic [DATA_WIDTH-1:0] g_byteForTx;
+    logic g_tx_ready;
+    logic g_new_byte_start;
+    logic g_new_byte_received;
+    logic [DATA_WIDTH-1:0] g_byteFromRx;
+    logic g_rx_ready;
 
+    //send uart
+    logic s_txByteStart;
+    logic [DATA_WIDTH-1:0] s_byteForTx;
+    logic s_tx_ready;
+    logic s_new_byte_start;
+    logic s_new_byte_received;
+    logic [DATA_WIDTH-1:0] s_byteFromRx;
+    logic s_rx_ready;
 
     logic baudTick;
 
@@ -48,32 +60,58 @@ uart_slave #(
     .valid(valid),
     .clk(clk),
     .rstN(rstN), 
-    .txStart(txByteStart),
-    .byteForTx(byteForTx),
-    .txReady(tx_ready),
-    .rxStart(new_byte_start),
-    .rxDone(new_byte_received),
-    .byteFromRx(byteFromRx),
-    .rxReady(rx_ready)
+    // get uart
+    .g_txStart(g_txByteStart),
+    .g_byteForTx(g_byteForTx),
+    .g_txReady(g_tx_ready),
+    .g_rxStart(g_new_byte_start),
+    .g_rxDone(g_new_byte_received),
+    .g_byteFromRx(g_byteFromRx),
+    .g_rxReady(g_rx_ready),
+    // send uart
+    .s_txStart(s_txByteStart),
+    .s_byteForTx(s_byteForTx),
+    .s_txReady(s_tx_ready),
+    .s_rxStart(s_new_byte_start),
+    .s_rxDone(s_new_byte_received),
+    .s_byteFromRx(s_byteFromRx),
+    .s_rxReady(s_rx_ready)
 );
 
 uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.clk(clk), .rstN(rstN), .baudTick(baudTick));
 
-uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) transmitter(
-                    .dataIn(byteForTx),
-                    .txStart(txByteStart), 
+uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) transmitter_send (
+                    .dataIn(s_byteForTx),
+                    .txStart(s_txByteStart), 
                     .clk(clk), .rstN(rstN), .baudTick(baudTick),                     
-                    .tx(tx), 
-                    .tx_ready(tx_ready)
+                    .tx(s_tx), 
+                    .tx_ready(s_tx_ready)
                     );
 
-uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) receiver (
-                .rx(rx), 
+uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) receiver_send (
+                .rx(s_rx), 
                 .clk(clk), .rstN(rstN), .baudTick(baudTick), 
-                .rx_ready(rx_ready), 
-                .dataOut(byteFromRx), 
-                .new_byte_start(new_byte_start),
-                .new_byte_received(new_byte_received)
+                .rx_ready(s_rx_ready), 
+                .dataOut(s_byteFromRx), 
+                .new_byte_start(s_new_byte_start),
+                .new_byte_received(s_new_byte_received)
                 );
 
+uart_transmitter #(.DATA_WIDTH(DATA_WIDTH)) transmitter_get (
+                    .dataIn(g_byteForTx),
+                    .txStart(g_txByteStart), 
+                    .clk(clk), .rstN(rstN), .baudTick(baudTick),                     
+                    .tx(g_tx), 
+                    .tx_ready(g_tx_ready)
+                    );
+
+uart_receiver #(.DATA_WIDTH(DATA_WIDTH)) receiver_get (
+                .rx(g_rx), 
+                .clk(clk), .rstN(rstN), .baudTick(baudTick), 
+                .rx_ready(g_rx_ready), 
+                .dataOut(g_byteFromRx), 
+                .new_byte_start(g_new_byte_start),
+                .new_byte_received(g_new_byte_received)
+                );
+                
 endmodule:uart_slave_system

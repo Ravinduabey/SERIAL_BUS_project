@@ -109,7 +109,7 @@ timeunit 1ns; timeprecision 1ps;
         eoc     <= 0;
 
         #(CLOCK_PERIOD*2);
-        start   <= 1;
+        start   <= 0;
 
         #(CLOCK_PERIOD);
         start   <= 0;
@@ -137,7 +137,7 @@ timeunit 1ns; timeprecision 1ps;
         
         #3;
         eoc     <= 0;
-        start   <= 1;
+        // start   <= 1;
         #(CLOCK_PERIOD);
         start   <= 0;
 
@@ -160,7 +160,7 @@ timeunit 1ns; timeprecision 1ps;
         //  state == startEndConfig   //
         //===========================//
         #(CLOCK_PERIOD);
-        start   <= 1;
+        start   <= 0;
         // last data    
         // address <= 12'd5;
         data    <= 16'd17;
@@ -175,9 +175,9 @@ timeunit 1ns; timeprecision 1ps;
         //     state == startCom      //
         //===========================//
         #(CLOCK_PERIOD);
-        start   <= 1;
+        // start   <= 1;
         arbCont <=0;
-        #(CLOCK_PERIOD);
+        // #(CLOCK_PERIOD);
         start   <= 0;
         // slaveId <= 2'b10;
         // rdWr    <= 0;
@@ -195,7 +195,7 @@ timeunit 1ns; timeprecision 1ps;
         master_control();
 
         #(CLOCK_PERIOD*100);
-        $stop;
+        // $stop;
     end
 
 endmodule
