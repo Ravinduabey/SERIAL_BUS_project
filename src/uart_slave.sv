@@ -332,12 +332,12 @@ module uart_slave
                         //from previous external write
                         if (rD_counter < 3 && !ready) begin
                             masterAck_buffer<= masterAck_buffer << 1;
-                            rD_temp         <= masterAck_buffer[DATA_WIDTH-1];
+                            rD_temp         <= masterAck_buffer[3];
                             ready           <= 1;
                         end
                         else if (rD_counter < 3 && ready) begin
                             masterAck_buffer<= masterAck_buffer << 1;
-                            rD_temp         <= masterAck_buffer[DATA_WIDTH-1];
+                            rD_temp         <= masterAck_buffer[3];
                             rD_counter      <= rD_counter + 1'b1;                       
                         end
                         //after ack is fully sent : 
