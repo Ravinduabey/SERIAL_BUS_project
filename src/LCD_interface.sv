@@ -1,4 +1,4 @@
-module LCD_interface import details::*;
+module LCD_interface import top_details::*;
 #(
     parameter MAX_MASTER_WRITE_DEPTH = 16,
     parameter DATA_WIDTH = 16,

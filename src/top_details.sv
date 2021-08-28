@@ -1,4 +1,4 @@
-package details;
+package top_details;
 
 typedef enum logic[7:0]{
     // numbers
@@ -102,4 +102,4 @@ typedef enum logic [3:0]{
     communication_done      = 4'd13     // state - 8
 } main_state_t;
 
-endpackage : details
+endpackage : top_details

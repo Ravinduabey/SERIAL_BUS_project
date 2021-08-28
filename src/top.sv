@@ -1,15 +1,18 @@
-module top import details::*;
+module top import top_details::*;
 #(
-    parameter SLAVE_COUNT=3,  // number of slaves
-    parameter MASTER_COUNT=2,  // number of masters
+    parameter INT_SLAVE_COUNT=3,  // number of slaves
+    parameter INT_MASTER_COUNT=2,  // number of masters
     parameter DATA_WIDTH = 16,   // width of a data word in slave & master
-    parameter int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
-    parameter int SLAVE_DELAYS[SLAVE_COUNT] = '{0,0,100},
+    parameter int SLAVE_DEPTHS[INT_SLAVE_COUNT] = '{4096,4096,2048}, // give each slave's depth
+    parameter int SLAVE_DELAYS[INT_SLAVE_COUNT] = '{0,0,100},
     parameter MAX_MASTER_WRITE_DEPTH = 16,  // maximum number of addresses of a master that can be externally written
     parameter MAX_SPLIT_TRANS_WAIT_CLK_COUNT = 1200 ,
     parameter FIRST_START_MASTER = 0, // this master will start communication first
-    parameter COM_START_DELAY = 0 //gap between 2 masters communication start signal
-
+    parameter COM_START_DELAY = 0, //gap between 2 masters communication start signal
+    parameter UART_WIDTH = 8,
+    parameter UART_BAUD_RATE = 19200,
+    parameter EXT_COM_INIT_VAL = 0,
+    parameter EXT_DISPLAY_DURATION = 5 // external communication value display duration
 )
 (
     input logic CLOCK_50,
@@ -19,21 +22,19 @@ module top import details::*;
     output logic [3:0]LEDG,
     // output logic [6:0]HEX0, HEX1, HEX2, HEX3, HEX4, HEX5, HEX6, HEX7,
     output logic [7:0]LCD_DATA,
-    output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON
-        
+    output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON,
+
+    inout logic GPIO[3:0]
 );
 
-// localparam SLAVE_COUNT=3;  // number of slaves
-// localparam MASTER_COUNT=2; // number of masters
-// localparam DATA_WIDTH = 16; // width of a data word in slave & master
-
-// localparam int SLAVE_DEPTHS[SLAVE_COUNT] = '{4096,4096,2048}; // give each slave's depth
-localparam int SLAVE_ADDR_WIDTHS[SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog2(SLAVE_DEPTHS[1]), $clog2(SLAVE_DEPTHS[2])};
+localparam MASTER_COUNT = INT_MASTER_COUNT + 1; // internal masters + masterExternal
+localparam SLAVE_COUNT = INT_SLAVE_COUNT + 1; // internal slvaes + m
+localparam int SLAVE_ADDR_WIDTHS[INT_SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $clog2(SLAVE_DEPTHS[1]), $clog2(SLAVE_DEPTHS[2])};
 
 localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or read all the slave address locations without loss
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
-localparam S_ID_WIDTH = $clog2(SLAVE_COUNT+1);
-localparam M_ID_WIDTH = $clog2(MASTER_COUNT);
+localparam S_ID_WIDTH = $clog2(INT_SLAVE_COUNT+1);
+localparam M_ID_WIDTH = $clog2(INT_MASTER_COUNT);
 
 
 logic rstN, clk, jump_stateN, jump_next_addr;
@@ -50,7 +51,7 @@ localparam TIME_DELAY = 500; // time delay for debouncing in ms
 genvar ii;
 generate
     for (ii=0;ii<4;ii=ii+1) begin: debouncing
-        debouncer #(.TIME_DELAY(TIME_DELAY)) debouncer(
+        top_debouncer #(.TIME_DELAY(TIME_DELAY)) debouncer(
             .clk(clk),
             .value_in(KEY[ii]),
             .value_out(KEY_OUT[ii])
@@ -61,18 +62,18 @@ endgenerate
 
 //////////////// TOP module & MASTER module wires and registers /////////////
 
-logic M_burst[0:MASTER_COUNT-1];
-logic M_burst_next[0:MASTER_COUNT-1];
-logic M_rdWr[0:MASTER_COUNT-1];
-logic M_rdWr_next[0:MASTER_COUNT-1];
-logic M_inEx[0:MASTER_COUNT-1];
-logic M_inEx_next[0:MASTER_COUNT-1];
-logic [DATA_WIDTH-1:0] M_data[0:MASTER_COUNT-1];
-logic [DATA_WIDTH-1:0] M_data_next[0:MASTER_COUNT-1];
-logic [MASTER_ADDR_WIDTH-1:0] M_address[0:MASTER_COUNT-1];
-logic [MASTER_ADDR_WIDTH-1:0] M_address_next[0:MASTER_COUNT-1];
-logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId[0:MASTER_COUNT-1];
-logic [$clog2(SLAVE_COUNT)-1:0] M_slaveId_next[0:MASTER_COUNT-1];
+logic M_burst[0:INT_MASTER_COUNT-1];
+logic M_burst_next[0:INT_MASTER_COUNT-1];
+logic M_rdWr[0:INT_MASTER_COUNT-1];
+logic M_rdWr_next[0:INT_MASTER_COUNT-1];
+logic M_inEx[0:INT_MASTER_COUNT-1];
+logic M_inEx_next[0:INT_MASTER_COUNT-1];
+logic [DATA_WIDTH-1:0] M_data[0:INT_MASTER_COUNT-1];
+logic [DATA_WIDTH-1:0] M_data_next[0:INT_MASTER_COUNT-1];
+logic [MASTER_ADDR_WIDTH-1:0] M_address[0:INT_MASTER_COUNT-1];
+logic [MASTER_ADDR_WIDTH-1:0] M_address_next[0:INT_MASTER_COUNT-1];
+logic [$clog2(INT_SLAVE_COUNT)-1:0] M_slaveId[0:INT_MASTER_COUNT-1];
+logic [$clog2(INT_SLAVE_COUNT)-1:0] M_slaveId_next[0:INT_MASTER_COUNT-1];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 logic M_eoc[0:MASTER_COUNT-1];
@@ -86,7 +87,7 @@ logic M_ready[0:MASTER_COUNT-1];
 logic M_control[0:MASTER_COUNT-1];           // START|SLAVE_ID|r/w|B|address| 
 logic M_wrD[0:MASTER_COUNT-1];
 logic M_valid[0:MASTER_COUNT-1];
-logic M_last[0:MASTER_COUNT-1];
+logic M_last[0:MASTER_COUNT-1]; // last wire is not used as externalMaster don't need M_last
 
 logic arbCont[0:MASTER_COUNT-1];
 logic arbSend[0:MASTER_COUNT-1];
@@ -97,22 +98,22 @@ logic S_ready[0:SLAVE_COUNT-1];
 logic S_control[0:SLAVE_COUNT-1]; 
 logic S_wD[0:SLAVE_COUNT-1];      
 logic S_valid[0:SLAVE_COUNT-1];   
-logic S_last[0:SLAVE_COUNT-1];    
+logic S_last[0:SLAVE_COUNT-1]; // last wire is not used as externalSlave don't need s_last   
 
 
 /// arbiter module related wires
 logic [S_ID_WIDTH+M_ID_WIDTH-1:0] a_bus_state;
 logic a_ready;
 
-logic [DATA_WIDTH-1:0]M_data_bank[0:MASTER_COUNT-1][0:MAX_MASTER_WRITE_DEPTH-1]; // used to store values to be written on masters' memories.
+logic [DATA_WIDTH-1:0]M_data_bank[0:INT_MASTER_COUNT-1][0:MAX_MASTER_WRITE_DEPTH-1]; // used to store values to be written on masters' memories.
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_data_bank_addr, next_data_bank_addr; // used to select a location in "M_data_bank"
-logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]data_bank_wr_count[0:MASTER_COUNT-1];
-logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]data_bank_wr_count_next[0:MASTER_COUNT-1];  
+logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]data_bank_wr_count[0:INT_MASTER_COUNT-1];
+logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]data_bank_wr_count_next[0:INT_MASTER_COUNT-1];  
 
-logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr[0:MASTER_COUNT-1];
-logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr_next[0:MASTER_COUNT-1]; // slave R/W first addr
-logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr[0:MASTER_COUNT-1];
-logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr_next[0:MASTER_COUNT-1]; // slave R/W last addr (when burst R/W)
+logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr[0:INT_MASTER_COUNT-1];
+logic [MASTER_ADDR_WIDTH-1:0]slave_first_addr_next[0:INT_MASTER_COUNT-1]; // slave R/W first addr
+logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr[0:INT_MASTER_COUNT-1];
+logic [MASTER_ADDR_WIDTH-1:0]slave_last_addr_next[0:INT_MASTER_COUNT-1]; // slave R/W last addr (when burst R/W)
 
 localparam COM_START_DELAY_COUNTER_WIDTH = (COM_START_DELAY==0)? 1:$clog2(COM_START_DELAY); // if widht==0 can not synthesize
 logic [COM_START_DELAY_COUNTER_WIDTH-1:0]current_com_start_delay_count, next_com_start_delay_count;
@@ -121,14 +122,14 @@ logic both_masters_com_started, both_masters_com_started_next;
 
 //////////////////// master configuration state related logics /////////////////
 localparam CONFIG_CLK_COUNT = 2;
-logic [$clog2(MASTER_COUNT)-1:0]current_config_master, next_config_master;
+logic [$clog2(INT_MASTER_COUNT)-1:0]current_config_master, next_config_master;
 logic [$clog2(CONFIG_CLK_COUNT)-1:0]current_config_clk_count, next_config_clk_count;
 logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_config_write_count, next_config_write_count;
 
 //////////////// MASTER module instantiate (start) /////////////
 genvar jj;
 generate
-    for (jj=0;jj<MASTER_COUNT; jj=jj+1) begin:MASTER
+    for (jj=0;jj<INT_MASTER_COUNT; jj=jj+1) begin:MASTER
         master #(.MEMORY_DEPTH(MASTER_DEPTH), .DATA_WIDTH(DATA_WIDTH)) master(
 
         //  with topModule   //
@@ -162,7 +163,7 @@ endgenerate
 
 /////// slave instantiation ////////////
 generate 
-    for (jj=0; jj<SLAVE_COUNT; jj++) begin : SLAVE
+    for (jj=0; jj<INT_SLAVE_COUNT; jj++) begin : SLAVE
         slave #(
             .ADDR_DEPTH(SLAVE_DEPTHS[jj]),
             .SLAVES(SLAVE_COUNT),
@@ -239,6 +240,69 @@ bus_interconnect #(
     );
 
 
+///////// Modules related to external communication ////////
+/////// external communication master /////////
+masterExternal #(
+    .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
+    .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
+    .CLK_FREQ(50_000_000), // internal clock frequency
+    .CLOCK_DERATION(EXT_DISPLAY_DURATION) // how long the data should be displayed in seconds
+) masterExternal( 
+
+        //  with topModule   //
+		  
+        .clk,      // clock
+        .rstN,     // reset
+        .start(M_start[MASTER_COUNT-1]),    // to start the module and initiate write in the next state
+        .eoc(M_eoc[MASTER_COUNT-1]),      // to notify the end of communication
+		  
+	    .doneCom(M_doneCom[MASTER_COUNT-1]),  // used to notify the top module the end of external communication
+        .dataOut(M_dataOut[MASTER_COUNT-1]),  // to send data to the top module to display
+
+        //    with slave     //
+
+        .rD(M_rD[MASTER_COUNT-1]),       // data in wire from the slave  
+        .ready(M_ready[MASTER_COUNT-1]),    // ready wire from the slave
+
+	    .control(M_control[MASTER_COUNT-1]),  // START|SLAVE_ID|r/w 
+        .wrD(M_wrD[MASTER_COUNT-1]),      // data out wire from master to slave
+        .valid(M_valid[MASTER_COUNT-1]),    // valid signal to slave during write
+
+        //    with arbiter   //
+
+        .arbCont(arbCont[MASTER_COUNT-1]),
+        .arbSend(arbSend[MASTER_COUNT-1])
+);
+
+/////// external communication master /////////
+
+uart_slave_system #(
+    .BAUD_RATE(UART_BAUD_RATE),
+    .SLAVES(SLAVE_COUNT),
+    .DATA_WIDTH(UART_WIDTH),   // *********** NOT SURE ASK FROM NUSHA **********
+    .SLAVEID(SLAVE_COUNT) // last slave is the external_com. slave
+)uart_slave_system(
+    // with Master (through interconnect)
+    .rD(S_rD[SLAVE_COUNT-1]),                  //serial read_data
+    .ready(S_ready[SLAVE_COUNT-1]),               //default HIGH
+
+    .control(S_control[SLAVE_COUNT-1]),              //serial control setup info  
+    .wD(S_wD[SLAVE_COUNT-1]),                   //serial write_data
+    .valid(S_valid[SLAVE_COUNT-1]),                //default LOW
+
+    //with Top Module
+    .clk,
+    .rstN, 
+
+    //get
+    .g_rx(GPIO[0]),
+    .g_tx(GPIO[1]),
+
+    //send
+    .s_rx(GPIO[2]),
+    .s_tx(GPIO[3])
+
+);
 
 main_state_t current_state, next_state;
 
@@ -446,7 +510,7 @@ always_comb begin
 
                 config_last: begin
                     if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
-                        if (current_config_master == (MASTER_COUNT-1)) begin
+                        if (current_config_master == (INT_MASTER_COUNT-1)) begin
                             next_config_state = config_done;
                         end
                         else begin
@@ -520,7 +584,7 @@ always_comb begin
     case (current_state) 
         master_slave_sel: begin
 
-            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin 
+            for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1) begin 
                 M_slaveId_next[ii] = SW[2*ii+1 -:2];
             end
 
@@ -530,14 +594,14 @@ always_comb begin
         end   
 
         read_write_sel: begin 
-            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1)begin
+            for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1)begin
                 M_rdWr_next[ii] = SW[ii];
             end
             
         end 
 
         external_write_sel: begin
-            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
+            for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1) begin
                 M_inEx_next[ii] = SW[ii];
             end
                       
@@ -648,7 +712,7 @@ always_comb begin
                     M_start_next[current_config_master] = 1'b0;  // set to zero after 1st clk cycle
                     if (current_config_clk_count == CONFIG_CLK_COUNT-1) begin
                         next_config_clk_count = '0;
-                        if (current_config_master != MASTER_COUNT-1) begin
+                        if (current_config_master != INT_MASTER_COUNT-1) begin
                             next_config_master = current_config_master+1'b1;
                             next_config_write_count = '0;
                             M_start_next[current_config_master+1] = 1'b1; // send start configuration for next master
@@ -695,7 +759,7 @@ always_comb begin
         end  
 
         communication_done: begin
-            for (integer ii=0;ii<MASTER_COUNT;ii=ii+1) begin
+            for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1) begin
                 M_address_next[ii] = SW[MASTER_ADDR_WIDTH-1:0];
             end          
         end   
@@ -713,9 +777,9 @@ assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
 
 //////// LCD control //////////////
 
-LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DATA_WIDTH), .MASTER_COUNT(MASTER_COUNT))
+LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DATA_WIDTH), .MASTER_COUNT(INT_MASTER_COUNT))
             LCD_interface(.clk, .rstN, .current_state, .next_state, .SW, 
-                        .current_data_bank_addr, .next_data_bank_addr, .M_dataOut,
+                        .current_data_bank_addr, .next_data_bank_addr, .M_dataOut(M_dataOut[0:INT_MASTER_COUNT-1]),
                         .LCD_DATA, .LCD_RW, .LCD_EN, .LCD_RS, .LCD_BLON, .LCD_ON);
 
 
