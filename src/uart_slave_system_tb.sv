@@ -77,31 +77,31 @@ logic baudTick;
         end
         wrD <= 0;
 
-        #(CLOCK_PERIOD*10);
-        //control = 11110000
-        // control <= 1;
-        // valid <= 1;
-        // wrD <= 0;
-        // #(CLOCK_PERIOD*4);
-        // control <= 0;
-        // #(CLOCK_PERIOD*3);
-        // control <= 1;
-        // #(CLOCK_PERIOD);
-        // control <= 0;
-        // #(CLOCK_PERIOD);
+        #(CLOCK_PERIOD*500000);
+        // control = 11110000
+        control <= 1;
+        valid <= 1;
+        wrD <= 0;
+        #(CLOCK_PERIOD*4);
+        control <= 0;
+        #(CLOCK_PERIOD*3);
+        control <= 1;
+        #(CLOCK_PERIOD);
+        control <= 0;
+        #(CLOCK_PERIOD);
 
-        // repeat(10) begin
-        //     g_rx <= 1'b0;
-        //     #(BAUD_TIME_PERIOD);
-        //     for (int i=0;i<DATA_WIDTH;i++) begin:data  //data
-        //         @(posedge clk);
-        //         g_rx = $urandom();
-        //         #(BAUD_TIME_PERIOD);
-        //     end
-        //     @(posedge clk);  // end delimiter
-        //     g_rx <= 1'b1;
-        //     #(BAUD_TIME_PERIOD);
-        // end
+        repeat(10) begin
+            g_rx <= 1'b0;
+            #(BAUD_TIME_PERIOD);
+            for (int i=0;i<DATA_WIDTH;i++) begin:data  //data
+                @(posedge clk);
+                g_rx = $urandom();
+                #(BAUD_TIME_PERIOD);
+            end
+            @(posedge clk);  // end delimiter
+            g_rx <= 1'b1;
+            #(BAUD_TIME_PERIOD);
+        end
 
         // @(posedge clk);
         // $stop;
@@ -109,8 +109,8 @@ logic baudTick;
       
         
 
-        // #(CLOCK_PERIOD*1000);
-        // $stop;
+        #(CLOCK_PERIOD*1000);
+        $stop;
     end
 
 endmodule
