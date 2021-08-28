@@ -210,7 +210,7 @@ module uart_slave
                     //if start and slave id sent by master is correct: 
                     //process the rest of the control signal
                     else if (config_counter == CON) begin
-                        if  (config_buffer[S_ID_WIDTH+1:2] == SLAVEID) begin
+                        if  (config_buffer[S_ID_WIDTH:1] == SLAVEID) begin
                             ready <= 0;
                             state <= CONFIG_NEXT;
                         end
@@ -227,17 +227,15 @@ module uart_slave
                         prev_state          <= CONFIG_NEXT;
                         state               <= RECONFIG;
                     end
-                    else if (config_buffer[1] == 0) begin
+                    else if (config_buffer[0] == 0) begin
                         //receive data from uart rx
-                        // check <= 1;
                         if (rxDone) begin
                             rD_buffer <= byteFromRx;
                             state     <= READ;
                         end
                     end
-                    else if (config_buffer[1] == 1) begin
+                    else if (config_buffer[0] == 1) begin
                         //send data to uart tx
-                        // check <= 1;
                         ready <= 1;
                         if (valid)  begin
                             wD_buffer       <= wD_buffer << 1;
@@ -256,19 +254,19 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     else begin
-                        if (rD_counter < DATA_WIDTH && !ready) begin
+                        if (rD_counter < DATA_WIDTH-1 && !ready) begin
                             rD_buffer       <= rD_buffer << 1;
                             rD_temp         <= rD_buffer[DATA_WIDTH-1];
                             ready           <= 1;
                         end
-                        else if (rD_counter < DATA_WIDTH && ready) begin
+                        else if (rD_counter < DATA_WIDTH-1 && ready) begin
                             rD_buffer       <= rD_buffer << 1;
                             rD_temp         <= rD_buffer[DATA_WIDTH-1];
                             rD_counter      <= rD_counter + 1'b1;                       
                             ready           <= 1;
                         end
                         //after first read data is fully sent : 
-                        else if (rD_counter == DATA_WIDTH && ready) begin
+                        else if (rD_counter == DATA_WIDTH-1 && ready) begin
                             rD_counter      <= 0;
                             ready           <= 0;
                             if (valid) begin
@@ -301,18 +299,16 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     else begin
-                        if (wD_counter < DATA_WIDTH-1) begin
+                        if (wD_counter < DATA_WIDTH-1 && valid) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                        else begin
-                            check <= 1; 
-                            if (txReady) begin
-                                wD_counter <= 0;
-                                check <= 1;
+                        else if (wD_counter == DATA_WIDTH-1 && txReady) begin
+                                wD_counter      <= 0;
+                                check           <= 1;
                                 txStart         <= 1;
-                            end
+                                state           <= IDLE;
                         end 
                     end
                 end

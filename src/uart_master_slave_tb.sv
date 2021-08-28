@@ -1,4 +1,4 @@
-module master_slave_tb ();
+module uart_master_slave_tb ();
 timeunit 1ns; timeprecision 1ps;
 
 
@@ -11,19 +11,14 @@ timeunit 1ns; timeprecision 1ps;
     logic control;              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
     logic wrD;                   //serial write_data
     logic valid;                //default LOW
-    logic last;                 //default LOW
 
     //with Top Module
-    logic [1:0]slave_ID = 2'd1;
+    logic [1:0]slave_ID;
     logic clk = 0;
     logic rstN; 
 
-    logic burst;
-    logic rdWr;
-    logic inEx;
     logic [DATA_WIDTH -1 : 0] data;
-    logic [ADDRESS_WIDTH-1:0] address;
-    logic [1:0] slaveId;
+
     logic start;
     logic eoc;       
     logic doneCom ;
@@ -53,35 +48,28 @@ timeunit 1ns; timeprecision 1ps;
         burst_master    = 1'b1
     } top_master_burst;
 
-    slave #(
-        .ADDR_DEPTH(4096),
-        .SLAVES(3), 
+    uart_slave_system #(
+        .SLAVES(4), 
         .DATA_WIDTH(DATA_WIDTH), 
-        .SLAVEID(1),
-        .DELAY(5)
-    ) Slave_dut (
+        .SLAVEID(4),
+        .BAUD_RATE(19200)
+    ) ext_Slave_dut (
         .rD(rD), 
         .ready(ready), 
         .control(control), 
         .wD(wrD), 
         .valid(valid), 
-        .last(last),
         .rstN(rstN),
-        .clk(clk)
+        .clk(clk),
+        .rx(rx),
+        .tx(tx)
     );
 
-    master  #(
-        .MEMORY_DEPTH (4096),
+    masterExternal  #(
         .DATA_WIDTH (DATA_WIDTH)
-    ) Master_dut (
+    ) ext_Master_dut (
         .clk(clk),
         .rstN(rstN),
-        .burst(burst),
-        .rdWr(rdWr),
-        .inEx(inEx),
-        .data(data),
-        .address(address),
-        .slaveId(slaveId),
         .start(start),
         .eoc(eoc),
         .doneCom(doneCom),
@@ -91,7 +79,6 @@ timeunit 1ns; timeprecision 1ps;
         .control(control),
         .wrD(wrD),
         .valid(valid),
-        .last(last),
         .arbCont(arbCont),
         .arbSend(arbSend)
     );
@@ -110,7 +97,7 @@ timeunit 1ns; timeprecision 1ps;
 
     task automatic master_control();
         begin
-            #(CLOCK_PERIOD*19);
+            #(CLOCK_PERIOD*7);
         end
     endtask
 
@@ -137,16 +124,16 @@ timeunit 1ns; timeprecision 1ps;
         //===========================//
         #(CLOCK_PERIOD*2);
         #17;
-        inEx    <=1;
+        // inEx    <=1;
         data    <= 16'd32778;
-        slaveId <= 2'b01;
+        // slaveId <= 2'b01;
 
         //===to change read-write mode===//
-        rdWr    <= Write_slave;
+        // rdWr    <= Write_slave;
         // rdWr    <= Read_slave;
-        burst   <= burst_master;
+        // burst   <= burst_master;
         //start adress 
-        address <= 12'd3;
+        // address <= 12'd3;
         
         #3;
         eoc     <= 0;
@@ -175,7 +162,7 @@ timeunit 1ns; timeprecision 1ps;
         #(CLOCK_PERIOD);
         start   <= 1;
         // last data    
-        address <= 12'd5;
+        // address <= 12'd5;
         data    <= 16'd17;
 
         #(CLOCK_PERIOD);
@@ -192,8 +179,8 @@ timeunit 1ns; timeprecision 1ps;
         arbCont <=0;
         #(CLOCK_PERIOD);
         start   <= 0;
-        slaveId <= 2'b10;
-        rdWr    <= 0;
+        // slaveId <= 2'b10;
+        // rdWr    <= 0;
 
         // wait for arbiter request
         #(CLOCK_PERIOD*5);

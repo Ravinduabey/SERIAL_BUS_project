@@ -520,7 +520,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                             else if (arbiterCounnter == 4'd6) begin
                                 arbiterCounnter     <= arbiterCounnter;
-                                if (fromArbiter == 2'b11) begin: ClearNew
+                                if (fromArbiter == 2'b11) begin: ClearNew1
                                     arbSend             <= 1'b1;            // first ack
                                     tempControl         <= tempControl_2;
                                     controlCounter      <= 0;
