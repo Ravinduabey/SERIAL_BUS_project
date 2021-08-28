@@ -107,12 +107,15 @@ module slave #(
     // end
     initial begin
         if (SLAVEID == 2'd1) 
-        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+//		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
         //D:\ads-bus\SERIAL_BUS_project\src
         else if (SLAVEID == 2'd2) 
-        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+//		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
         else if (SLAVEID == 2'd3) 
-        $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+//		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
     end
     // initial begin
     //     if (SLAVEID == 2'd1) 

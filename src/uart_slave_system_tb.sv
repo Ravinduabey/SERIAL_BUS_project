@@ -133,7 +133,7 @@ logic baudTick;
       
         
 
-        #(CLOCK_PERIOD*1000);
+        #(CLOCK_PERIOD*100);
         $stop;
     end
 
