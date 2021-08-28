@@ -12,8 +12,10 @@ logic valid=0;                //default LOW
 logic clk = 0;
 logic rstN; 
 
-logic tx;
-logic rx;
+logic g_rx;
+logic g_tx;
+logic s_rx;
+logic s_tx;
 
 localparam DATA_WIDTH = 8;
 localparam BAUD_RATE = 19200;
@@ -54,8 +56,10 @@ logic ext_rx_ready;
         .valid(valid), 
         .rstN(rstN),
         .clk(clk),
-        .rx(rx),
-        .tx(tx)
+        .g_rx(g_rx),
+        .g_tx(g_tx),
+        .s_rx(s_rx),
+        .s_tx(s_tx)
     );
 
     initial begin
@@ -85,29 +89,29 @@ logic ext_rx_ready;
 
         #(CLOCK_PERIOD*10);
         //control = 11110000
-        control <= 1;
-        valid <= 1;
-        wrD <= 0;
-        #(CLOCK_PERIOD*4);
-        control <= 0;
-        #(CLOCK_PERIOD*3);
-        control <= 1;
-        #(CLOCK_PERIOD);
-        control <= 0;
-        #(CLOCK_PERIOD);
+        // control <= 1;
+        // valid <= 1;
+        // wrD <= 0;
+        // #(CLOCK_PERIOD*4);
+        // control <= 0;
+        // #(CLOCK_PERIOD*3);
+        // control <= 1;
+        // #(CLOCK_PERIOD);
+        // control <= 0;
+        // #(CLOCK_PERIOD);
 
-        repeat(10) begin
-            rx <= 1'b0;
-            #(BAUD_TIME_PERIOD);
-            for (int i=0;i<DATA_WIDTH;i++) begin:data  //data
-                @(posedge clk);
-                rx = $urandom();
-                #(BAUD_TIME_PERIOD);
-            end
-            @(posedge clk);  // end delimiter
-            rx <= 1'b1;
-            #(BAUD_TIME_PERIOD);
-        end
+        // repeat(10) begin
+        //     g_rx <= 1'b0;
+        //     #(BAUD_TIME_PERIOD);
+        //     for (int i=0;i<DATA_WIDTH;i++) begin:data  //data
+        //         @(posedge clk);
+        //         g_rx = $urandom();
+        //         #(BAUD_TIME_PERIOD);
+        //     end
+        //     @(posedge clk);  // end delimiter
+        //     g_rx <= 1'b1;
+        //     #(BAUD_TIME_PERIOD);
+        // end
 
         // @(posedge clk);
         // $stop;
@@ -115,8 +119,8 @@ logic ext_rx_ready;
       
         
 
-        #(CLOCK_PERIOD*100);
-        $stop;
+        // #(CLOCK_PERIOD*1000);
+        // $stop;
     end
 
 endmodule
