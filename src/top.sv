@@ -250,8 +250,10 @@ bus_interconnect #(
 masterExternal #(
     .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
     .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
-    .CLK_FREQ(50_000_000), // internal clock frequency
-    .CLOCK_DURATION(EXT_DISPLAY_DURATION) // how long the data should be displayed in seconds
+    .CLK_FREQ(50), // internal clock frequency
+    .CLOCK_DURATION(EXT_DISPLAY_DURATION), // how long the data should be displayed in seconds
+    .NUM_OF_SLAVES(SLAVE_COUNT),
+    .SLAVEID(3'b100)
 ) masterExternal( 
 
         //  with topModule   //

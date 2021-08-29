@@ -17,8 +17,8 @@ localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH);
 
 localparam UART_WIDTH = 8;
 localparam UART_BAUD_RATE = 19200;
-localparam EXT_COM_INIT_VAL = 0;
-localparam EXT_DISPLAY_DURATION = 5; // external communication value display duration
+localparam EXT_COM_INIT_VAL = 5;
+localparam EXT_DISPLAY_DURATION = 1; // external communication value display duration
 
 typedef enum logic[1:0]{
     no_slave = 2'b00,
