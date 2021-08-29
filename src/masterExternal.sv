@@ -2,7 +2,9 @@ module masterExternal #(
     parameter DATA_WIDTH    = 8,        // datawidth of the sent data
     parameter DATA_FROM_TOP = 8'd10,    // initial start data
     parameter CLK_FREQ     = 5, // internal clock frequency
-    parameter CLOCK_DURATION = 1 // how long the data should be displayed in seconds
+    parameter CLOCK_DURATION = 1, // how long the data should be displayed in seconds
+    parameter NUM_OF_SLAVES = 4,
+    parameter SLAVEID = 4;
     // parameter SLAVES        = 4,
     // parameter SLAVE_WIDTH   = $clog2(SLAVES + 1)
 )( 
@@ -16,7 +18,7 @@ module masterExternal #(
         input   logic                             clk,      // clock
         input   logic                             rstN,     // reset
         input   logic                             start,    // to start the module and initiate write in the next state
-        input   logic                             eoc,      // to notify the end of communication
+        input   logic                             eoc,      // to notify the end of communication  
 		  
 	    output  logic [1:0]                       doneCom,  // used to notify the top module the end of external communication
         output  logic [DATA_WIDTH-1:0]            dataOut,  // to send data to the top module to display
@@ -49,7 +51,7 @@ module masterExternal #(
 
 
 localparam CONTROL_LEN = 7;
-localparam slaveId = 3'b101 ;
+// localparam SLAVEID = 3'b101 ;
 localparam ACK = 8'b11001100;
 
 
@@ -129,15 +131,15 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
     else begin : topStates
         case (state) 
             //==========================//
-            //===========IDLE===========// 
+            //=======Config Master======// 
             //==========================//
             configMaster:
                 if (start)begin
                     state                       <= idle;
-                    tempControl                 <= {3'b111, slaveId, 1'b1};
-                    tempControl_2               <= {3'b111, slaveId, 1'b1};
-                    arbiterRequest              <= {3'b111, slaveId};
-                    tempArbiterRequest          <= {3'b111, slaveId};
+                    tempControl                 <= {3'b111, SLAVEID, 1'b1};
+                    tempControl_2               <= {3'b111, SLAVEID, 1'b1};
+                    arbiterRequest              <= {3'b111, SLAVEID};
+                    tempArbiterRequest          <= {3'b111, SLAVEID};
                 end
                 else begin
                     state <= configMaster;
@@ -153,10 +155,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         assign the arbiter request
                     */
                     state                       <= displayData;
-                    tempControl                 <= {3'b111, slaveId, 1'b1};
-                    tempControl_2               <= {3'b111, slaveId, 1'b1};
-                    arbiterRequest              <= {3'b111, slaveId};
-                    tempArbiterRequest          <= {3'b111, slaveId};
+                    tempControl                 <= {3'b111, SLAVEID, 1'b1};
+                    tempControl_2               <= {3'b111, SLAVEID, 1'b1};
+                    arbiterRequest              <= {3'b111, SLAVEID};
+                    tempArbiterRequest          <= {3'b111, SLAVEID};
                     
                 end
                 else if (~start && eoc) begin
@@ -187,10 +189,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     splitOnot           <= 0;
                     state               <= read_data;
                     communicationState  <= idleCom;
-                    tempControl         <= {3'b111, slaveId, 1'b0};
-                    tempControl_2       <= {3'b111, slaveId, 1'b0};
-                    arbiterRequest      <= {3'b111, slaveId};
-                    tempArbiterRequest  <= {3'b111, slaveId};
+                    tempControl         <= {3'b111, SLAVEID, 1'b0};
+                    tempControl_2       <= {3'b111, SLAVEID, 1'b0};
+                    arbiterRequest      <= {3'b111, SLAVEID};
+                    tempArbiterRequest  <= {3'b111, SLAVEID};
                 end
 
             //==========================//
@@ -213,6 +215,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         clock_      <= 1'b0;
                         dataOut     <= tempReadWriteData;
                         tempReadWriteData <= tempReadWriteData +1'b1;
+                        tempArbiterRequest  <= {3'b111, SLAVEID};
                         state       <= write_data;
                         disData     <= 0;
                     end
@@ -230,8 +233,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         case (communicationState) 
                             idleCom:
                                 if (~arbCont) begin
-                                    tempControl                 <= {3'b111, slaveId, 1'b1};
-                                    tempControl_2               <= {3'b111, slaveId, 1'b1};
+                                    tempControl                 <= {3'b111, SLAVEID, 1'b1};
+                                    tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                                     communicationState          <= reqCom;
                                     tempHold                    <= 0;
                                     arbiterCounnter             <= 0;
@@ -453,8 +456,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     controlCounter      <= 0;
                                     clock_counter       <= 0;
                                     arbiterRequest      <= tempArbiterRequest;
-                                    tempControl         <= {3'b111, slaveId, 1'b0};
-                                    tempControl_2       <= {3'b111, slaveId, 1'b0};
+                                    tempControl         <= {3'b111, SLAVEID, 1'b0};
+                                    tempControl_2       <= {3'b111, SLAVEID, 1'b0};
                                 end
 
                             reqCom:
