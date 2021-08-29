@@ -3,7 +3,9 @@ module uart_slave
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
-    parameter SLAVEID = 1
+    parameter SLAVEID = 1,
+    parameter ACK_TIMEOUT = 1000000,
+    parameter RETRANSMIT_TIMES = 5
 )(
 
     // with Master (through interconnect)
@@ -16,8 +18,10 @@ module uart_slave
 
     //with Top Module
     input logic clk,
-    input logic rstN, 
+    input logic rstN,
 
+
+    //==================uart to get data==============//
     //with uart transmitter_get
     output logic g_txStart,
     output logic [DATA_WIDTH-1:0] g_byteForTx,
@@ -29,6 +33,7 @@ module uart_slave
     input   logic [DATA_WIDTH-1:0] g_byteFromRx,
     input   logic g_rxReady,
 
+    //=================uart to send data=============//
     //with uart receiver_send
     input logic s_rxStart,
     input logic s_rxDone,
@@ -41,31 +46,37 @@ module uart_slave
     input   logic s_txReady
   
 );
-    /*                         |----------------------------------------------      
-    |===================|      |  |=================|        |===============|
-    |   Int. Master   []| ---> |O |   uart slave    |  --->  |   uart tx     |
-    |===================|      |  |=================|        |===============|
-                               |----------------------------------------------
+   /* 
+   |=========|-1-write-->    |=========|                |==========|
+   | master  |-2-write data->| slave   |                | next_fpga|
+   |         |               |     s_tx|-3-write data-> |          |
+   |         |               |     s_rx|<--4-ACK------- |          |
+   |=========|               |=========|                |==========|
 
-                               |----------------------------------------------
-    |===================|      |  |=================|        |===============|
-    |   Int. Master   []| <--- |O |   uart slave    |  <---  |   uart rx     |
-    |===================|      |  |=================|        |===============|
-                               |---------------------------------------------- 
-    
-    if rx     sends data : send to master
+   next read
+
+   |=========| --1-read---> |=========|                 |==========|
+   |         |              |     g_rx| <-2-read data-  |          |
+   | master  |<-4-ACK/NAK-- |     g_tx| ---3-ACK----->  |prev_fpga |
+   |         | of prev write|  slave  |                 |          |
+   |         |              |         |                 |          |
+   |=========|<-5-read-data-|=========|                 |==========|
+
+    if rx_get  sends data : send to master
     -- input from rx
     -- slave in READ mode : ready LOW
     -- send ack
     -1- if g_rxStart : read g_byteFromRx
-    -2--- for DATA_WIDTH clock cycles : ready and send rD
+    -2--- send ACK
+    -3--- for DATA_WIDTH clock cycles : ready and send rD
 
-    if master sends data : send to tx
+    if master sends data : send to tx_send
     -- slave in WRITE mode
     -- output to rx
     -- receive ack 
     -1- if valid : write for DATA_WIDTH clock cycles
     -2--- if wD_buffer full : assign s_byteForTx and send s_txStart
+    -3--- wait for ACK
 
     */
 
@@ -82,7 +93,7 @@ module uart_slave
     //data out fifo buffer for READ  RAM -->|_|_|_|_|_..._|--> |rD_temp|
     //rD reads as readData
     logic [DATA_WIDTH-1   :0]  rD_buffer;             
-    logic [DATA_COUNTER   :0]  rD_counter;            
+    logic [DATA_COUNTER*2 :0]  rD_counter;            
     logic                      rD_temp;
 
     //data_in fifo buffer for WRITE  |wD_temp| -->|_|_|_|_|_..._|--> RAM 
@@ -91,8 +102,16 @@ module uart_slave
     logic [DATA_COUNTER   :0]  wD_counter;
     logic                      wD_temp;
     
-    logic check=0;
+    //master ack/nak buffer
+    logic [3:0] masterAck_buffer;
+    // logic check=0;
 
+    //ack for uart
+    logic [DATA_WIDTH-1              :0] sAck_buffer;
+    logic [$clog2(ACK_TIMEOUT)-1     :0] ack_counter;
+    logic [$clog2(RETRANSMIT_TIMES)-1:0] reTx_counter;
+    logic [DATA_WIDTH-1              :0] reTx_data;
+    
     typedef enum logic [2:0] {
         ABORT       = 3'b100,
         CONTINUE    = 3'b101,
@@ -109,6 +128,11 @@ module uart_slave
         hold
     } com_;
     com_ com_status = comm;
+
+    typedef enum logic [7:0] {
+        ACK = 8'b11001100,
+        NAK = 8'b10101010
+    }ack_param;
     
   
     typedef enum logic [3:0] { 
@@ -120,28 +144,35 @@ module uart_slave
        CONFIG_NEXT, 
 
        //data from rx --> internal master
-       READ,        
-    //    READB_GET,   
+       READ,
+       SEND_ACK,
 
        //data from internal master --> tx      
-       WRITE
-    //    WRITEB_END 
+       WRITE,
+       GET_ACK,
+       CHECK_ACK
     } state_;
 	 
     state_ state = INIT;
     state_ prev_state;
 
-    genvar i;
-    generate 
-        for (i = 0; i<DATA_WIDTH; i++) begin : uart_data
-            assign s_byteForTx    [i] = wD_buffer[i];
-        end
-    endgenerate
+    // genvar i;
+    // generate 
+    //     for (i = 0; i<DATA_WIDTH; i++) begin : uart_data
+    //         assign s_byteForTx    [i] = wD_buffer[i];
+    //     end
+    // endgenerate
 
     always_ff @( posedge clk or negedge rstN ) begin : slaveStateMachine
         if (!rstN) begin
-            s_txStart         <= 0;
+            s_txStart       <= 0;
+            g_txStart       <= 0;
+            g_byteForTx     <= 0;
+            s_byteForTx     <= 0;
+            ack_counter     <= 0;
+            reTx_counter    <= 0;
             config_buffer   <= 0;
+            masterAck_buffer<= 0;
             rD_counter      <= 0;
             wD_counter      <= 0;
             config_counter  <= 0;
@@ -155,20 +186,28 @@ module uart_slave
             case (state)
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
-                    s_txStart             <= 0;
+                    s_txStart           <= 0;
+                    g_txStart           <= 0;
+                    ack_counter         <= 0;
+                    reTx_counter        <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
                     wD_counter          <= 0;
                     ready               <= 1;
                     rD_temp             <= 0;
+                    masterAck_buffer    <= 0;
                     rD_buffer           <= 0;
                     wD_buffer           <= 0;
                     config_buffer       <= 0;
                     state               <= IDLE;
                 end
                 IDLE : begin
+                    //set counters and txStart outputs to 0
                     com_status      <= comm;
-                    s_txStart         <= 0;
+                    s_txStart       <= 0;
+                    g_txStart       <= 0;
+                    ack_counter     <= 0;
+                    reTx_counter    <= 0;                    
                     ready           <= 1;
                     config_counter  <= 0;
                     rD_counter      <= 0;
@@ -198,9 +237,11 @@ module uart_slave
                             state       <= RECONFIG; 
                         end
                         //or wait for master reconnect
+                        //continue action until communication
+                        //with master is required : then wait
                         else if  (config_buffer[2:0] == HOLD) begin
                             com_status  <= hold;
-                            state       <= RECONFIG;
+                            state       <= prev_state;
                         end 
                         //or continue current configuration   
                         else if (config_buffer[2:0] == CONTINUE) begin
@@ -236,24 +277,47 @@ module uart_slave
                         prev_state          <= CONFIG_NEXT;
                         state               <= RECONFIG;
                     end
+                    //READ 
                     else if (config_buffer[0] == 0) begin
-                        //receive data from uart rx
+                    //==========receive data from uart rx===========//
                         if (g_rxDone) begin
-                            rD_buffer <= g_byteFromRx;
-                            state     <= READ;
+                            rD_buffer   <= g_byteFromRx;
+                            g_byteForTx <= ACK;
+                            state       <= SEND_ACK;
                         end
                     end
+                    //WRITE 
+                    //========start receiving data from master======//
                     else if (config_buffer[0] == 1) begin
                         //send data to uart tx
                         ready <= 1;
-                        if (valid)  begin
+                        if (valid && com_status==comm)  begin
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    
                             state           <= WRITE;
                         end
                     end 
                 end
+                //==============Comm with get_uart===================//
+                //send acknowledgement to previous board
+                SEND_ACK : begin
+                    //reconfigure if master sends control HIGH
+                    if (control) begin
+                        config_counter      <= 1; 
+                        config_buffer       <= config_buffer << 1'b1;
+                        config_buffer[0]    <= temp_control;
+                        prev_state          <= SEND_ACK;
+                        state               <= RECONFIG;
+                    end
+                    else begin
+                        if (g_txReady) begin
+                            g_txStart           <= 1;
+                            state               <= READ;
+                        end
+                    end
+                end                 
                 READ : begin
+                    g_txStart <= 0;
                     //reconfigure if master sends control HIGH
                     if (control) begin
                         config_counter      <= 1; 
@@ -262,42 +326,36 @@ module uart_slave
                         prev_state          <= READ;
                         state               <= RECONFIG;
                     end
-                    else begin
-                        if (rD_counter < DATA_WIDTH-1 && !ready) begin
-                            rD_buffer       <= rD_buffer << 1;
-                            rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                    else if (com_status == comm) begin
+                        //send ACK or NAK to master
+                        //from previous external write
+                        if (rD_counter < 3 && !ready) begin
+                            masterAck_buffer<= masterAck_buffer << 1;
+                            rD_temp         <= masterAck_buffer[3];
                             ready           <= 1;
                         end
-                        else if (rD_counter < DATA_WIDTH-1 && ready) begin
-                            rD_buffer       <= rD_buffer << 1;
-                            rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                        else if (rD_counter < 3 && ready) begin
+                            masterAck_buffer<= masterAck_buffer << 1;
+                            rD_temp         <= masterAck_buffer[3];
                             rD_counter      <= rD_counter + 1'b1;                       
-                            ready           <= 1;
                         end
-                        //after first read data is fully sent : 
-                        else if (rD_counter == DATA_WIDTH-1 && ready) begin
+                        //after ack is fully sent : 
+                        //send the read data from external read
+                        else if (rD_counter < DATA_WIDTH+3 && ready) begin
+                            rD_buffer       <= rD_buffer << 1;
+                            rD_temp         <= rD_buffer[DATA_WIDTH-1];
+                            rD_counter      <= rD_counter + 1'b1;  
+                        end                     
+                        else if (rD_counter == DATA_WIDTH+3 && ready) begin
                             rD_counter      <= 0;
                             ready           <= 0;
                             if (valid) begin
-                                state  <= IDLE;
+                                state        <= IDLE;
                             end
                         end
                     end
-                end                
-                // READB_GET: begin
-                //     //reconfigure if master sends control HIGH
-                //     if (control) begin
-                //         config_counter      <= 1; 
-                //         config_buffer       <= config_buffer << 1'b1;
-                //         config_buffer[0]    <= temp_control;
-                //         prev_state          <= READB_GET;
-                //         state               <= RECONFIG;
-                //     end
-                //     else if (g_rxDone) begin                    
-                //         rD_buffer   <= g_byteFromRx;
-                //         state       <= READB;
-                //     end
-                // end
+                end 
+                //==============Comm with send_uart==================//
                 WRITE: begin
                     //reconfigure if master sends control HIGH
                     if (control) begin
@@ -307,27 +365,80 @@ module uart_slave
                         prev_state          <= WRITE;
                         state               <= RECONFIG;
                     end
-                    else begin
+                    else if (com_status == comm) begin
                         if (wD_counter < DATA_WIDTH-1 && valid) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                        else if (wD_counter == DATA_WIDTH-1 && s_txReady) begin
-                                wD_counter      <= 0;
-                                check           <= 1;
-                                s_txStart         <= 1;
-                                state           <= IDLE;
+                        else if (wD_counter == DATA_WIDTH-1) begin
+                                wD_counter      <= wD_counter + 1'b1;
+                                s_byteForTx     <= wD_buffer;
+                        end
+                        else if (wD_counter == DATA_WIDTH) begin
+                            if (s_txReady) begin
+                                s_txStart       <= 1;
+                                state           <= GET_ACK;
+                            end
                         end 
                     end
                 end
-                // WRITEB_END : begin
-                //     //store last byte 
-                //     // s_byteForTx   <= wD_buffer;
-                //     state       <= IDLE;
-                // end
-                // default: state <= IDLE;
-                    
+                GET_ACK : begin
+                    //reconfigure if master sends control HIGH
+                    if (control) begin
+                        config_counter      <= 1; 
+                        config_buffer       <= config_buffer << 1'b1;
+                        config_buffer[0]    <= temp_control;
+                        prev_state          <= GET_ACK;
+                        state               <= RECONFIG;
+                    end
+                    //if ACK is received
+                    //from send_Receiver
+                    else if (s_rxDone) begin
+                                    sAck_buffer     <= s_byteFromRx;
+                                    state           <= CHECK_ACK;
+                    end
+                    //wait for ACK 
+                    //retransmit after timeout 
+                    else begin
+                        if (reTx_counter < RETRANSMIT_TIMES) begin
+                            if (ack_counter < ACK_TIMEOUT) begin
+                                s_txStart           <= 0;
+                                ack_counter         <= ack_counter + 1'b1;
+                            end
+                            else if (ack_counter == ACK_TIMEOUT) begin
+                                //retransmit
+                                if (s_txReady) begin 
+                                    ack_counter     <= 0;
+                                    s_txStart       <= 1;
+                                    reTx_counter    <= reTx_counter + 1'b1;
+                                end
+                            end
+                        end
+                        else state     <= CHECK_ACK;
+                    end                    
+                end
+                CHECK_ACK : begin
+                    if (control) begin
+                        config_counter      <= 1; 
+                        config_buffer       <= config_buffer << 1'b1;
+                        config_buffer[0]    <= temp_control;
+                        prev_state          <= CHECK_ACK;
+                        state               <= RECONFIG;
+                    end  
+                    //if send_rx has sent an acknowledgement 
+                    //send 4-bit ACK to master 
+                    //during next READ                 
+                    if (sAck_buffer == ACK) begin
+                        masterAck_buffer    <= ACK[7:4];
+                    end
+                    //if communication failed
+                    //no ack/nak will be sent --> default nak
+                    else begin
+                        masterAck_buffer    <= NAK[7:4];
+                    end
+                    state       <= IDLE;
+                end
             endcase
 
         end 

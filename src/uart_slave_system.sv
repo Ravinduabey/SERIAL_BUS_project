@@ -18,16 +18,16 @@ module uart_slave_system
     input logic clk,
     input logic rstN, 
 
-    //get
+    //get data
     input logic g_rx,
     output logic g_tx,
 
-    //send
+    //send data
     input  logic s_rx,
     output logic s_tx
 
 );
-    //get uart
+    //get data uart modules
     logic g_txByteStart;
     logic [DATA_WIDTH-1:0] g_byteForTx;
     logic g_tx_ready;
@@ -36,7 +36,7 @@ module uart_slave_system
     logic [DATA_WIDTH-1:0] g_byteFromRx;
     logic g_rx_ready;
 
-    //send uart
+    //send data uart modules
     logic s_txByteStart;
     logic [DATA_WIDTH-1:0] s_byteForTx;
     logic s_tx_ready;

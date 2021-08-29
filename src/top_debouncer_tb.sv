@@ -1,7 +1,7 @@
 timeunit 1ns;
 timeprecision 1ns;
 
-module debouncer_tb();
+module top_debouncer_tb();
 
 localparam CLK_PERIOD = 20;  //nS
 localparam CLK_FREQ = 50; // MHz
@@ -20,7 +20,7 @@ initial begin
 end
 
 
-debouncer #(.TIME_DELAY(TIME_DELAY)) dut(.*);
+top_debouncer #(.TIME_DELAY(TIME_DELAY)) dut(.*);
 
 initial begin
 
@@ -58,4 +58,4 @@ end
 
 
 
-endmodule: debouncer_tb
+endmodule: top_debouncer_tb

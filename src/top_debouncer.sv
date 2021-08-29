@@ -1,4 +1,4 @@
-module debouncer 
+module top_debouncer 
 #(
     parameter TIME_DELAY = 500 //mS
 )
@@ -32,4 +32,4 @@ end
 
 assign value_out = (counter == '0)? value_in: 1'b1;  // while counting value_out is always one 
 
-endmodule : debouncer
+endmodule : top_debouncer

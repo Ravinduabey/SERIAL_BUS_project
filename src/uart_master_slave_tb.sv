@@ -38,15 +38,6 @@ timeunit 1ns; timeprecision 1ps;
            end
    end
 
-    typedef enum logic  {
-        Read_slave  = 1'b0,
-        Write_slave = 1'b1
-    } Read_write_slave;
-
-    typedef enum logic  {
-        non_burst       = 1'b0,
-        burst_master    = 1'b1
-    } top_master_burst;
 
     uart_slave_system #(
         .SLAVES(4), 
@@ -83,33 +74,33 @@ timeunit 1ns; timeprecision 1ps;
         .arbSend(arbSend)
     );
 
-    task automatic top_burst_write(
-        output [DATA_WIDTH -1 : 0] data
-    );
-       
-        begin
-            #17;
-            data = $random;
-            #3;
-            #CLOCK_PERIOD;
-        end
-    endtask
-
     task automatic master_control();
         begin
-            #(CLOCK_PERIOD*7);
+            #(CLOCK_PERIOD*10);
         end
     endtask
 
+    task automatic master_display(); 
+        begin
+            #(CLK_FREQ*CLOCK_DURATION);
+        end
+    endtask
+
+    task automatic data_write_duration(); 
+        begin
+            #(CLOCK_PERIOD*12);
+        end
+    endtask
 
     initial begin
         @(posedge clk);
         start   <= 0;
         rstN    <= 0;
         eoc     <= 0;
+        arbCont <= 0;
 
         #(CLOCK_PERIOD*2);
-        start   <= 0;
+        start   <= 1;
 
         #(CLOCK_PERIOD);
         start   <= 0;
@@ -118,84 +109,104 @@ timeunit 1ns; timeprecision 1ps;
 
         start   <= 0;
         rstN    <= 1;
-
-        //============================//
-        //    state == startConfig    //
-        //===========================//
-        #(CLOCK_PERIOD*2);
-        #17;
-        // inEx    <=1;
-        data    <= 16'd32778;
-        // slaveId <= 2'b01;
-
-        //===to change read-write mode===//
-        // rdWr    <= Write_slave;
-        // rdWr    <= Read_slave;
-        // burst   <= burst_master;
-        //start adress 
-        // address <= 12'd3;
         
-        #3;
-        eoc     <= 0;
-        // start   <= 1;
-        #(CLOCK_PERIOD);
-        start   <= 0;
-
-        
-
-        #17;
-        data    <= 16'd14;
-        #3;
-        top_burst_write(.data(data));
-        top_burst_write(.data(data));
-        top_burst_write(.data(data));
-        top_burst_write(.data(data));
-        top_burst_write(.data(data));
-        top_burst_write(.data(data));
-        
-        #(CLOCK_PERIOD);
-        start   <= 0;
-
-        //============================//
-        //  state == startEndConfig   //
-        //===========================//
-        #(CLOCK_PERIOD);
-        start   <= 0;
-        // last data    
-        // address <= 12'd5;
-        data    <= 16'd17;
-
-        #(CLOCK_PERIOD);
-        start   <= 0;
-
-        // send data to check whether the master module save this data
-        data    <= 16'd18;
-
-        //============================//
-        //     state == startCom      //
-        //===========================//
-        #(CLOCK_PERIOD);
-        // start   <= 1;
-        arbCont <=0;
-        // #(CLOCK_PERIOD);
-        start   <= 0;
-        // slaveId <= 2'b10;
-        // rdWr    <= 0;
-
-        // wait for arbiter request
         #(CLOCK_PERIOD*5);
+        start   <= 1;
+        #(CLOCK_PERIOD);
+        start   <= 0;
 
-        arbCont <= 0;
+        /* display first */
+        master_display();
+        // wait for arbiter request
+        #(CLOCK_PERIOD*7);
+
+        /* go to write mode */
+        arbCont <= 0;   // wait period
         #(CLOCK_PERIOD*5);
         arbCont <= 1;
-        // #(CLOCK_PERIOD*2);
-        // arbCont <= 0;
+        #(CLOCK_PERIOD*2);
+        arbCont <= 0;
 
-        //-- master will send the control signal for 19 clock_cycles--//
+        #(CLOCK_PERIOD*3);
+
+        // wait for arbiter clear for ack
+        arbCont <= 1;
+        #(CLOCK_PERIOD*2);
+
+
+        //-- master will send the control signal for 10 clock_cycles--//
+        master_control();
+        ready <= 0;
+        rD    <= 1;
+
+        data_write_duration(); 
+        arbCont <= 0;
+
+        /* go to read mode */
+        // wait for arbiter request
+        #(CLOCK_PERIOD*7);
+
+        arbCont <= 0;   // wait period
+        #(CLOCK_PERIOD*5);
+        arbCont <= 1;
+        #(CLOCK_PERIOD*2);
+        arbCont <= 0;
+
+        #(CLOCK_PERIOD*3);
+
+        // wait for arbiter clear for ack
+        arbCont <= 1;
+        #(CLOCK_PERIOD*2);
+
+
+        //-- master will send the control signal for 10 clock_cycles--//
         master_control();
 
-        #(CLOCK_PERIOD*100);
-        // $stop;
-    end
+        ready <= 1;
+        rD    <= 1; // 11
+        #(CLOCK_PERIOD*2);
+        rD    <= 0; // 1100    
+        #(CLOCK_PERIOD*2);
+        rD    <= 1; // 110011
+        #(CLOCK_PERIOD*2);
+        rD    <= 0; // 11001100
+        #(CLOCK_PERIOD*2);
 
+        /* send data now */
+        rD    <= 0;
+        #(CLOCK_PERIOD*6);
+        rD    <= 1;
+        #(CLOCK_PERIOD*3); 
+        ready <= 0;
+        arbCont <=0;
+
+        /* Second display */
+        master_display();
+        // wait for arbiter request
+        #(CLOCK_PERIOD*7);
+
+        arbCont <= 0;   // wait period
+        #(CLOCK_PERIOD*5);
+        arbCont <= 1;
+        #(CLOCK_PERIOD*2);
+        arbCont <= 0;
+
+        #(CLOCK_PERIOD*3);
+
+        // wait for arbiter clear for ack
+        arbCont <= 1;
+        #(CLOCK_PERIOD*2);
+
+
+        //-- master will send the control signal for 10 clock_cycles--//
+        master_control();
+        ready <= 0;
+        rD    <= 1;
+
+        data_write_duration(); 
+        #(CLOCK_PERIOD*5);
+
+        $stop;
+
+    end
 endmodule
