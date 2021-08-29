@@ -62,7 +62,7 @@ logic CLOCK_50;
 logic [3:0]KEY;
 logic [17:0]SW;
 logic [17:0]LEDR;
-logic [3:0]LEDG;
+logic [6:0]LEDG;
 logic [6:0]HEX0, HEX1;
 logic [7:0]LCD_DATA;
 logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON;

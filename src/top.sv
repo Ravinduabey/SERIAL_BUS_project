@@ -11,7 +11,7 @@ module top import top_details::*;
     parameter COM_START_DELAY = 0, //gap between 2 masters communication start signal
     parameter UART_WIDTH = 8,
     parameter UART_BAUD_RATE = 19200,
-    parameter EXT_COM_INIT_VAL = 0,
+    parameter EXT_COM_INIT_VAL = 255,
     parameter EXT_DISPLAY_DURATION = 5 // external communication value display duration
 )
 (
@@ -250,7 +250,7 @@ bus_interconnect #(
 masterExternal #(
     .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
     .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
-    .CLK_FREQ(50), // internal clock frequency
+    .CLK_FREQ(50_000_000), // internal clock frequency
     .CLOCK_DURATION(EXT_DISPLAY_DURATION), // how long the data should be displayed in seconds
     .NUM_OF_SLAVES(SLAVE_COUNT),
     .SLAVEID(3'b100)
