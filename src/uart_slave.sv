@@ -260,9 +260,9 @@ module uart_slave
 						end
                     //if start and slave id sent by master is correct: 
                     //process the rest of the control signal
+                    else if (config_counter == CON-1) ready <= 0;
                     else if (config_counter == CON) begin
                         if  (config_buffer[S_ID_WIDTH:1] == SLAVEID) begin
-                            ready <= 0;
                             state <= CONFIG_NEXT;
                         end
                         else state <= IDLE;
@@ -374,6 +374,7 @@ module uart_slave
                         else if (wD_counter == DATA_WIDTH-1) begin
                                 wD_counter      <= wD_counter + 1'b1;
                                 s_byteForTx     <= wD_buffer;
+                                ready           <= 0;
                         end
                         else if (wD_counter == DATA_WIDTH) begin
                             if (s_txReady) begin
