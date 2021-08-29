@@ -819,7 +819,7 @@ LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DAT
 
 ///////// HEX display control ////////
 
-top_seven_segment segment_0(.in(M_dataOut[MASTER_COUNT-1][3:0]), .show(ext_M_disData), .out(HEX0));
-top_seven_segment segment_1(.in(M_dataOut[MASTER_COUNT-1][7:4]), .show(ext_M_disData), .out(HEX1));
+top_seven_segment segment_0(.in(ext_M_dataOut[3:0]), .show(ext_M_disData), .out(HEX0));
+top_seven_segment segment_1(.in(ext_M_dataOut[7:4]), .show(ext_M_disData), .out(HEX1));
 
 endmodule : top
