@@ -19,7 +19,7 @@ module top import top_details::*;
     input logic [3:0]KEY,
     input logic [17:0]SW,
     output logic [17:0]LEDR,
-    output logic [3:0]LEDG,
+    output logic [6:0]LEDG,
     output logic [6:0]HEX0, HEX1,
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON,
@@ -314,8 +314,6 @@ main_state_t current_state, next_state;
 
 config_sub_state_t current_config_state, next_config_state;
 
-external_com_state_t current_ext_com_state, next_ext_com_state;
-
 always_ff @(posedge clk or negedge rstN) begin
     if (!rstN) begin
         current_state <= master_slave_sel;
@@ -343,9 +341,6 @@ always_ff @(posedge clk or negedge rstN) begin
 
         current_com_start_delay_count <= '0;
         both_masters_com_started <= 1'b0;
-
-        /////// external communication ////
-        current_ext_com_state <= idle;
 
     end
     else begin
@@ -376,8 +371,7 @@ always_ff @(posedge clk or negedge rstN) begin
         current_com_start_delay_count <= next_com_start_delay_count;
         both_masters_com_started <= both_masters_com_started_next;
 
-        /////// external communication ////
-        current_ext_com_state <= next_ext_com_state;
+
 
     end
 end
@@ -585,9 +579,6 @@ always_comb begin
     next_com_start_delay_count = current_com_start_delay_count;
     both_masters_com_started_next = both_masters_com_started;
 
-    /////// external communication ////
-    next_ext_com_state = current_ext_com_state;
-
     case (current_state) 
         master_slave_sel: begin
 
@@ -768,13 +759,11 @@ always_comb begin
             /// set external communication state ///
             M_eoc_next = '{default: '0};
             if (!start_ext_com) begin
-                if (current_ext_com_state == idle) begin
-                    next_ext_com_state = ext_communicating;  
-                    M_start_next[MASTER_COUNT-1] = 1'b1; // set start signal for 1 clk cycle                  
+                if (ext_M_doneCom == 2'b00) begin // no one has started yet
+                    M_start_next[MASTER_COUNT-1] = 1'b1; // set start signal for 1 clk cycle to begin                
                 end
-                else if (current_ext_com_state == ext_communicating) begin
-                    next_ext_com_state = idle;
-                    M_eoc_next[MASTER_COUNT-1] = 1'b1; // set end signal for 1 clk cycle
+                else if (ext_M_doneCom == 2'b11) begin // during external communication
+                    M_eoc_next[MASTER_COUNT-1] = 1'b1; // set end signal for 1 clk cycle to stop
                 end
             end
         end  
@@ -788,15 +777,13 @@ always_comb begin
             M_start_next = '{default:'0};
             M_eoc_next = '{default: '0};
             if (!start_ext_com) begin
-                if (current_ext_com_state == idle) begin
-                    next_ext_com_state = ext_communicating;  
-                    M_start_next[MASTER_COUNT-1] = 1'b1; // set start signal for 1 clk cycle                  
+                if (ext_M_doneCom == 2'b00) begin // no one has started yet
+                    M_start_next[MASTER_COUNT-1] = 1'b1; // set start signal for 1 clk cycle to begin                
                 end
-                else if (current_ext_com_state == ext_communicating) begin
-                    next_ext_com_state = idle;
-                    M_eoc_next[MASTER_COUNT-1] = 1'b1; // set end signal for 1 clk cycle
+                else if (ext_M_doneCom == 2'b11) begin // during external communication
+                    M_eoc_next[MASTER_COUNT-1] = 1'b1; // set end signal for 1 clk cycle to stop
                 end
-            end          
+            end         
         end   
     endcase
 end
@@ -821,5 +808,8 @@ LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DAT
 
 top_seven_segment segment_0(.in(ext_M_dataOut[3:0]), .show(ext_M_disData), .out(HEX0));
 top_seven_segment segment_1(.in(ext_M_dataOut[7:4]), .show(ext_M_disData), .out(HEX1));
+
+assign LEDG[4] = ext_M_disData;
+assign LEDG[6:5] = ext_M_doneCom;
 
 endmodule : top

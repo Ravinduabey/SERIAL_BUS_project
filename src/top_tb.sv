@@ -167,11 +167,12 @@ initial begin
     @(posedge clk);
     get_data_from_masters();
 
-    // #(CLK_PERIOD*10);
-    // change_external_com(); // start ext_com
+    #(CLK_PERIOD*10);
+    change_external_com(); // start sending data ext_com
 
-    // #(CLK_PERIOD*100);
-    // change_external_com(); // finish ext_com
+    #(CLK_PERIOD*100);
+    change_external_com(); // finish ext_com
+    #(CLK_PERIOD*10);
 
     $stop;
 
