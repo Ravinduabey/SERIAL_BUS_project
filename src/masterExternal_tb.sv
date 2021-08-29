@@ -15,6 +15,7 @@ timeunit 1ns; timeprecision 1ps;
 
     logic [1:0] doneCom;
     logic [DATA_WIDTH-1:0] dataOut;
+    logic disData;
 
   
     ///////////////////////
@@ -49,6 +50,7 @@ timeunit 1ns; timeprecision 1ps;
         .eoc(eoc),
         .doneCom(doneCom),
         .dataOut(dataOut),
+        .logic (disData),
         .rD(rD),
         .ready(ready),
         .control(control),
