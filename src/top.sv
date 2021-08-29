@@ -24,7 +24,7 @@ module top import top_details::*;
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON,
 
-    inout logic GPIO[3:0]
+    inout logic [3:0]GPIO
 );
 
 localparam MASTER_COUNT = INT_MASTER_COUNT + 1; // internal masters + masterExternal
@@ -33,8 +33,8 @@ localparam int SLAVE_ADDR_WIDTHS[INT_SLAVE_COUNT] = '{$clog2(SLAVE_DEPTHS[0]), $
 
 localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or read all the slave address locations without loss
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
-localparam S_ID_WIDTH = $clog2(INT_SLAVE_COUNT+1);
-localparam M_ID_WIDTH = $clog2(INT_MASTER_COUNT);
+localparam S_ID_WIDTH = $clog2(SLAVE_COUNT+1);
+localparam M_ID_WIDTH = $clog2(MASTER_COUNT);
 
 
 logic rstN, clk, jump_stateN, jump_next_addr, start_ext_com;
@@ -82,8 +82,10 @@ logic M_eoc[0:MASTER_COUNT-1];
 logic M_eoc_next[0:MASTER_COUNT-1];
 logic ext_M_disData; // indicate by masterExternal module that new data to display
 
-logic M_doneCom[0:MASTER_COUNT-1];
-logic [DATA_WIDTH-1:0] M_dataOut[0:MASTER_COUNT-1];
+logic M_doneCom[0:INT_MASTER_COUNT-1];
+logic [DATA_WIDTH-1:0] M_dataOut[0:INT_MASTER_COUNT-1];
+logic [1:0]ext_M_doneCom;
+logic [UART_WIDTH-1:0] ext_M_dataOut;
 
 logic M_rD[0:MASTER_COUNT-1];         
 logic M_ready[0:MASTER_COUNT-1];
@@ -259,8 +261,8 @@ masterExternal #(
         .start(M_start[MASTER_COUNT-1]),    // to start the module and initiate write in the next state
         .eoc(M_eoc[MASTER_COUNT-1]),      // to notify the end of communication
 		  
-	    .doneCom(M_doneCom[MASTER_COUNT-1]),  // used to notify the top module the end of external communication
-        .dataOut(M_dataOut[MASTER_COUNT-1]),  // to send data to the top module to display
+	    .doneCom(ext_M_doneCom),  // used to notify the top module the end of external communication
+        .dataOut(ext_M_dataOut),  // to send data to the top module to display
         .disData(ext_M_disData),   // to notify the top module whether to display data or not 
 
         //    with slave     //
@@ -817,7 +819,7 @@ LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DAT
 
 ///////// HEX display control ////////
 
-top_seven_segment segment_0(.in(M_dataOut[MASTER_COUNT-1][3:0]), .show(ext_M_disData), .out(HEX0));
-top_seven_segment segment_1(.in(M_dataOut[MASTER_COUNT-1][7:4]), .show(ext_M_disData), .out(HEX1));
+top_seven_segment segment_0(.in(ext_M_dataOut[3:0]), .show(ext_M_disData), .out(HEX0));
+top_seven_segment segment_1(.in(ext_M_dataOut[7:4]), .show(ext_M_disData), .out(HEX1));
 
 endmodule : top

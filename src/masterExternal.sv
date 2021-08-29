@@ -1,8 +1,10 @@
 module masterExternal #(
     parameter DATA_WIDTH    = 8,        // datawidth of the sent data
-    parameter DATA_FROM_TOP = 8'd10,    // initial start data
+    parameter logic [DATA_WIDTH-1:0] DATA_FROM_TOP = 8'b00001010,    // initial start data
     parameter CLK_FREQ     = 5, // internal clock frequency
-    parameter CLOCK_DURATION = 1 // how long the data should be displayed in seconds
+    parameter CLOCK_DURATION = 1, // how long the data should be displayed in seconds
+    parameter NUM_OF_SLAVES = 4,
+    parameter SLAVEID = 3'b101
     // parameter SLAVES        = 4,
     // parameter SLAVE_WIDTH   = $clog2(SLAVES + 1)
 )( 
@@ -16,7 +18,7 @@ module masterExternal #(
         input   logic                             clk,      // clock
         input   logic                             rstN,     // reset
         input   logic                             start,    // to start the module and initiate write in the next state
-        input   logic                             eoc,      // to notify the end of communication
+        input   logic                             eoc,      // to notify the end of communication  
 		  
 	    output  logic [1:0]                       doneCom,  // used to notify the top module the end of external communication
         output  logic [DATA_WIDTH-1:0]            dataOut,  // to send data to the top module to display
@@ -48,8 +50,8 @@ module masterExternal #(
 
 
 
-localparam CONTROL_LEN = 7;
-localparam slaveId = 3'b101 ;
+localparam CONTROL_LEN = 4 + $clog2(NUM_OF_SLAVES);
+// localparam SLAVEID = 3'b101 ;
 localparam ACK = 8'b11001100;
 
 
@@ -64,13 +66,14 @@ logic [4:0]                 arbiterCounnter;
 logic [4:0]                 controlCounter;
 logic [5:0]                 arbiterRequest, tempArbiterRequest;
 
-logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
+logic [CONTROL_LEN:0]     tempControl,tempControl_2;
 logic [DATA_WIDTH*2-1:0]      tempReadWriteData;
 logic [DATA_WIDTH-1:0]      tempDataAck;
 logic [$clog2(2*DATA_WIDTH):0] i;
 logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]    clock_;
 // define states for the top module
 typedef enum logic [2:0]{
+    configMaster,
     idle,
     write_data,
     read_data,
@@ -119,15 +122,30 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         tempHold            <= 0;
         clock_              <= 0;
         clock_counter       <= 0;
+        disData             <= 0;
         arbiterCounnter     <= 0;
         splitOnot           <= 0;
-        state               <= idle;
+        state               <= configMaster;
         communicationState  <= idleCom;
-        // internalComState    <= checkState;
         
     end
     else begin : topStates
         case (state) 
+            //==========================//
+            //=======Config Master======// 
+            //==========================//
+            configMaster:
+                if (start)begin
+                    state                       <= idle;
+                    tempControl                 <= {3'b111, SLAVEID, 1'b1};
+                    tempControl_2               <= {3'b111, SLAVEID, 1'b1};
+                    arbiterRequest              <= {3'b111, SLAVEID};
+                    tempArbiterRequest          <= {3'b111, SLAVEID};
+                end
+                else begin
+                    state <= configMaster;
+                end
+            
             //==========================//
             //===========IDLE===========// 
             //==========================//
@@ -138,10 +156,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         assign the arbiter request
                     */
                     state                       <= displayData;
-                    tempControl                 <= {3'b111, slaveId, 1'b1};
-                    tempControl_2               <= {3'b111, slaveId, 1'b1};
-                    arbiterRequest              <= {3'b111, slaveId};
-                    tempArbiterRequest          <= {3'b111, slaveId};
+                    tempControl                 <= {3'b111, SLAVEID, 1'b1};
+                    tempControl_2               <= {3'b111, SLAVEID, 1'b1};
+                    arbiterRequest              <= {3'b111, SLAVEID};
+                    tempArbiterRequest          <= {3'b111, SLAVEID};
                     
                 end
                 else if (~start && eoc) begin
@@ -168,18 +186,19 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     clock_              <= 0;
                     tempHold            <= 0;
                     clock_counter       <= 0;
+                    disData             <= 0;
                     arbiterCounnter     <= 0;
                     splitOnot           <= 0;
                     state               <= read_data;
                     communicationState  <= idleCom;
-                    tempControl         <= {3'b111, slaveId, 1'b0};
-                    tempControl_2       <= {3'b111, slaveId, 1'b0};
-                    arbiterRequest      <= {3'b111, slaveId};
-                    tempArbiterRequest  <= {3'b111, slaveId};
+                    tempControl         <= {3'b111, SLAVEID, 1'b0};
+                    tempControl_2       <= {3'b111, SLAVEID, 1'b0};
+                    arbiterRequest      <= {3'b111, SLAVEID};
+                    tempArbiterRequest  <= {3'b111, SLAVEID};
                 end
 
             //==========================//
-            //=======IncrementData======// 
+            //=======Dsiplay Data======// 
             //==========================//    
             displayData:
                 begin
@@ -191,13 +210,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     end
                     else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
                         clock_       <= clock_ + 1'b1;
-                        dataOut      <= tempReadWriteData;
+                        dataOut      <= tempReadWriteData[DATA_WIDTH-1:0];
                         disData      <= 1;
                     end
                     else begin
                         clock_      <= 1'b0;
-                        dataOut     <= tempReadWriteData;
+                        dataOut     <= tempReadWriteData[DATA_WIDTH-1:0];
                         tempReadWriteData <= tempReadWriteData +1'b1;
+                        tempArbiterRequest  <= {3'b111, SLAVEID};
                         state       <= write_data;
                         disData     <= 0;
                     end
@@ -215,8 +235,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         case (communicationState) 
                             idleCom:
                                 if (~arbCont) begin
-                                    tempControl                 <= {3'b111, slaveId, 1'b1};
-                                    tempControl_2               <= {3'b111, slaveId, 1'b1};
+                                    tempControl                 <= {3'b111, SLAVEID, 1'b1};
+                                    tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                                     communicationState          <= reqCom;
                                     tempHold                    <= 0;
                                     arbiterCounnter             <= 0;
@@ -234,6 +254,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                                 else if (arbiterCounnter == 4'd6) begin
                                     arbiterCounnter     <= arbiterCounnter;
+                                    arbSend             <= 0;
                                     if (fromArbiter == 2'b11) begin: ClearNew
                                         arbSend             <= 1'b1;            // first ack
                                         tempControl         <= tempControl_2;
@@ -386,6 +407,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 end
                                 else if (clock_counter == 2'd2) begin
                                     communicationState <= idleCom;
+                                    state              <= read_data;
                                     control            <= 0;
                                 end
                             end
@@ -437,8 +459,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     controlCounter      <= 0;
                                     clock_counter       <= 0;
                                     arbiterRequest      <= tempArbiterRequest;
-                                    tempControl         <= {3'b111, slaveId, 1'b0};
-                                    tempControl_2       <= {3'b111, slaveId, 1'b0};
+                                    tempControl         <= {3'b111, SLAVEID, 1'b0};
+                                    tempControl_2       <= {3'b111, SLAVEID, 1'b0};
                                 end
 
                             reqCom:
@@ -734,7 +756,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     else if (start && ~eoc)begin
                         state              <= displayData;
                         communicationState <= idleCom;
-                        tempReadWriteData  <= DATA_FROM_TOP;
+                        tempReadWriteData[DATA_WIDTH-1 :0]  <= DATA_FROM_TOP;
                     end
                     else if (~start && eoc) begin
                         state              <= end_com;
@@ -754,7 +776,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             end_com: 
                 begin
                     doneCom         <= 1;
-                    dataOut         <= tempReadWriteData;    
+                    dataOut         <= tempReadWriteData[DATA_WIDTH-1:0];    
                 end   
         endcase
     end
