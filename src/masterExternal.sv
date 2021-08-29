@@ -71,6 +71,7 @@ logic [$clog2(2*DATA_WIDTH):0] i;
 logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]    clock_;
 // define states for the top module
 typedef enum logic [2:0]{
+    configMaster,
     idle,
     write_data,
     read_data,
@@ -121,13 +122,27 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         clock_counter       <= 0;
         arbiterCounnter     <= 0;
         splitOnot           <= 0;
-        state               <= idle;
+        state               <= configMaster;
         communicationState  <= idleCom;
-        // internalComState    <= checkState;
         
     end
     else begin : topStates
         case (state) 
+            //==========================//
+            //===========IDLE===========// 
+            //==========================//
+            configMaster:
+                if (start)begin
+                    state                       <= idle;
+                    tempControl                 <= {3'b111, slaveId, 1'b1};
+                    tempControl_2               <= {3'b111, slaveId, 1'b1};
+                    arbiterRequest              <= {3'b111, slaveId};
+                    tempArbiterRequest          <= {3'b111, slaveId};
+                end
+                else begin
+                    state <= configMaster;
+                end
+            
             //==========================//
             //===========IDLE===========// 
             //==========================//
@@ -179,7 +194,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 end
 
             //==========================//
-            //=======IncrementData======// 
+            //=======Dsiplay Data======// 
             //==========================//    
             displayData:
                 begin
@@ -386,6 +401,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 end
                                 else if (clock_counter == 2'd2) begin
                                     communicationState <= idleCom;
+                                    state              <= read_data;
                                     control            <= 0;
                                 end
                             end
