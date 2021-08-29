@@ -50,7 +50,7 @@ module masterExternal #(
 
 
 
-localparam CONTROL_LEN = 4 + $clog2(NUM_OF_SLAVES);
+localparam CONTROL_LEN = 4 + $clog2(NUM_OF_SLAVES+1);
 // localparam SLAVEID = 3'b101 ;
 localparam ACK = 8'b11001100;
 
@@ -521,14 +521,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             
                                 if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
 
-                                    if (controlCounter < CONTROL_LEN) begin
+                                    if (controlCounter < CONTROL_LEN+1) begin
                                         control             <= tempControl[6];
                                         tempControl         <= {tempControl[5:0] ,1'b0};
-                                        controlCounter      <= controlCounter + 5'd1;
+                                        controlCounter      <= controlCounter + 1'b1;
 
                                         
                                     end  
-                                    else if (controlCounter == CONTROL_LEN) begin
+                                    else if (controlCounter == CONTROL_LEN+1) begin
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
                                         

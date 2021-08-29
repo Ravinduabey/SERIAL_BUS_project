@@ -110,10 +110,5 @@ typedef enum logic [2:0] {
     config_done = 3'd4
 } config_sub_state_t;
 
-/////// external communication states //////////
-typedef enum logic {
-    idle = 1'b0,
-    ext_communicating = 1'b1
-}external_com_state_t;
 
 endpackage : top_details

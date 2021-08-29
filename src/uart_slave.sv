@@ -113,9 +113,9 @@ module uart_slave
     logic [DATA_WIDTH-1              :0] reTx_data;
     
     typedef enum logic [2:0] {
-        ABORT       = 3'b100,
+        ABORT       = 3'b110,
         CONTINUE    = 3'b101,
-        HOLD        = 3'b110,
+        HOLD        = 3'b100,
         START       = 3'b111
     } control_;
     
@@ -253,15 +253,20 @@ module uart_slave
                             state       <= IDLE;
                         end
                     end
-                    else if (config_counter < CON ) begin
+                    else if (config_counter < CON-1 ) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
-						end
+					end
+                    else if (config_counter == CON-1) begin
+                        config_counter   <= config_counter + 1'b1; 
+                        config_buffer    <= config_buffer << 1'b1;
+                        config_buffer[0] <= temp_control;
+
+                        ready <= 0;
+                    end
                     //if start and slave id sent by master is correct: 
-                    //process the rest of the control signal
-                    else if (config_counter == CON-1) ready <= 0;
-                    else if (config_counter == CON) begin
+                    //process the rest of the control signalelse if (config_counter == CON) begin
                         if  (config_buffer[S_ID_WIDTH:1] == SLAVEID) begin
                             state <= CONFIG_NEXT;
                         end

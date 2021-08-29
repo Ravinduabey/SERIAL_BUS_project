@@ -17,8 +17,8 @@ localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH);
 
 localparam UART_WIDTH = 8;
 localparam UART_BAUD_RATE = 19200;
-localparam EXT_COM_INIT_VAL = 0;
-localparam EXT_DISPLAY_DURATION = 5; // external communication value display duration
+localparam EXT_COM_INIT_VAL = 5;
+localparam EXT_DISPLAY_DURATION = 1; // external communication value display duration
 
 typedef enum logic[1:0]{
     no_slave = 2'b00,
@@ -62,7 +62,7 @@ logic CLOCK_50;
 logic [3:0]KEY;
 logic [17:0]SW;
 logic [17:0]LEDR;
-logic [3:0]LEDG;
+logic [6:0]LEDG;
 logic [6:0]HEX0, HEX1;
 logic [7:0]LCD_DATA;
 logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON;
@@ -167,11 +167,12 @@ initial begin
     @(posedge clk);
     get_data_from_masters();
 
-    // #(CLK_PERIOD*10);
-    // change_external_com(); // start ext_com
+    #(CLK_PERIOD*10);
+    change_external_com(); // start sending data ext_com
 
-    // #(CLK_PERIOD*100);
-    // change_external_com(); // finish ext_com
+    #(CLK_PERIOD*100);
+    change_external_com(); // finish ext_com
+    #(CLK_PERIOD*10);
 
     $stop;
 
