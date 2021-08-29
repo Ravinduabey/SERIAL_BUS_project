@@ -1,6 +1,6 @@
 module masterExternal #(
     parameter DATA_WIDTH    = 8,        // datawidth of the sent data
-    parameter DATA_FROM_TOP = 8'b00001010,    // initial start data
+    parameter logic [DATA_WIDTH-1:0] DATA_FROM_TOP = 8'b00001010,    // initial start data
     parameter CLK_FREQ     = 5, // internal clock frequency
     parameter CLOCK_DURATION = 1, // how long the data should be displayed in seconds
     parameter NUM_OF_SLAVES = 4,
