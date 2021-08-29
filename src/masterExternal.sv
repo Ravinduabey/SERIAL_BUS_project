@@ -122,6 +122,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         tempHold            <= 0;
         clock_              <= 0;
         clock_counter       <= 0;
+        disData             <= 0;
         arbiterCounnter     <= 0;
         splitOnot           <= 0;
         state               <= configMaster;
@@ -185,6 +186,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     clock_              <= 0;
                     tempHold            <= 0;
                     clock_counter       <= 0;
+                    disData             <= 0;
                     arbiterCounnter     <= 0;
                     splitOnot           <= 0;
                     state               <= read_data;
