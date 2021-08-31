@@ -74,8 +74,8 @@ logic [DATA_WIDTH-1:0] M_data[0:INT_MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_data_next[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address_next[0:INT_MASTER_COUNT-1];
-logic [$clog2(INT_SLAVE_COUNT)-1:0] M_slaveId[0:INT_MASTER_COUNT-1];
-logic [$clog2(INT_SLAVE_COUNT)-1:0] M_slaveId_next[0:INT_MASTER_COUNT-1];
+logic [$clog2(SLAVE_COUNT):0] M_slaveId[0:INT_MASTER_COUNT-1];
+logic [$clog2(SLAVE_COUNT):0] M_slaveId_next[0:INT_MASTER_COUNT-1];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 logic M_eoc[0:MASTER_COUNT-1];
@@ -136,7 +136,9 @@ genvar jj;
 generate
     for (jj=0;jj<INT_MASTER_COUNT; jj=jj+1) begin:MASTER
         master #(.MEMORY_DEPTH(MASTER_DEPTH), 
-        .DATA_WIDTH(DATA_WIDTH)) master(
+        .DATA_WIDTH(DATA_WIDTH),
+        .NO_SLAVES(SLAVE_COUNT)
+        ) master(
 
         //  with topModule   //
             .clk, .rstN, 
@@ -251,7 +253,7 @@ bus_interconnect #(
 masterExternal #(
     .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
     .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
-    .CLK_FREQ(50_000_000), // internal clock frequency
+    .CLK_FREQ(50), // internal clock frequency
     .CLOCK_DURATION(EXT_DISPLAY_DURATION), // how long the data should be displayed in seconds
     .NUM_OF_SLAVES(SLAVE_COUNT),
     .SLAVEID(3'b100)

@@ -180,9 +180,9 @@ initial begin
     UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
     #(CLK_PERIOD*100);
-    uart_transmitter(8'b10, g_rx); // send a new value 
+    UART_transmit(8'b10, g_rx); // send a new value 
 
-    uart_receive(g_tx); // read the acknowledgement for sent data
+    UART_receive(g_tx); // read the acknowledgement for sent data
 
     #(CLK_PERIOD*100);
     change_external_com(); // finish ext_com
@@ -362,20 +362,20 @@ endtask
 
 task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
     @(posedge clk);  //starting delimiter
-    rx <= 1'b0; 
+    rx = 1'b0; 
     #(BAUD_TIME_PERIOD);
     for (int i=0;i<UART_WIDTH;i++) begin //send from LSB to MSB
         @(posedge clk);
-        rx <= value[i];
+        rx = value[i];
         #(BAUD_TIME_PERIOD);
     end
     @(posedge clk);  // end delimiter
-    rx <= 1'b1;
+    rx = 1'b1;
     #(BAUD_TIME_PERIOD);
 
 endtask
 
-task automatic UART_receive(ref logic tx)
+task automatic UART_receive(ref logic tx);
     logic [UART_WIDTH-1:0]value;
     @(posedge clk);
     wait(~tx); // wait untill start of the start bit
@@ -387,6 +387,6 @@ task automatic UART_receive(ref logic tx)
         #(BAUD_TIME_PERIOD);
     end
     $display("%b /n", value);
-
+endtask
 
 endmodule : top_tb
