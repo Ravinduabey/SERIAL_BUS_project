@@ -74,8 +74,8 @@ logic [DATA_WIDTH-1:0] M_data[0:INT_MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_data_next[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address_next[0:INT_MASTER_COUNT-1];
-logic [$clog2(SLAVE_COUNT):0] M_slaveId[0:INT_MASTER_COUNT-1];
-logic [$clog2(SLAVE_COUNT):0] M_slaveId_next[0:INT_MASTER_COUNT-1];
+logic [S_ID_WIDTH-1:0] M_slaveId[0:INT_MASTER_COUNT-1];
+logic [S_ID_WIDTH-1:0] M_slaveId_next[0:INT_MASTER_COUNT-1];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 logic M_eoc[0:MASTER_COUNT-1];
@@ -588,7 +588,7 @@ always_comb begin
         master_slave_sel: begin
 
             for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1) begin 
-                M_slaveId_next[ii] = SW[2*ii+1 -:2];
+                M_slaveId_next[ii] = S_ID_WIDTH'(SW[2*ii+1 -:2]);
             end
 
             if ((SW[3:0] == '0) & (next_state == communication_done)) begin
