@@ -54,7 +54,7 @@ module master #(
 
 
 localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
-localparam CONTROL_LEN = 5 + ADDRESS_WIDTH + $clog2(NO_SLAVES+1);
+localparam CONTROL_LEN = 6 + ADDRESS_WIDTH + $clog2(NO_SLAVES+1);
 
 
 
@@ -70,7 +70,7 @@ logic [2:0]                 arbGrant;
 logic [4:0]                 arbiterCounnter;
 
 logic [4:0]                 controlCounter;
-logic [4:0]                 arbiterRequest, tempArbiterRequest;
+logic [(3+$clog2(NO_SLAVES+1)):0]                 arbiterRequest, tempArbiterRequest;
 
 logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
 
