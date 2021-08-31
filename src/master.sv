@@ -54,8 +54,8 @@ module master #(
 
 
 localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
-localparam CONTROL_LEN = 5 + ADDRESS_WIDTH + $clog2(NO_SLAVES);
-localparam ARBITER_REQUEST_LEN = 3+$clog2(NO_SLAVES);
+localparam CONTROL_LEN = 5 + ADDRESS_WIDTH + $clog2(NO_SLAVES+1);
+localparam ARBITER_REQUEST_LEN = 3+$clog2(NO_SLAVES+1);
 
 
 logic                       wr;
