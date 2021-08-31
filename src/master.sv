@@ -54,8 +54,8 @@ module master #(
 
 
 localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
-localparam CONTROL_LEN = 6 + ADDRESS_WIDTH + $clog2(NO_SLAVES+1);
-
+localparam CONTROL_LEN = 5 + ADDRESS_WIDTH + $clog2(NO_SLAVES+1);
+localparam ARBITER_REQUEST_LEN = 3+$clog2(NO_SLAVES+1);
 
 
 logic                       wr;
@@ -67,12 +67,12 @@ logic [1:0]                 clock_counter;
 
 logic [1:0]                 fromArbiter;
 logic [2:0]                 arbGrant;
-logic [4:0]                 arbiterCounnter;
+logic [$clog2(ARBITER_REQUEST_LEN):0]      arbiterCounnter;
 
 logic [4:0]                 controlCounter;
-logic [(3+$clog2(NO_SLAVES+1)):0]                 arbiterRequest, tempArbiterRequest;
+logic [ARBITER_REQUEST_LEN:0] arbiterRequest, tempArbiterRequest;
 
-logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
+logic [CONTROL_LEN:0]     tempControl,tempControl_2;
 
 logic [ADDRESS_WIDTH-1:0]   burstLen;
 logic [ADDRESS_WIDTH-1:0]   addressInternal, addresstemp;
@@ -310,12 +310,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
 
                         reqCom:
-                            if (arbiterCounnter < 4'd6) begin
-                                arbSend                 <= arbiterRequest[4];
-                                arbiterRequest          <= {arbiterRequest[3:0], 1'b0};
+                            if (arbiterCounnter < ARBITER_REQUEST_LEN) begin
+                                arbSend                 <= arbiterRequest[ARBITER_REQUEST_LEN-1];
+                                arbiterRequest          <= {arbiterRequest[ARBITER_REQUEST_LEN-2:0], 1'b0};
                                 arbiterCounnter         <= arbiterCounnter + 1'b1;
                             end
-                            else if (arbiterCounnter == 4'd6) begin
+                            else if (arbiterCounnter == ARBITER_REQUEST_LEN) begin
                                 arbiterCounnter     <= arbiterCounnter;
                                 if (fromArbiter == 2'b11) begin: ClearNew
                                     arbSend             <= 1'b1;            // first ack
@@ -334,20 +334,20 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                         
                         reqAck:
-                            if (arbiterCounnter < 4'd7) begin
+                            if (arbiterCounnter < ARBITER_REQUEST_LEN+1) begin
                                 arbSend             <= 1'b0;        // second ack
-                                arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                arbiterCounnter     <= arbiterCounnter + 1'b1;
                                 communicationState  <= reqAck;
                             end
-                            else if (arbiterCounnter < 4'd8) begin
+                            else if (arbiterCounnter <ARBITER_REQUEST_LEN+2) begin
                                 arbSend             <= 1'b1;        // 3rd ack
-                                arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                arbiterCounnter     <= arbiterCounnter + 1'b1;
                                 communicationState  <= reqAck;
                             end
-                            else if (arbiterCounnter < 4'd12) begin
-                                arbiterCounnter     <= arbiterCounnter + 3'd1;
+                            else if (arbiterCounnter < ARBITER_REQUEST_LEN+6) begin
+                                arbiterCounnter     <= arbiterCounnter + 1'b1;
                             end
-                            else if (arbiterCounnter == 4'd12) begin
+                            else if (arbiterCounnter == ARBITER_REQUEST_LEN+6) begin
                                 arbSend             <= 1'b1;
                                 arbiterCounnter     <= 3'd0;
                                 control             <= tempControl[18];
