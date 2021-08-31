@@ -112,57 +112,59 @@ initial begin
     @(posedge clk);
     rstN <= 1'b1;
 
-    // if ((slave_t'(masters_slave[0]) == no_slave) & (slave_t'(masters_slave[1]) == no_slave)) begin
+    
         
     #(CLK_PERIOD*10);
     @(posedge clk);
     master_slave_select(slave_t'(masters_slave[0]), slave_t'(masters_slave[1]));
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    master_read_write_select(operation_t'(master_RW[0]), operation_t'(master_RW[1]));
+    if (~((slave_t'(masters_slave[0]) == no_slave) & (slave_t'(masters_slave[1]) == no_slave))) begin
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    external_write_select(external_write[0], external_write[1]);
-
-    @(posedge clk);
-    if (external_write[0]==1'b1) begin
         #(CLK_PERIOD*10);
-        master_external_write(external_write_count[0]);
-    end
+        @(posedge clk);
+        master_read_write_select(operation_t'(master_RW[0]), operation_t'(master_RW[1]));
 
-    @(posedge clk);
-    if (external_write[1]==1'b1) begin
         #(CLK_PERIOD*10);
-        master_external_write(external_write_count[1]);
-    end
+        @(posedge clk);
+        external_write_select(external_write[0], external_write[1]);
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_start_address(slave_start_address[0]);
+        @(posedge clk);
+        if (external_write[0]==1'b1) begin
+            #(CLK_PERIOD*10);
+            master_external_write(external_write_count[0]);
+        end
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_start_address(slave_start_address[1]);
+        @(posedge clk);
+        if (external_write[1]==1'b1) begin
+            #(CLK_PERIOD*10);
+            master_external_write(external_write_count[1]);
+        end
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_end_address(slave_end_address[0]);
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_start_address(slave_start_address[0]);
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_end_address(slave_end_address[1]); 
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_start_address(slave_start_address[1]);
 
-    ///////// after the end of above state automatically goes to master configuration state //////////
-    
-    wait(communication_ready);  // wait untill configuration is done 
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_end_address(slave_end_address[0]);
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    start_communication();
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_end_address(slave_end_address[1]); 
 
-    // end 
+        ///////// after the end of above state automatically goes to master configuration state //////////
+        
+        wait(communication_ready);  // wait untill configuration is done 
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        start_communication();
+
+    end 
 
     wait(communication_done);
 
