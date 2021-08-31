@@ -17,7 +17,7 @@ module master #(
         input   logic                             inEx,     // internal or external
         input   logic [DATA_WIDTH-1:0]            data,
         input   logic [$clog2(MEMORY_DEPTH)-1:0]  address,
-        input   logic [$clog2(NO_SLAVES)-1:0]             slaveId,
+        input   logic [$clog2(NO_SLAVES+1)-1:0]     slaveId,
         input   logic                             start,
         input   logic                             eoc,
 		  
