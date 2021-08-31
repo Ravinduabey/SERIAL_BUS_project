@@ -135,7 +135,8 @@ logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_config_write_count, next_confi
 genvar jj;
 generate
     for (jj=0;jj<INT_MASTER_COUNT; jj=jj+1) begin:MASTER
-        master #(.MEMORY_DEPTH(MASTER_DEPTH), .DATA_WIDTH(DATA_WIDTH)) master(
+        master #(.MEMORY_DEPTH(MASTER_DEPTH), 
+        .DATA_WIDTH(DATA_WIDTH)) master(
 
         //  with topModule   //
             .clk, .rstN, 
