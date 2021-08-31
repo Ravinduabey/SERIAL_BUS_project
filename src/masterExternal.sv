@@ -389,6 +389,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             valid               <= 0;
                                             i                   <= 0;
                                             communicationState  <= over;
+                                            arbSend             <= 0;
                                         end
                                     end
                                 end
@@ -417,7 +418,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 begin
                                     valid           <= 0;
                                     if (clock_counter < 2'd1) begin
-                                        arbSend <= 0;
+                                        arbSend <= 1;
                                         control <= 1;
                                         clock_counter <= clock_counter + 1'b1;
                                     end
@@ -594,19 +595,23 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     if (controlCounter < CONTROL_LEN) begin
                                         control             <= tempControl[CONTROL_LEN-1];
                                         tempControl         <= {tempControl[CONTROL_LEN-2:0] ,1'b0};
-                                        controlCounter      <= controlCounter + 5'd1;                                    
+                                        controlCounter      <= controlCounter + 1'b1;                                    
                                     end  
                                     else if (controlCounter == CONTROL_LEN) begin
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
-                                        if (arbCont == 1 || fromArbiter == 2'b11) begin
+                                        if (!arbCont) begin
                                             if (i < 2*DATA_WIDTH && ready) begin
                                                 tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
                                                 i                            <= i + 1'b1;
                                             end
                                             else if (i == 2*DATA_WIDTH) begin
-                                                i <= 0;;
+                                                i <= 0;
                                                 communicationState <= masterDone;
+                                            end
+                                            else if (~ready) begin
+                                                communicationState <= masterDone;
+                                                i <= 0;
                                             end
                                         end
                                     end
@@ -614,35 +619,37 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                             masterDone: begin
                                 if (clock_counter < 2'd1 && splitOnot == 0) begin
-                                    arbSend            <= 1;
+                                    arbSend            <= 0;
                                     valid              <= 0;
                                     control            <= 0;
                                     clock_counter <= clock_counter + 1'b1;
                                 end
                                 else if (clock_counter < 2'd2 && splitOnot == 0 ) begin
-                                    arbSend <= 0;
+                                    arbSend <= 1;
                                     control <= 1;
                                     clock_counter <= clock_counter + 1'b1;
                                 end
                                 else if (clock_counter == 2'd2 && splitOnot == 0 ) begin
                                     communicationState <= idleCom;
                                     control            <= 0;
+                                    arbSend            <= 0;
                                 end
                                 
                                 else if (clock_counter < 2'd1 && splitOnot == 1) begin
-                                    arbSend            <= 1;
+                                    arbSend            <= 0;
                                     valid              <= 0;
                                     control            <= 1;
                                     clock_counter <= clock_counter + 1'b1;
                                 end
                                 else if (clock_counter < 2'd2 && splitOnot == 1 ) begin
-                                    arbSend <= 0;
+                                    arbSend <= 1;
                                     control <= 1;
                                     clock_counter <= clock_counter + 1'b1;
                                 end
                                 else if (clock_counter == 2'd2 && splitOnot == 1 ) begin
                                     communicationState <= idleCom;
                                     control            <= 0;
+                                    arbSend            <= 0;
                                 end
                             end
                             
@@ -729,13 +736,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         clock_counter <= clock_counter + 1'b1;
                                     end
                                     else if (clock_counter == 2'd3) begin
-                                        arbSend         <= 0;
+                                        arbSend         <= 1;
                                         communicationState <= checkAck;
                                     end
                                 end
                             
                             checkAck:
                                 begin
+                                    arbSend <= 0;
                                     if (tempReadWriteData[(DATA_WIDTH*2-1) -: DATA_WIDTH] == ACK) begin
                                         /* 
                                         acknowledgement received correctly

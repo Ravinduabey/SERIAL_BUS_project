@@ -17,7 +17,7 @@ module master #(
         input   logic                             inEx,     // internal or external
         input   logic [DATA_WIDTH-1:0]            data,
         input   logic [$clog2(MEMORY_DEPTH)-1:0]  address,
-        input   logic [NO_SLAVES-1:0]             slaveId,
+        input   logic [$clog2(NO_SLAVES+1)-1:0]     slaveId,
         input   logic                             start,
         input   logic                             eoc,
 		  
@@ -70,9 +70,9 @@ logic [2:0]                 arbGrant;
 logic [$clog2(ARBITER_REQUEST_LEN):0]      arbiterCounnter;
 
 logic [4:0]                 controlCounter;
-logic [ARBITER_REQUEST_LEN:0] arbiterRequest, tempArbiterRequest;
+logic [ARBITER_REQUEST_LEN-1:0] arbiterRequest, tempArbiterRequest;
 
-logic [CONTROL_LEN:0]     tempControl,tempControl_2;
+logic [CONTROL_LEN-1:0]     tempControl,tempControl_2;
 
 logic [ADDRESS_WIDTH-1:0]   burstLen;
 logic [ADDRESS_WIDTH-1:0]   addressInternal, addresstemp;
@@ -722,17 +722,18 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end    
                             else if (tempHold == 2'd1) begin
                                 arbSend <= 1;
+                                tempHold <=  tempHold + 1'b1;
                             end 
 
                             if (controlCounter < CONTROL_LEN) begin
                                 control             <= tempControl[18];
                                 tempControl         <= {tempControl[17:0] ,1'b0};
-                                controlCounter      <= controlCounter + 5'd1;     
+                                controlCounter      <= controlCounter + 1'b1;     
                             end 
 
                             else if (controlCounter == CONTROL_LEN) begin
                                 controlCounter      <= controlCounter;
-                                 control             <= 0;
+                                control             <= 0;
 
                                 if (burstLen == 0) begin: singleMode
                                     if (tempRdWr == 0) begin    // single read
@@ -866,7 +867,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                         masterDone: begin
                             if (clock_counter < 2'd1 && splitOnot == 0) begin
-                                arbSend            <= 1;
+                                arbSend            <= 0;
                                 wr                 <= 0;
                                 valid              <= 0;
                                 control            <= 0;
@@ -874,17 +875,18 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 clock_counter <= clock_counter + 1'b1;
                             end
                             else if (clock_counter < 2'd2 && splitOnot == 0 ) begin
-                                arbSend <= 0;
+                                arbSend <= 1;
                                 control <= 1;
                                 clock_counter <= clock_counter + 1'b1;
                             end
                             else if (clock_counter == 2'd2 && splitOnot == 0 ) begin
                                 communicationState <= idleCom;
                                 control            <= 0;
+                                arbSend            <= 0;
                             end
                             
                             else if (clock_counter < 2'd1 && splitOnot == 1) begin
-                                arbSend            <= 1;
+                                arbSend            <= 0;
                                 wr                 <= 0;
                                 valid              <= 0;
                                 control            <= 1;
@@ -892,13 +894,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 clock_counter <= clock_counter + 1'b1;
                             end
                             else if (clock_counter < 2'd2 && splitOnot == 1 ) begin
-                                arbSend <= 0;
+                                arbSend <= 1;
                                 control <= 1;
                                 clock_counter <= clock_counter + 1'b1;
                             end
                             else if (clock_counter == 2'd2 && splitOnot == 1 ) begin
                                 communicationState <= idleCom;
                                 control            <= 0;
+                                arbSend            <= 0;
                             end
                         end
                         
