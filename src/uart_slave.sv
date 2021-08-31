@@ -266,7 +266,8 @@ module uart_slave
                         ready <= 0;
                     end
                     //if start and slave id sent by master is correct: 
-                    //process the rest of the control signalelse if (config_counter == CON) begin
+                    //process the rest of the control signal
+                    else if (config_counter == CON) begin
                         if  (config_buffer[S_ID_WIDTH:1] == SLAVEID) begin
                             state <= CONFIG_NEXT;
                         end

@@ -1,7 +1,7 @@
 module master #(
     parameter MEMORY_DEPTH  = 4096,
     parameter DATA_WIDTH    = 8,
-    parameter NO_SLAVES     = 2
+    parameter NO_SLAVES     = 4
 )( 
 
 	    ///////////////////////
@@ -54,7 +54,7 @@ module master #(
 
 
 localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
-localparam CONTROL_LEN = 7 + ADDRESS_WIDTH;
+localparam CONTROL_LEN = 5 + ADDRESS_WIDTH + $clog2(NO_SLAVES+1);
 
 
 
@@ -368,9 +368,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
 
                                 if (controlCounter < CONTROL_LEN) begin
-                                    control             <= tempControl[18];
-                                    tempControl         <= {tempControl[17:0] ,1'b0};
-                                    controlCounter      <= controlCounter + 5'd1;
+                                    control             <= tempControl[CONTROL_LEN-1];
+                                    tempControl         <= {tempControl[CONTROL_LEN-2:0] ,1'b0};
+                                    controlCounter      <= controlCounter + 1'b1;
 
                                     
                                 end  
