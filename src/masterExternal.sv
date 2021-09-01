@@ -207,11 +207,17 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         clock_       <= clock_ + 1'b1;
                         doneCom      <= 2'b11;
                         disData      <= 1;
+                        arbSend      <= 0;
+                    end
+                    else if (clock_ == 1) begin
+                        clock_       <= clock_ + 1'b1;
+                        arbSend      <= 1;
                     end
                     else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
                         clock_       <= clock_ + 1'b1;
                         dataOut      <= tempReadWriteData[DATA_WIDTH-1:0];
                         disData      <= 1;
+                        arbSend      <= 0;
                     end
                     else begin
                         clock_      <= 1'b0;
@@ -418,7 +424,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 begin
                                     valid           <= 0;
                                     if (clock_counter < 2'd1) begin
-                                        arbSend <= 1;
+                                        arbSend <= 0;
                                         control <= 1;
                                         clock_counter <= clock_counter + 1'b1;
                                     end
@@ -736,7 +742,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         clock_counter <= clock_counter + 1'b1;
                                     end
                                     else if (clock_counter == 2'd3) begin
-                                        arbSend         <= 1;
+                                        arbSend         <= 0;
                                         communicationState <= checkAck;
                                     end
                                 end
