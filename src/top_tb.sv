@@ -16,7 +16,7 @@ localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or 
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
 
 localparam UART_WIDTH = 8;
-localparam UART_BAUD_RATE = 19200;
+localparam UART_BAUD_RATE = 115200;
 localparam EXT_COM_INIT_VAL = 5;
 localparam EXT_DISPLAY_DURATION = 1; // external communication value display duration
 
@@ -178,7 +178,7 @@ initial begin
 
     UART_receive(s_tx); // read data sent by the data_transmitter
 
-    #(CLK_PERIOD*10);
+    #(CLK_PERIOD*1000);
     UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
     #(CLK_PERIOD*100);

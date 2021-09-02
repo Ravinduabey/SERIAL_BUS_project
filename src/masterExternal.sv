@@ -52,7 +52,7 @@ module masterExternal #(
 
 localparam CONTROL_LEN = 4 + $clog2(NUM_OF_SLAVES+1);
 // localparam SLAVEID = 3'b101 ;
-localparam ACK = 8'b11001100;
+localparam ACK = 4'b1100;
 
 
 logic [1:0]                 tempHold;
@@ -67,9 +67,9 @@ logic [4:0]                 controlCounter;
 logic [5:0]                 arbiterRequest, tempArbiterRequest;
 
 logic [CONTROL_LEN:0]     tempControl,tempControl_2;
-logic [DATA_WIDTH*2-1:0]      tempReadWriteData;
-logic [DATA_WIDTH-1:0]      tempDataAck;
-logic [$clog2(2*DATA_WIDTH):0] i;
+logic [DATA_WIDTH+3:0]      tempReadWriteData;
+logic [3:0]      tempDataAck;
+logic [$clog2(DATA_WIDTH+3):0] i;
 logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]    clock_;
 // define states for the top module
 typedef enum logic [2:0]{
@@ -543,12 +543,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========================//
                                         //========= Read =========//
                                         //========================//
-                                        if (i < 2*DATA_WIDTH && ready) begin
+                                        if ((i < DATA_WIDTH+4) && ready) begin
                                             doneCom                   <= 2'b11;
-                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
+                                            tempReadWriteData[DATA_WIDTH+3-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == 2*DATA_WIDTH) begin
+                                        else if (i == DATA_WIDTH+4) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end
@@ -569,11 +569,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
 
-                                        if (i < 2*DATA_WIDTH && ready) begin
-                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
+                                        if ((i < DATA_WIDTH+4) && ready) begin
+                                            tempReadWriteData[DATA_WIDTH+3-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == 2*DATA_WIDTH) begin
+                                        else if (i == DATA_WIDTH+4) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end
@@ -607,11 +607,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
                                         if (!arbCont) begin
-                                            if (i < 2*DATA_WIDTH && ready) begin
-                                                tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
+                                            if ((i < DATA_WIDTH+4) && ready) begin
+                                                tempReadWriteData[DATA_WIDTH+3-i] <= rD;
                                                 i                            <= i + 1'b1;
                                             end
-                                            else if (i == 2*DATA_WIDTH) begin
+                                            else if (i == DATA_WIDTH+4) begin
                                                 i <= 0;
                                                 communicationState <= masterDone;
                                             end
@@ -691,11 +691,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========================//
                                         //========= Read =========//
                                         //========================//
-                                        if (i < 2*DATA_WIDTH && ready) begin
-                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
+                                        if ((i < DATA_WIDTH+4) && ready) begin
+                                            tempReadWriteData[DATA_WIDTH+3-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == 2*DATA_WIDTH) begin
+                                        else if (i == DATA_WIDTH+4) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end       
@@ -715,11 +715,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
 
-                                        if (i < 2*DATA_WIDTH && ready) begin
-                                            tempReadWriteData[2*DATA_WIDTH-1-i] <= rD;
+                                        if ((i < DATA_WIDTH+4) && ready) begin
+                                            tempReadWriteData[DATA_WIDTH+3-i] <= rD;
                                             i                            <= i + 1'b1;
                                         end
-                                        else if (i == 2*DATA_WIDTH) begin
+                                        else if (i == DATA_WIDTH+4) begin
                                             i <= 0;
                                             communicationState  <= over;
                                         end
@@ -750,7 +750,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             checkAck:
                                 begin
                                     arbSend <= 0;
-                                    if (tempReadWriteData[(DATA_WIDTH*2-1) -: DATA_WIDTH] == ACK) begin
+                                    if (tempReadWriteData[(DATA_WIDTH+3) -: 4] == ACK) begin
                                         /* 
                                         acknowledgement received correctly
                                         */
