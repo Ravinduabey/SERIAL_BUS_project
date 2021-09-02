@@ -38,15 +38,15 @@ typedef enum logic{
 } operation_t;
 
 //////// set the following parameters first before run the simulation ////////
-localparam logic [1:0] masters_slave[0:1] = '{slave_1, no_slave};
-localparam logic master_RW[0:1] = '{read,write};
+localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
+localparam logic master_RW[0:1] = '{read,read};
 localparam logic external_write[0:1] = '{1'b1, 1'b1};
 localparam int   external_write_count[0:1] = '{1,1};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{0,0};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_end_address[0:1] = '{1,1};
 localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr[0:9] = '{0,1,2,3,4,5,6,7,8,9}; // read the masters' memory after communication
 localparam FIRST_START_MASTER = master_0; // this master will start communication first
-localparam COM_START_DELAY = 0; //gap between 2 masters communication start signal
+localparam COM_START_DELAY = 100; //gap between 2 masters communication start signal
     
 
 logic clk;

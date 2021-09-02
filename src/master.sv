@@ -54,7 +54,7 @@ module master #(
 
 
 localparam ADDRESS_WIDTH = $clog2(MEMORY_DEPTH);
-localparam CONTROL_LEN = 7 + ADDRESS_WIDTH;
+localparam CONTROL_LEN = 5 +$clog2(NO_SLAVES+1) + ADDRESS_WIDTH;
 
 
 
