@@ -61,11 +61,11 @@ logic [1:0]                 clock_counter;
 logic [1:0]                 fromArbiter;
 logic [4:0]                 arbiterCounnter;
 logic [5:0]                 arbiterRequest, tempArbiterRequest;
-
 logic [CONTROL_LEN:0]     tempControl,tempControl_2;
 logic [DATA_WIDTH+3:0]      tempReadWriteData;
 logic [3:0]      tempDataAck;
 logic [$clog2(DATA_WIDTH+3):0] i;
+logic [$clog2(CONTROL_LEN)-1:0] controlCounter;
 logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]    clock_;
 // define states for the top module
 typedef enum logic [2:0]{
