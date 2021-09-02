@@ -16,7 +16,7 @@ localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or 
 localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH); 
 
 localparam UART_WIDTH = 8;
-localparam UART_BAUD_RATE = 19200;
+localparam UART_BAUD_RATE = 115200;
 localparam EXT_COM_INIT_VAL = 5;
 localparam EXT_DISPLAY_DURATION = 1; // external communication value display duration
 
@@ -38,7 +38,7 @@ typedef enum logic{
 } operation_t;
 
 //////// set the following parameters first before run the simulation ////////
-localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
+localparam logic [1:0] masters_slave[0:1] = '{no_slave, no_slave};
 localparam logic master_RW[0:1] = '{read,write};
 localparam logic external_write[0:1] = '{1'b1, 1'b1};
 localparam int   external_write_count[0:1] = '{1,1};
@@ -182,7 +182,7 @@ initial begin
     UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
     #(CLK_PERIOD*100);
-    UART_transmit(8'b10, g_rx); // send a new value 
+    UART_transmit(8'b101010, g_rx); // send a new value 
 
     UART_receive(g_tx); // read the acknowledgement for sent data
 
@@ -388,7 +388,7 @@ task automatic UART_receive(ref logic tx);
         value[i] = tx;
         #(BAUD_TIME_PERIOD);
     end
-    $display("%b /n", value);
+    $display("%b \n", value);
 endtask
 
 endmodule : top_tb
