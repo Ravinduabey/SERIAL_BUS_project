@@ -73,7 +73,7 @@ logic [ARBITER_REQUEST_LEN-1:0]         arbiterRequest, tempArbiterRequest; // b
 logic [ADDRESS_WIDTH-1:0]               addressInternal, addresstemp;    // bufers for internal bram address
 logic [ADDRESS_WIDTH-1:0]               addressInternalBurtstBegin, addressInternalBurtstEnd; // buffers to get the start and end address of the slave communication
 logic [$clog2(ARBITER_REQUEST_LEN):0]   arbiterCounnter;  // counter for arbiter request
-logic [$clog2(ADDRESS_WIDTH)-1:0]       burstLen;   // burst length for burst communication
+logic [ADDRESS_WIDTH:0]       burstLen;   // burst length for burst communication
 logic [DATA_WIDTH-1:0]                  dataInternal, internalDataOut, tempReadWriteData; /// bufers for internal bram adta
 
 
@@ -321,7 +321,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 arbiterCounnter         <= arbiterCounnter + 1'b1;
                             end
                             else if (arbiterCounnter == ARBITER_REQUEST_LEN) begin
-                                arbiterCounnter     <= arbiterCounnter+1;
+                                arbiterCounnter     <= arbiterCounnter+1'b1;
                                 arbSend             <= 0;
                             end
                             else if (arbiterCounnter == ARBITER_REQUEST_LEN+1) begin
