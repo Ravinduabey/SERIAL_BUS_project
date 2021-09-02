@@ -38,8 +38,8 @@ typedef enum logic{
 } operation_t;
 
 //////// set the following parameters first before run the simulation ////////
-localparam logic [1:0] masters_slave[0:1] = '{no_slave, no_slave};
-localparam logic master_RW[0:1] = '{read,write};
+localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
+localparam logic master_RW[0:1] = '{read,read};
 localparam logic external_write[0:1] = '{1'b1, 1'b1};
 localparam int   external_write_count[0:1] = '{1,1};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{0,0};
@@ -178,7 +178,7 @@ initial begin
 
     UART_receive(s_tx); // read data sent by the data_transmitter
 
-    #(CLK_PERIOD*10);
+    #(CLK_PERIOD*1000);
     UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
     #(CLK_PERIOD*100);
