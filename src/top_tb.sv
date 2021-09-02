@@ -46,7 +46,10 @@ localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{0,0};
 localparam logic [MASTER_ADDR_WIDTH-1:0] slave_end_address[0:1] = '{1,1};
 localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr[0:9] = '{0,1,2,3,4,5,6,7,8,9}; // read the masters' memory after communication
 localparam FIRST_START_MASTER = master_0; // this master will start communication first
-localparam COM_START_DELAY = 100; //gap between 2 masters communication start signal
+localparam COM_START_DELAY = 0; //gap between 2 masters communication start signal
+
+localparam BAUD_TIME_PERIOD = 10**9 / UART_BAUD_RATE;
+localparam [UART_WIDTH-1:0]UART_ACK = 8'b11001100;
     
 
 logic clk;
@@ -80,10 +83,10 @@ assign KEY[3] = start_ext_com;
 assign communication_ready = LEDG[1];
 assign communication_done  = LEDG[2];
 
-assign GPIO[0] = g_rx; // get data
-assign GPIO[2] = s_rx; // send data
-assign g_tx = GPIO[1]; // send ack
-assign s_tx = GPIO[3]; // get ack
+assign GPIO[0] = g_rx; // get get_data
+assign GPIO[2] = s_rx; // get send_ack
+assign g_tx = GPIO[1]; // send get_ack
+assign s_tx = GPIO[3]; // send send_data
 
 top #(.INT_SLAVE_COUNT(INT_SLAVE_COUNT), .INT_MASTER_COUNT(INT_MASTER_COUNT), .DATA_WIDTH(DATA_WIDTH), 
     .SLAVE_DEPTHS(SLAVE_DEPTHS), .SLAVE_DELAYS(SLAVE_DELAYS), .MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), 
@@ -109,57 +112,59 @@ initial begin
     @(posedge clk);
     rstN <= 1'b1;
 
-    // if ((slave_t'(masters_slave[0]) == no_slave) & (slave_t'(masters_slave[1]) == no_slave)) begin
+    
         
     #(CLK_PERIOD*10);
     @(posedge clk);
     master_slave_select(slave_t'(masters_slave[0]), slave_t'(masters_slave[1]));
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    master_read_write_select(operation_t'(master_RW[0]), operation_t'(master_RW[1]));
+    if (~((slave_t'(masters_slave[0]) == no_slave) & (slave_t'(masters_slave[1]) == no_slave))) begin
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    external_write_select(external_write[0], external_write[1]);
-
-    @(posedge clk);
-    if (external_write[0]==1'b1) begin
         #(CLK_PERIOD*10);
-        master_external_write(external_write_count[0]);
-    end
+        @(posedge clk);
+        master_read_write_select(operation_t'(master_RW[0]), operation_t'(master_RW[1]));
 
-    @(posedge clk);
-    if (external_write[1]==1'b1) begin
         #(CLK_PERIOD*10);
-        master_external_write(external_write_count[1]);
-    end
+        @(posedge clk);
+        external_write_select(external_write[0], external_write[1]);
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_start_address(slave_start_address[0]);
+        @(posedge clk);
+        if (external_write[0]==1'b1) begin
+            #(CLK_PERIOD*10);
+            master_external_write(external_write_count[0]);
+        end
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_start_address(slave_start_address[1]);
+        @(posedge clk);
+        if (external_write[1]==1'b1) begin
+            #(CLK_PERIOD*10);
+            master_external_write(external_write_count[1]);
+        end
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_end_address(slave_end_address[0]);
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_start_address(slave_start_address[0]);
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    set_slave_end_address(slave_end_address[1]); 
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_start_address(slave_start_address[1]);
 
-    ///////// after the end of above state automatically goes to master configuration state //////////
-    
-    wait(communication_ready);  // wait untill configuration is done 
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_end_address(slave_end_address[0]);
 
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    start_communication();
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_end_address(slave_end_address[1]); 
 
-    // end 
+        ///////// after the end of above state automatically goes to master configuration state //////////
+        
+        wait(communication_ready);  // wait untill configuration is done 
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        start_communication();
+
+    end 
 
     wait(communication_done);
 
@@ -167,17 +172,25 @@ initial begin
     @(posedge clk);
     get_data_from_masters();
 
+    ////// test external communication ///////////
     #(CLK_PERIOD*10);
     change_external_com(); // start sending data ext_com
+
+    UART_receive(s_tx); // read data sent by the data_transmitter
+
+    #(CLK_PERIOD*10);
+    UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
+
+    #(CLK_PERIOD*100);
+    UART_transmit(8'b10, g_rx); // send a new value 
+
+    UART_receive(g_tx); // read the acknowledgement for sent data
 
     #(CLK_PERIOD*100);
     change_external_com(); // finish ext_com
     #(CLK_PERIOD*10);
 
     $stop;
-
-
-
 end
 
 
@@ -347,6 +360,35 @@ task automatic change_external_com();
 
     #(CLK_PERIOD*10); // wait some time before next KEY press / SW change
 
+endtask
+
+task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
+    @(posedge clk);  //starting delimiter
+    rx = 1'b0; 
+    #(BAUD_TIME_PERIOD);
+    for (int i=0;i<UART_WIDTH;i++) begin //send from LSB to MSB
+        @(posedge clk);
+        rx = value[i];
+        #(BAUD_TIME_PERIOD);
+    end
+    @(posedge clk);  // end delimiter
+    rx = 1'b1;
+    #(BAUD_TIME_PERIOD);
+
+endtask
+
+task automatic UART_receive(ref logic tx);
+    logic [UART_WIDTH-1:0]value;
+    @(posedge clk);
+    wait(~tx); // wait untill start of the start bit
+    #(BAUD_TIME_PERIOD/2) // wait till the middle of the bit occur
+    #(BAUD_TIME_PERIOD); // wait till the middle of 1st data bit occur
+    for (int i=0;i<UART_WIDTH;i++) begin //receive from LSB to MSB
+        @(posedge clk);
+        value[i] = tx;
+        #(BAUD_TIME_PERIOD);
+    end
+    $display("%b /n", value);
 endtask
 
 endmodule : top_tb

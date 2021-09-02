@@ -74,8 +74,8 @@ logic [DATA_WIDTH-1:0] M_data[0:INT_MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_data_next[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address_next[0:INT_MASTER_COUNT-1];
-logic [$clog2(INT_SLAVE_COUNT)-1:0] M_slaveId[0:INT_MASTER_COUNT-1];
-logic [$clog2(INT_SLAVE_COUNT)-1:0] M_slaveId_next[0:INT_MASTER_COUNT-1];
+logic [$clog2(SLAVE_COUNT):0] M_slaveId[0:INT_MASTER_COUNT-1];
+logic [$clog2(SLAVE_COUNT):0] M_slaveId_next[0:INT_MASTER_COUNT-1];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 logic M_eoc[0:MASTER_COUNT-1];
@@ -135,7 +135,10 @@ logic [$clog2(MAX_MASTER_WRITE_DEPTH)-1:0]current_config_write_count, next_confi
 genvar jj;
 generate
     for (jj=0;jj<INT_MASTER_COUNT; jj=jj+1) begin:MASTER
-        master #(.MEMORY_DEPTH(MASTER_DEPTH), .DATA_WIDTH(DATA_WIDTH)) master(
+        master #(.MEMORY_DEPTH(MASTER_DEPTH), 
+        .DATA_WIDTH(DATA_WIDTH),
+        .NO_SLAVES(SLAVE_COUNT)
+        ) master(
 
         //  with topModule   //
             .clk, .rstN, 
@@ -589,7 +592,10 @@ always_comb begin
             end
 
             if ((SW[3:0] == '0) & (next_state == communication_done)) begin
-                M_eoc_next = '{default:1'b1};  // say masters to directly jump to last state without communication;
+                for (integer ii=0; ii<INT_MASTER_COUNT;ii=ii+1) begin
+                    M_eoc_next[ii] = 1'b1; // say internal masters to directly jump to last state without communication;
+                end
+                M_start_next[MASTER_COUNT-1] = 1'b1; // start external master without starting other masters
             end
         end   
 
@@ -771,13 +777,16 @@ always_comb begin
         end  
 
         communication_done: begin
+
+            M_start_next = '{default:'0};
+            M_eoc_next = '{default: '0};
+
             for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1) begin
                 M_address_next[ii] = SW[MASTER_ADDR_WIDTH-1:0];
             end
 
             /// set external communication state ///
-            M_start_next = '{default:'0};
-            M_eoc_next = '{default: '0};
+            
             if (!start_ext_com) begin
                 if (ext_M_doneCom == 2'b00) begin // no one has started yet
                     M_start_next[MASTER_COUNT-1] = 1'b1; // set start signal for 1 clk cycle to begin                
