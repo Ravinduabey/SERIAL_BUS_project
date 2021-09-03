@@ -113,12 +113,12 @@ module uart_slave
     
     //master ack/nak buffer
     logic [3:0] masterAck_buffer;
-    logic check=0;
+    // logic check=0;
     logic reconfigured=0;
     //ack for uart
     logic [DATA_WIDTH-1              :0] sAck_buffer;
     logic [$clog2(ACK_TIMEOUT)-1     :0] ack_counter;
-    logic [$clog2(RETRANSMIT_TIMES)-1:0] reTx_counter;
+    logic [$clog2(RETRANSMIT_TIMES+1)-1:0] reTx_counter;
     logic [DATA_WIDTH-1              :0] reTx_data;
     
     typedef enum logic [2:0] {
@@ -285,6 +285,7 @@ module uart_slave
                     end                                              
                 end                
                 CONFIG_NEXT : begin
+                    s_txStart <= 0;
                     //reconfigure if master sends control HIGH
                     if (control) begin
                         config_counter      <= 1; 
@@ -369,9 +370,9 @@ module uart_slave
                         else if (rD_counter == DATA_WIDTH+3 && ready) begin
                             rD_counter      <= 0;
                             ready           <= 0;
-                            if (valid) begin
-                                state        <= IDLE;
-                            end
+                            // if (valid) begin
+                            state           <= IDLE;
+                            // end
                         end
                     end
                 end 
@@ -434,7 +435,7 @@ module uart_slave
                     //wait for ACK 
                     //retransmit after timeout 
                     else begin
-                        if (reTx_counter < RETRANSMIT_TIMES) begin
+                        if (reTx_counter < RETRANSMIT_TIMES-1) begin
                             if (ack_counter < ACK_TIMEOUT) begin
                                 s_txStart           <= 0;
                                 ack_counter         <= ack_counter + 1'b1;
@@ -448,11 +449,15 @@ module uart_slave
                                 end
                             end
                         end
-                        else state     <= CHECK_ACK;
+                        else begin
+                            state           <= CHECK_ACK;
+                        end
                     end                    
                 end
                 CHECK_ACK : begin
                     ready <= 0;
+                    ack_counter <= 0;
+                    reTx_counter <= 0;
                     if (control) begin
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
@@ -472,6 +477,7 @@ module uart_slave
                         masterAck_buffer    <= NAK[7:4];
                     end
                     if (config_counter != 0) begin
+                        config_counter  <= 0;
                         reconfigured    <= 1;
                         state           <= CONFIG_NEXT;
                     end
