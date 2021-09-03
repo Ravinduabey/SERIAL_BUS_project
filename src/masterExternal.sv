@@ -103,21 +103,22 @@ logic communicationDone;
 
 always_ff @( posedge clk or negedge rstN) begin : topModule
     if (~rstN) begin
-        fromArbiter         <= 0;
-        tempReadWriteData   <= 0;
-        i                   <= 0;
-        control             <= 0;
-        valid               <= 0;
-        doneCom             <= 0;
-        controlCounter      <= 0;
-        tempHold            <= 0;
-        clock_              <= 0;
-        clock_counter       <= 0;
-        disData             <= 0;
-        arbiterCounnter     <= 0;
-        splitOnot           <= 0;
-        state               <= configMaster;
-        communicationState  <= idleCom;
+        fromArbiter                       <= 0;
+        tempReadWriteData                 <= 0;
+        i                                 <= 0;
+        control                           <= 0;
+        valid                             <= 0;
+        doneCom                           <= 0;
+        controlCounter                    <= 0;
+        tempHold                          <= 0;
+        clock_                            <= 0;
+        clock_counter                     <= 0;
+        disData                           <= 0;
+        arbiterCounnter                   <= 0;
+        splitOnot                         <= 0;
+        state                             <= configMaster;
+        communicationState                <= idleCom;
+        tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
         
     end
     else begin : topStates
@@ -132,6 +133,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                     arbiterRequest              <= {3'b111, SLAVEID};
                     tempArbiterRequest          <= {3'b111, SLAVEID};
+                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
                 end
                 else begin
                     state <= configMaster;
@@ -151,6 +153,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                     arbiterRequest              <= {3'b111, SLAVEID};
                     tempArbiterRequest          <= {3'b111, SLAVEID};
+                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
                     
                 end
                 else if (~start && eoc) begin
@@ -186,6 +189,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2       <= {3'b111, SLAVEID, 1'b0};
                     arbiterRequest      <= {3'b111, SLAVEID};
                     tempArbiterRequest  <= {3'b111, SLAVEID};
+                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
                 end
 
             //==========================//
