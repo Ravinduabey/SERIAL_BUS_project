@@ -4,7 +4,9 @@ module uart_slave_system
     parameter SLAVES = 3,
     parameter DATA_WIDTH = 8,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
-    parameter SLAVEID = 1
+    parameter SLAVEID = 1,
+    parameter ACK_TIMEOUT = 10000,
+    parameter RETRANSMIT_TIMES = 3
 )(
     // with Master (through interconnect)
     output logic rD,                  //serial read_data
@@ -49,9 +51,11 @@ module uart_slave_system
 
 
 uart_slave #(
-    .SLAVES(4),
-    .DATA_WIDTH(8),
-    .SLAVEID(4)               
+    .SLAVES(SLAVES),
+    .DATA_WIDTH(DATA_WIDTH),
+    .SLAVEID(SLAVEID) ,
+    .ACK_TIMEOUT(ACK_TIMEOUT),
+    .RETRANSMIT_TIMES(RETRANSMIT_TIMES)              
 ) uart_slave (
     .rD(rD),
     .ready(ready),
