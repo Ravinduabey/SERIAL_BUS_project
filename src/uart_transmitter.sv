@@ -25,7 +25,7 @@ logic [COUNTER_WIDTH-1:0] currentCount, nextCount;
 logic [3:0] currentTick, nextTick;
 
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk or negedge rstN) begin
     if (~rstN) begin
         currentTick <= 4'b0;
         currentCount <= '0;
