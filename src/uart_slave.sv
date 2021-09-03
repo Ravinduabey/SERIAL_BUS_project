@@ -4,8 +4,8 @@ module uart_slave
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
     parameter SLAVEID = 1,
-    parameter ACK_TIMEOUT = 1000000,
-    parameter RETRANSMIT_TIMES = 5
+    parameter ACK_TIMEOUT = 10000,
+    parameter RETRANSMIT_TIMES = 3
 )(
 
     // with Master (through interconnect)
@@ -104,12 +104,12 @@ module uart_slave
     
     //master ack/nak buffer
     logic [3:0] masterAck_buffer;
-    logic check=0;
+    // logic check=0;
     logic reconfigured=0;
     //ack for uart
     logic [DATA_WIDTH-1              :0] sAck_buffer;
     logic [$clog2(ACK_TIMEOUT)-1     :0] ack_counter;
-    logic [$clog2(RETRANSMIT_TIMES)-1:0] reTx_counter;
+    logic [$clog2(RETRANSMIT_TIMES+1)-1:0] reTx_counter;
     logic [DATA_WIDTH-1              :0] reTx_data;
     
     typedef enum logic [2:0] {
@@ -180,7 +180,7 @@ module uart_slave
             wD_buffer       <= 0;
             rD_temp         <= 0;
             ready           <= 1;
-            state           <= IDLE;
+            state           <= INIT;
         end
         else begin
             case (state)
@@ -276,6 +276,7 @@ module uart_slave
                     end                                              
                 end                
                 CONFIG_NEXT : begin
+                    s_txStart <= 0;
                     //reconfigure if master sends control HIGH
                     if (control) begin
                         config_counter      <= 1; 
@@ -360,9 +361,9 @@ module uart_slave
                         else if (rD_counter == DATA_WIDTH+3 && ready) begin
                             rD_counter      <= 0;
                             ready           <= 0;
-                            if (valid) begin
-                                state        <= IDLE;
-                            end
+                            // if (valid) begin
+                            state           <= IDLE;
+                            // end
                         end
                     end
                 end 
@@ -425,7 +426,7 @@ module uart_slave
                     //wait for ACK 
                     //retransmit after timeout 
                     else begin
-                        if (reTx_counter < RETRANSMIT_TIMES) begin
+                        if (reTx_counter < RETRANSMIT_TIMES-1) begin
                             if (ack_counter < ACK_TIMEOUT) begin
                                 s_txStart           <= 0;
                                 ack_counter         <= ack_counter + 1'b1;
@@ -439,7 +440,11 @@ module uart_slave
                                 end
                             end
                         end
-                        else state     <= CHECK_ACK;
+                        else begin
+                            state           <= CHECK_ACK;
+                            ack_counter     <= 0;
+                            reTx_counter    <= 0;
+                        end
                     end                    
                 end
                 CHECK_ACK : begin
@@ -463,6 +468,7 @@ module uart_slave
                         masterAck_buffer    <= NAK[7:4];
                     end
                     if (config_counter != 0) begin
+                        config_counter  <= 0;
                         reconfigured    <= 1;
                         state           <= CONFIG_NEXT;
                     end
