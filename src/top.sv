@@ -11,7 +11,7 @@ module top import top_details::*;
     parameter COM_START_DELAY = 0, //gap between 2 masters communication start signal
     parameter UART_WIDTH = 8,
     parameter UART_BAUD_RATE = 19200,
-    parameter EXT_COM_INIT_VAL = 255,
+    parameter EXT_COM_INIT_VAL = 5,
     parameter EXT_DISPLAY_DURATION = 5 // external communication value display duration
 )
 (
@@ -253,7 +253,7 @@ bus_interconnect #(
 masterExternal #(
     .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
     .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
-    .CLK_FREQ(50), // internal clock frequency
+    .CLK_FREQ(50_000_000), // internal clock frequency
     .CLOCK_DURATION(EXT_DISPLAY_DURATION), // how long the data should be displayed in seconds
     .NUM_OF_SLAVES(SLAVE_COUNT),
     .SLAVEID(3'b100)
@@ -286,6 +286,15 @@ masterExternal #(
 );
 
 /////// external communication master /////////
+logic [7:0]  rD_buffer_out;          
+// logic [3:0]  rD_counter_out;            
+logic [7:0]  wD_buffer_out;             
+logic [3:0]  wD_counter_out;
+logic [6:0] config_buffer_out;
+logic [3:0] state_out;
+logic [7:0] g_byteForTx;
+logic [7:0] s_byteForTx;
+
 
 uart_slave_system #(
     .BAUD_RATE(UART_BAUD_RATE),
@@ -304,6 +313,15 @@ uart_slave_system #(
     //with Top Module
     .clk,
     .rstN, 
+
+    .rD_buffer_out,
+    // .rD_counter_out,
+    .wD_buffer_out,
+    .wD_counter_out,
+    .config_buffer_out,
+    .state_out,
+    .g_byteForTx,
+    .s_byteForTx,
 
     //get
     .g_rx(GPIO[0]),
@@ -804,7 +822,7 @@ assign LEDG[0] = (current_state == master_slave_sel)? 1'b1:1'b0; // to indicate 
 assign LEDG[1] = (current_state == communication_ready)? 1'b1:1'b0; // to indicate master configuration done. Now communication can be started.
 assign LEDG[3] = (current_state == communicating)? 1'b1:1'b0; // master slave communicating
 assign LEDG[2] = (current_state == communication_done)? 1'b1:1'b0; // master slave communication is over
-assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
+// assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
 
 
 
@@ -822,5 +840,10 @@ top_seven_segment segment_1(.in(ext_M_dataOut[7:4]), .show(ext_M_disData), .out(
 
 assign LEDG[4] = ext_M_disData;
 assign LEDG[6:5] = ext_M_doneCom;
+
+assign LEDR[5:0]= wD_buffer_out;
+assign LEDR[13:6]= s_byteForTx;
+assign LEDR[17:14] = state_out;
+
 
 endmodule : top

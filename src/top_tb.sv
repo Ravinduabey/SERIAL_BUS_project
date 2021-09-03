@@ -182,9 +182,9 @@ initial begin
     UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
     #(CLK_PERIOD*100);
-    UART_transmit(8'b101010, g_rx); // send a new value 
+    UART_transmit_by_ext_FPGA(8'b101010, g_rx); // send a new value 
 
-    UART_receive(g_tx); // read the acknowledgement for sent data
+    UART_receive_by_ext_FPGA(g_tx); // read the acknowledgement for sent data
 
     #(CLK_PERIOD*100);
     change_external_com(); // finish ext_com
@@ -362,7 +362,7 @@ task automatic change_external_com();
 
 endtask
 
-task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
+task automatic UART_transmit_by_ext_FPGA(logic [UART_WIDTH-1:0]value, ref logic rx);
     @(posedge clk);  //starting delimiter
     rx = 1'b0; 
     #(BAUD_TIME_PERIOD);
@@ -377,7 +377,7 @@ task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
 
 endtask
 
-task automatic UART_receive(ref logic tx);
+task automatic UART_receive_by_ext_FPGA(ref logic tx);
     logic [UART_WIDTH-1:0]value;
     @(posedge clk);
     wait(~tx); // wait untill start of the start bit
