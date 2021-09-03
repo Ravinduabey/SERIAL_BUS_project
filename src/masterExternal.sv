@@ -51,7 +51,7 @@ module masterExternal #(
 
 
 localparam CONTROL_LEN = 4 + $clog2(NUM_OF_SLAVES+1);
-// localparam SLAVEID = 3'b101 ;
+localparam ARBITER_REQUEST_LEN = 3+$clog2(NUM_OF_SLAVES+1); // get the length of the arbiter request
 localparam ACK = 4'b1100;
 
 
@@ -59,14 +59,15 @@ logic                       splitOnot;
 logic [1:0]                 tempHold;
 logic [1:0]                 clock_counter;
 logic [1:0]                 fromArbiter;
-logic [4:0]                 arbiterCounnter;
-logic [5:0]                 arbiterRequest, tempArbiterRequest;
-logic [CONTROL_LEN:0]     tempControl,tempControl_2;
-logic [DATA_WIDTH+3:0]      tempReadWriteData;
-logic [3:0]      tempDataAck;
-logic [$clog2(DATA_WIDTH+3):0] i;
-logic [$clog2(CONTROL_LEN)-1:0] controlCounter;
-logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]    clock_;
+logic [CONTROL_LEN:0]       tempControl,tempControl_2;
+logic [DATA_WIDTH+3:0]      tempReadWriteData = 0;
+logic [3:0]                 tempDataAck;
+logic [$clog2(DATA_WIDTH+3):0]                  i;
+logic [$clog2(CONTROL_LEN)-1:0]                 controlCounter;
+logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]     clock_;
+logic [ARBITER_REQUEST_LEN-1:0]                 arbiterRequest, tempArbiterRequest;
+logic [$clog2(ARBITER_REQUEST_LEN):0]           arbiterCounnter;
+
 // define states for the top module
 typedef enum logic [2:0]{
     configMaster,
@@ -104,7 +105,6 @@ logic communicationDone;
 always_ff @( posedge clk or negedge rstN) begin : topModule
     if (~rstN) begin
         fromArbiter                       <= 0;
-        tempReadWriteData                 <= 0;
         i                                 <= 0;
         control                           <= 0;
         valid                             <= 0;
@@ -171,7 +171,6 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         from another board 
                     */
                     fromArbiter         <= 0;
-                    tempReadWriteData   <= 0;
                     i                   <= 0;
                     control             <= 0;
                     valid               <= 0;
@@ -250,13 +249,21 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 end
 
                             reqCom:
-                                if (arbiterCounnter < 4'd6) begin
+                            /*  
+                                send the request to arbiter to inform that the 
+                                master requires to communicate with a slave
+                            */
+                                if (arbiterCounnter < ARBITER_REQUEST_LEN) begin
                                     arbSend                 <= arbiterRequest[5];
                                     arbiterRequest          <= {arbiterRequest[4:0], 1'b0};
                                     arbiterCounnter         <= arbiterCounnter + 1'b1;
                                 end
+                                 else if (arbiterCounnter == ARBITER_REQUEST_LEN) begin
+                                    arbiterCounnter     <= arbiterCounnter+1'b1;
+                                    arbSend             <= 0;
+                                end
 
-                                else if (arbiterCounnter == 4'd6) begin
+                                else if (arbiterCounnter == ARBITER_REQUEST_LEN+1) begin
                                     arbiterCounnter     <= arbiterCounnter;
                                     arbSend             <= 0;
                                     if (fromArbiter == 2'b11) begin: ClearNew
@@ -271,20 +278,24 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 end
                             
                             reqAck:
-                                if (arbiterCounnter < 4'd7) begin
+                            /* 
+                                Send the ackownledgement for the clear signal for the
+                                clear signal sent by the arbiter
+                            */
+                                if (arbiterCounnter < ARBITER_REQUEST_LEN+2) begin
                                     arbSend             <= 1'b0;        // second ack
-                                    arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                    arbiterCounnter     <= arbiterCounnter + 1'b1;
                                     communicationState  <= reqAck;
                                 end
-                                else if (arbiterCounnter < 4'd8) begin
+                                else if (arbiterCounnter < ARBITER_REQUEST_LEN+3) begin
                                     arbSend             <= 1'b1;        // 3rd ack
-                                    arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                    arbiterCounnter     <= arbiterCounnter + 1'b1;
                                     communicationState  <= reqAck;
                                 end
-                                else if (arbiterCounnter < 4'd12) begin
-                                    arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                else if (arbiterCounnter < ARBITER_REQUEST_LEN+7) begin
+                                    arbiterCounnter     <= arbiterCounnter + 1'b1;
                                 end
-                                else if (arbiterCounnter == 4'd12) begin
+                                else if (arbiterCounnter == ARBITER_REQUEST_LEN+7) begin
                                     arbSend             <= 1'b1;
                                     arbiterCounnter     <= 3'd0;
                                     control             <= tempControl[6];
@@ -482,13 +493,17 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             /*  
                                 Request the arbiter for communication
                             */
-                                if (arbiterCounnter < 4'd7) begin
+                                if (arbiterCounnter < ARBITER_REQUEST_LEN) begin
                                     arbSend                 <= arbiterRequest[5];
                                     arbiterRequest          <= {arbiterRequest[4:0], 1'b0};
                                     arbiterCounnter         <= arbiterCounnter + 1'b1;
                                 end
-                                else if (arbiterCounnter == 4'd7) begin
-                                    arbiterCounnter     <= arbiterCounnter;
+                                else if (arbiterCounnter == ARBITER_REQUEST_LEN) begin
+                                    arbiterCounnter         <= arbiterCounnter+1'b1;
+                                    arbSend                 <= 0;
+                                end
+                                else if (arbiterCounnter == ARBITER_REQUEST_LEN+1) begin
+                                    arbiterCounnter         <= arbiterCounnter;
                                     /*  
                                         Wait till arbiter sends a clear signal 
                                         to start communication
@@ -514,20 +529,20 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 Send the ackownledgement to the arbiter for 
                                 the clear signal
                             */
-                                if (arbiterCounnter < 4'd8) begin
+                                if (arbiterCounnter < ARBITER_REQUEST_LEN+2) begin
                                     arbSend             <= 1'b0;        // second ack
-                                    arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                    arbiterCounnter     <= arbiterCounnter + 1'b1;
                                     communicationState  <= reqAck;
                                 end
-                                else if (arbiterCounnter < 4'd9) begin
+                                else if (arbiterCounnter < ARBITER_REQUEST_LEN+3) begin
                                     arbSend             <= 1'b1;        // 3rd ack
-                                    arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                    arbiterCounnter     <= arbiterCounnter + 1'b1;
                                     communicationState  <= reqAck;
                                 end
-                                else if (arbiterCounnter < 4'd13) begin
-                                    arbiterCounnter     <= arbiterCounnter + 3'd1;
+                                else if (arbiterCounnter < ARBITER_REQUEST_LEN+7) begin
+                                    arbiterCounnter     <= arbiterCounnter + 1'b1;
                                 end
-                                else if (arbiterCounnter == 4'd13) begin
+                                else if (arbiterCounnter == ARBITER_REQUEST_LEN+7) begin
                                     arbSend             <= 1'b1;
                                     arbiterCounnter     <= 3'd0;
                                     control             <= tempControl[CONTROL_LEN-1];
