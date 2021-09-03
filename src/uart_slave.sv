@@ -442,13 +442,13 @@ module uart_slave
                         end
                         else begin
                             state           <= CHECK_ACK;
-                            ack_counter     <= 0;
-                            reTx_counter    <= 0;
                         end
                     end                    
                 end
                 CHECK_ACK : begin
                     ready <= 0;
+                    ack_counter <= 0;
+                    reTx_counter <= 0;
                     if (control) begin
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;

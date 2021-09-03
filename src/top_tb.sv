@@ -187,12 +187,12 @@ initial begin
 
     UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
-    // #(CLK_PERIOD*100);
-    // UART_transmit(8'b10, g_rx); // send a new value 
-
-    // UART_receive(g_tx); // read the acknowledgement for sent data
-
     #(CLK_PERIOD*10000);
+    UART_transmit(8'b10, g_rx); // send a new value 
+
+    UART_receive(g_tx); // read the acknowledgement for sent data
+
+    #(CLK_PERIOD*1000);
     change_external_com(); // finish ext_com
     #(CLK_PERIOD*500);
 
