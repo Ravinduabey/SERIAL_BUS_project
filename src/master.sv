@@ -455,6 +455,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 i <= 0;
                                                 wr <=0;
                                                 communicationState <= over;
+                                                clock_counter       <= 1'b0;
                                             end
 
 
@@ -507,6 +508,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 last                <= 0;
                                                 wr <= 0;
                                                 communicationState <= over;
+                                                clock_counter       <= 1'b0;
                                             end
                                     
                                     singleWrite:
@@ -522,6 +524,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 i                   <= 0;
                                                 communicationState  <= over;
                                                 last                <= 0;
+                                                clock_counter       <= 1'b0;
                                             end
 
                                     
@@ -562,6 +565,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         else begin
                                             valid               <= 0;
                                             communicationState  <= over;
+                                            clock_counter       <= 1'b0;
                                             last                <= 0;
                                         end
                                     endcase 
@@ -605,6 +609,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     i <= 0;
                                                     wr <=0;
                                                     communicationState <= over;
+                                                    clock_counter       <= 1'b0;
                                                 end
                                             end
                                         end
@@ -621,6 +626,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 i                   <= 0;
                                                 communicationState  <= over;
                                                 last                <= 0;
+                                                clock_counter       <= 1'b0;
                                             end
                                         end
                                     end
@@ -667,6 +673,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     valid               <= 0;
                                                     burstLen            <= burstLen - 1'b1;  
                                                     communicationState  <= over; 
+                                                    clock_counter       <= 1'b0;
                                                 end
                                                 else if (~ready) begin
                                                     wr <= 0;
@@ -708,6 +715,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     valid                       <= 1;
                                                     last                        <= 1;
                                                     communicationState          <= over;
+                                                    clock_counter       <= 1'b0;
                                                 end
                                             end
                                         end: burstWriteMode
@@ -763,6 +771,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             i <= 0;
                                             wr <=0;
                                             communicationState <= over;
+                                            clock_counter       <= 1'b0;
                                         end
                                     end
                                     else begin
@@ -777,6 +786,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             i                   <= 0;
                                             communicationState  <= over;
                                             last                <= 0;
+                                            clock_counter       <= 1'b0;
                                         end
                                     end
                                 end
@@ -866,6 +876,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 tempReadWriteData                <= internalDataOut;
                                                 valid                       <= 0;
                                                 last                        <= 0;
+                                                clock_counter               <= 1'b0;
                                                 communicationState          <= over;
                                             end
                                         end
@@ -961,6 +972,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             else if (i > DATA_WIDTH) begin
                                                 i <= 0;
                                                 wr <=0;
+                                                clock_counter       <= 1'b0;
                                                 communicationState <= over;
                                             end
                                         end
@@ -1013,6 +1025,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         else begin
                                             last                <= 0;
                                             wr <= 0;
+                                            clock_counter       <= 1'b0;
                                             communicationState <= over;
                                         end
                                     end
@@ -1041,6 +1054,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                             else if (i > DATA_WIDTH) begin
                                                 i <= 0;
                                                 wr <=0;
+                                                clock_counter       <= 1'b0;
                                                 communicationState <= over;
                                             end
                                         end
@@ -1103,6 +1117,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 last                <= 1;
                                                 valid               <= 0;
                                                 burstLen            <= burstLen - 1'b1;  
+                                                clock_counter       <= 1'b0; 
                                                 communicationState  <= over; 
                                             end
                                             else if (~ready) begin
@@ -1145,6 +1160,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 valid                       <= 1;
                                                 last                        <= 1;
                                                 communicationState          <= over;
+                                                clock_counter               <= 1'b0; 
                                             end
                                         end
                                     end
