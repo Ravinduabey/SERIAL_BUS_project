@@ -49,7 +49,7 @@ module uart_slave
     input logic s_rxStart,
     input logic s_rxDone,
     input logic [DATA_WIDTH-1:0] s_byteFromRx,
-    input logic s_rxReady
+    input logic s_rxReady,
 
     //with uart transmitter_send
     output  logic s_txStart,
