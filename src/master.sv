@@ -358,9 +358,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                             else if (arbiterCounnter == ARBITER_REQUEST_LEN+7) begin
                                 arbSend             <= 1'b1;
-                                arbiterCounnter     <= 3'd0;
-                                control             <= tempControl[18];
-                                tempControl         <= {tempControl[17:0] ,1'b0};
+                                arbiterCounnter     <= 0;
+                                control             <= tempControl[CONTROL_LEN-1];
+                                tempControl         <= {tempControl[CONTROL_LEN-2:0] ,1'b0};
                                 controlCounter      <= controlCounter + 1'b1;
                                 if (splitOnot == 1)begin
                                     communicationState <= splitComContinue;
@@ -376,8 +376,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
 
                                 if (controlCounter < CONTROL_LEN) begin
-                                    control             <= tempControl[CONTROL_LEN-1];
+                                    control             <= tempControl[CONTROL_LEN-1]; 
                                     tempControl         <= {tempControl[CONTROL_LEN-2:0] ,1'b0};
+                                    // tempControl         <= tempControl << 1;
                                     controlCounter      <= controlCounter + 1'b1;
 
                                     
