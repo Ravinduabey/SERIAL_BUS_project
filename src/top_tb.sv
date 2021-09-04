@@ -185,16 +185,122 @@ initial begin
     // @(posedge clk);
     // rstN <= 1'b1;
 
-    UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
+    // UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
     #(CLK_PERIOD*10000);
-    UART_transmit(8'b10, g_rx); // send a new value 
+    // UART_transmit(8'b10, g_rx); // send a new value 
 
-    UART_receive(g_tx); // read the acknowledgement for sent data
+    // UART_receive(g_tx); // read the acknowledgement for sent data
 
     #(CLK_PERIOD*1000);
     change_external_com(); // finish ext_com
     #(CLK_PERIOD*500);
+
+    @(posedge clk);
+    rstN <= 1'b0;
+
+    @(posedge clk);
+    rstN <= 1'b1;
+    @(posedge clk);
+    jump_next_addr = 1'b1;  // initially at pulled up (high) state
+    jump_stateN = 1'b1;
+    rstN = 1'b1;
+    start_ext_com = 1'b1;
+
+    SW[17:0] = '0; // all switches are off at the beginning.
+
+    s_rx = 1'b1; // keep the UART receive wires at high
+    g_rx = 1'b1;
+
+    @(posedge clk);
+    rstN <= 1'b0;
+
+    @(posedge clk);
+    rstN <= 1'b1;
+
+    
+        
+    #(CLK_PERIOD*10);
+    @(posedge clk);
+    master_slave_select(slave_t'(masters_slave[0]), slave_t'(masters_slave[1]));
+
+    if (~((slave_t'(masters_slave[0]) == no_slave) & (slave_t'(masters_slave[1]) == no_slave))) begin
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        master_read_write_select(operation_t'(master_RW[0]), operation_t'(master_RW[1]));
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        external_write_select(external_write[0], external_write[1]);
+
+        @(posedge clk);
+        if (external_write[0]==1'b1) begin
+            #(CLK_PERIOD*10);
+            master_external_write(external_write_count[0]);
+        end
+
+        @(posedge clk);
+        if (external_write[1]==1'b1) begin
+            #(CLK_PERIOD*10);
+            master_external_write(external_write_count[1]);
+        end
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_start_address(slave_start_address[0]);
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_start_address(slave_start_address[1]);
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_end_address(slave_end_address[0]);
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        set_slave_end_address(slave_end_address[1]); 
+
+        ///////// after the end of above state automatically goes to master configuration state //////////
+        
+        wait(communication_ready);  // wait untill configuration is done 
+
+        #(CLK_PERIOD*10);
+        @(posedge clk);
+        start_communication();
+
+    end 
+
+    wait(communication_done);
+
+    #(CLK_PERIOD*50);
+
+    // #(CLK_PERIOD*100);
+    // change_external_com(); // start sending data ext_com
+
+    change_external_com(); // start sending data ext_com
+
+    UART_receive(s_tx); // read data sent by the data_transmitter
+
+    #(CLK_PERIOD*5000);
+    // @(posedge clk);
+    // rstN <= 1'b0;
+
+    // @(posedge clk);
+    // rstN <= 1'b1;
+
+    // UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
+
+    #(CLK_PERIOD*100000);
+    // UART_transmit(8'b10, g_rx); // send a new value 
+
+    // UART_receive(g_tx); // read the acknowledgement for sent data
+
+    #(CLK_PERIOD*1000);
+    change_external_com(); // finish ext_com
+    #(CLK_PERIOD*500);
+
 
     $stop;
 end
