@@ -115,7 +115,7 @@ module uart_slave
     logic [3:0] masterAck_buffer;
 
     //ack for uart
-    logic [DATA_WIDTH-1              :0] sAck_buffer;
+    logic [DATA_WIDTH-1              :0] sAck_buffer = 0;
     logic [$clog2(ACK_TIMEOUT)-1     :0] ack_counter;
     logic [$clog2(RETRANSMIT_TIMES+1)-1:0] reTx_counter;
 
@@ -235,6 +235,7 @@ module uart_slave
                     wD_counter      <= 0;
                     //start to receive new configuration
                     if (control == 1'b1) begin
+                        prev_state      <= IDLE;
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer[0] <= temp_control;                        
                         state            <= RECONFIG;                   

@@ -53,6 +53,7 @@ module masterExternal #(
 localparam CONTROL_LEN = 4 + $clog2(NUM_OF_SLAVES+1);
 localparam ARBITER_REQUEST_LEN = 3+$clog2(NUM_OF_SLAVES+1); // get the length of the arbiter request
 localparam ACK = 4'b1100;
+localparam NAK = 4'b1010;
 
 
 logic                       splitOnot;
@@ -208,6 +209,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         arbSend      <= 1;
                     end
                     else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
+                    // else if (clock_ < 10000*CLOCK_DURATION)begin
                         /*
                         Dispay data for n seconds defined by "CLOCK_DURARION" 
                         */
@@ -802,18 +804,18 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             */
                                 begin
                                     arbSend <= 0;
-                                    if (tempReadWriteData[(DATA_WIDTH+3) -: 4] == ACK) begin
+                                    if (tempReadWriteData[(DATA_WIDTH+3) -: 4] == NAK) begin
                                         /* 
                                         acknowledgement received correctly
                                         */
-                                        state              <= displayData;
-                                        communicationState <= idleCom;
-                                        doneCom            <= 2'b11;
-                                    end
-                                    else begin
                                         state              <= end_com;
                                         communicationState <= idleCom;
                                         doneCom            <= 2'b01;
+                                    end
+                                    else begin
+                                        state              <= displayData;
+                                        communicationState <= idleCom;
+                                        doneCom            <= 2'b11;
                                         end
                                 end
 

@@ -105,17 +105,17 @@ module slave #(
     // initial begin
     // if (MEM_INIT_FILE != "") $readmemh(MEM_INIT_FILE, ram);
     // end
-    initial begin
-        if (SLAVEID == 2'd1) 
-        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
-		//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
-        else if (SLAVEID == 2'd2) 
-        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
-		//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
-        else if (SLAVEID == 2'd3) 
-        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
-		//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
-    end
+    // initial begin
+    //     if (SLAVEID == 2'd1) 
+    //     $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+	// 	//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+    //     else if (SLAVEID == 2'd2) 
+    //     $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+	// 	//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+    //     else if (SLAVEID == 2'd3) 
+    //     $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+	// 	//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+    // end
     // initial begin
     //     if (SLAVEID == 2'd1) 
     //     $readmemh("s_slave-mem-1.txt",ram);
@@ -477,12 +477,12 @@ module slave #(
             // else if (SLAVEID == 2'd3) 
 			// 	$writememh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
 
-            if (SLAVEID == 2'd1) 
-				$writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
-            else if (SLAVEID == 2'd2) 
-				$writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
-            else if (SLAVEID == 2'd3) 
-				$writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+            // if (SLAVEID == 2'd1) 
+			// 	$writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+            // else if (SLAVEID == 2'd2) 
+			// 	$writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+            // else if (SLAVEID == 2'd3) 
+			// 	$writememh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
 
             //     if (SLAVEID == 2'd1) 
             //     $writememh("s_slave-mem-1.txt",ram);
