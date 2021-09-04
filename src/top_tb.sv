@@ -185,17 +185,17 @@ initial begin
     // @(posedge clk);
     // rstN <= 1'b1;
 
-    // UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
+    UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
-    #(CLK_PERIOD*10000);
-    // UART_transmit(8'b10, g_rx); // send a new value 
+    #(CLK_PERIOD*100);
+    UART_transmit(8'b10, g_rx); // send a new value 
 
-    // UART_receive(g_tx); // read the acknowledgement for sent data
+    UART_receive(g_tx); // read the acknowledgement for sent data
 
     #(CLK_PERIOD*1000);
     change_external_com(); // finish ext_com
     #(CLK_PERIOD*500);
-
+    /*
     @(posedge clk);
     rstN <= 1'b0;
 
@@ -272,7 +272,7 @@ initial begin
 
     end 
 
-    wait(communication_done);
+    wait(communication_done); 
 
     #(CLK_PERIOD*50);
 
@@ -300,7 +300,7 @@ initial begin
     #(CLK_PERIOD*1000);
     change_external_com(); // finish ext_com
     #(CLK_PERIOD*500);
-
+*/
 
     $stop;
 end

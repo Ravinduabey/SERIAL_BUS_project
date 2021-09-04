@@ -329,6 +329,7 @@ module uart_slave
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
+                        sto_status          <= stored;                        
                         prev_state          <= SEND_ACK;
                         state               <= RECONFIG;
                     end
@@ -346,6 +347,7 @@ module uart_slave
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
+                        sto_status          <= stored;                        
                         prev_state          <= READ;
                         state               <= RECONFIG;
                     end
@@ -372,9 +374,12 @@ module uart_slave
                         else if (rD_counter == DATA_WIDTH+3 && ready) begin
                             rD_counter      <= 0;
                             ready           <= 0;
-                            // if (valid) begin
-                            state           <= IDLE;
-                            // end
+                            if (config_counter != 0) begin
+                                config_counter  <= 0;
+                                sto_status      <= exec;
+                                state           <= CONFIG_NEXT;
+                            end
+                            else state          <= IDLE;                            
                         end
                     end
                 end 
@@ -385,6 +390,7 @@ module uart_slave
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
+                        sto_status          <= stored;                        
                         prev_state          <= WRITE;
                         state               <= RECONFIG;
                     end
@@ -465,8 +471,8 @@ module uart_slave
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
-                        prev_state          <= CHECK_ACK;
                         sto_status          <= stored;
+                        prev_state          <= CHECK_ACK;
                         state               <= RECONFIG;
                     end  
                     //if send_rx has sent an acknowledgement 
