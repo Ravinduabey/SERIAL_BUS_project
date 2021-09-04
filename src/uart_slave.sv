@@ -22,6 +22,8 @@ module uart_slave
     input logic rstN,
 
     //debug
+    output logic received_ack,
+
     // output logic [DATA_WIDTH-1   :0]  rD_buffer_out,          
     // // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
     // output logic [DATA_WIDTH-1   :0]  wD_buffer_out,             
@@ -47,7 +49,7 @@ module uart_slave
     input logic s_rxStart,
     input logic s_rxDone,
     input logic [DATA_WIDTH-1:0] s_byteFromRx,
-    input logic s_rxReady,
+    input logic s_rxReady
 
     //with uart transmitter_send
     output  logic s_txStart,
@@ -205,6 +207,7 @@ module uart_slave
             case (state)
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
+                    received_ack        <= 0;
                     s_txStart           <= 0;
                     g_txStart           <= 0;
                     ack_counter         <= 0;
@@ -489,6 +492,7 @@ module uart_slave
                     //send 4-bit ACK to master 
                     //during next READ                 
                     if (sAck_buffer == ACK) begin
+                        received_ack        <= 1;
                         masterAck_buffer    <= ACK[7:4];
                     end
                     //if communication failed

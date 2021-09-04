@@ -312,6 +312,9 @@ uart_slave_system #(
     .g_rx(GPIO[0]),
     .g_tx(GPIO[1]),
 
+    //debug
+    .received_ack(received_ack),
+
     //send
     .s_rx(GPIO[2]),
     .s_tx(GPIO[3])
