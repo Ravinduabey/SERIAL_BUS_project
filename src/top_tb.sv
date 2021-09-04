@@ -17,6 +17,7 @@ localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH);
 
 localparam UART_WIDTH = 8;
 localparam UART_BAUD_RATE = 115200*2;
+localparam UART_RETRANSMIT_COUNT = 5;
 localparam EXT_COM_INIT_VAL = 5;
 localparam EXT_DISPLAY_DURATION = 1; // external communication value display duration
 
@@ -92,7 +93,7 @@ top #(.INT_SLAVE_COUNT(INT_SLAVE_COUNT), .INT_MASTER_COUNT(INT_MASTER_COUNT), .D
     .SLAVE_DEPTHS(SLAVE_DEPTHS), .SLAVE_DELAYS(SLAVE_DELAYS), .MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), 
     .FIRST_START_MASTER(FIRST_START_MASTER), .COM_START_DELAY(COM_START_DELAY),
     .UART_WIDTH(UART_WIDTH), .UART_BAUD_RATE(UART_BAUD_RATE), .EXT_COM_INIT_VAL(EXT_COM_INIT_VAL), 
-    .EXT_DISPLAY_DURATION(EXT_DISPLAY_DURATION) ) dut (.*);
+    .EXT_DISPLAY_DURATION(EXT_DISPLAY_DURATION), .UART_RETRANSMIT_COUNT(UART_RETRANSMIT_COUNT) ) dut (.*);
     
 initial begin
     @(posedge clk);
@@ -173,134 +174,27 @@ initial begin
     get_data_from_masters();
 
     ////// test external communication ///////////
-    #(CLK_PERIOD*10);
-    change_external_com(); // start sending data ext_com
-
-    UART_receive(s_tx); // read data sent by the data_transmitter
-
-    #(CLK_PERIOD*5000);
-    // @(posedge clk);
-    // rstN <= 1'b0;
-
-    // @(posedge clk);
-    // rstN <= 1'b1;
-
-    // UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
-
-    #(CLK_PERIOD*10000);
-    // UART_transmit(8'b10, g_rx); // send a new value 
-
-    // UART_receive(g_tx); // read the acknowledgement for sent data
-
-    #(CLK_PERIOD*1000);
-    change_external_com(); // finish ext_com
-    #(CLK_PERIOD*500);
-
-    @(posedge clk);
-    rstN <= 1'b0;
-
-    @(posedge clk);
-    rstN <= 1'b1;
-    @(posedge clk);
-    jump_next_addr = 1'b1;  // initially at pulled up (high) state
-    jump_stateN = 1'b1;
-    rstN = 1'b1;
-    start_ext_com = 1'b1;
-
-    SW[17:0] = '0; // all switches are off at the beginning.
-
-    s_rx = 1'b1; // keep the UART receive wires at high
-    g_rx = 1'b1;
-
-    @(posedge clk);
-    rstN <= 1'b0;
-
-    @(posedge clk);
-    rstN <= 1'b1;
-
-    
-        
-    #(CLK_PERIOD*10);
-    @(posedge clk);
-    master_slave_select(slave_t'(masters_slave[0]), slave_t'(masters_slave[1]));
-
-    if (~((slave_t'(masters_slave[0]) == no_slave) & (slave_t'(masters_slave[1]) == no_slave))) begin
-
-        #(CLK_PERIOD*10);
-        @(posedge clk);
-        master_read_write_select(operation_t'(master_RW[0]), operation_t'(master_RW[1]));
-
-        #(CLK_PERIOD*10);
-        @(posedge clk);
-        external_write_select(external_write[0], external_write[1]);
-
-        @(posedge clk);
-        if (external_write[0]==1'b1) begin
-            #(CLK_PERIOD*10);
-            master_external_write(external_write_count[0]);
-        end
-
-        @(posedge clk);
-        if (external_write[1]==1'b1) begin
-            #(CLK_PERIOD*10);
-            master_external_write(external_write_count[1]);
-        end
-
-        #(CLK_PERIOD*10);
-        @(posedge clk);
-        set_slave_start_address(slave_start_address[0]);
-
-        #(CLK_PERIOD*10);
-        @(posedge clk);
-        set_slave_start_address(slave_start_address[1]);
-
-        #(CLK_PERIOD*10);
-        @(posedge clk);
-        set_slave_end_address(slave_end_address[0]);
-
-        #(CLK_PERIOD*10);
-        @(posedge clk);
-        set_slave_end_address(slave_end_address[1]); 
-
-        ///////// after the end of above state automatically goes to master configuration state //////////
-        
-        wait(communication_ready);  // wait untill configuration is done 
-
-        #(CLK_PERIOD*10);
-        @(posedge clk);
-        start_communication();
-
-    end 
-
-    wait(communication_done);
-
-    #(CLK_PERIOD*50);
-
-    // #(CLK_PERIOD*100);
+    // #(CLK_PERIOD*10);
     // change_external_com(); // start sending data ext_com
 
-    change_external_com(); // start sending data ext_com
+    // UART_receive_by_ext_FPGA(s_tx); // read data sent by the data_transmitter
 
-    UART_receive(s_tx); // read data sent by the data_transmitter
+    // #(CLK_PERIOD*5000);
+    // UART_transmit_by_ext_FPGA(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
-    #(CLK_PERIOD*5000);
-    // @(posedge clk);
-    // rstN <= 1'b0;
+    #(CLK_PERIOD*100);
+    UART_transmit_by_ext_FPGA(8'b101010, g_rx); // send a new value 
 
-    // @(posedge clk);
-    // rstN <= 1'b1;
+    UART_receive_by_ext_FPGA(g_tx); // read the acknowledgement for sent data
 
-    // UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
+    UART_receive_by_ext_FPGA(s_tx);  // get the next (incremented) value
 
-    #(CLK_PERIOD*100000);
-    // UART_transmit(8'b10, g_rx); // send a new value 
-
-    // UART_receive(g_tx); // read the acknowledgement for sent data
+    #(CLK_PERIOD*100);
+    UART_transmit_by_ext_FPGA(UART_ACK, s_rx); // send the ack
 
     #(CLK_PERIOD*1000);
     change_external_com(); // finish ext_com
     #(CLK_PERIOD*500);
-
 
     $stop;
 end
@@ -309,8 +203,8 @@ end
 
 task automatic master_slave_select(slave_t M1_slave, M2_slave); 
     @(posedge clk);
-    SW[1:0] = logic'(M1_slave); // set the switches
-    SW[3:2] = logic'(M2_slave);
+    SW[1:0] = (M1_slave); // set the switches
+    SW[3:2] = (M2_slave);
 
     @(posedge clk);
     #(CLK_PERIOD*10);
@@ -474,7 +368,7 @@ task automatic change_external_com();
 
 endtask
 
-task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
+task automatic UART_transmit_by_ext_FPGA(logic [UART_WIDTH-1:0]value, ref logic rx);
     @(posedge clk);  //starting delimiter
     rx = 1'b0; 
     #(BAUD_TIME_PERIOD);
@@ -489,7 +383,7 @@ task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
 
 endtask
 
-task automatic UART_receive(ref logic tx);
+task automatic UART_receive_by_ext_FPGA(ref logic tx);
     logic [UART_WIDTH-1:0]value;
     @(posedge clk);
     wait(~tx); // wait untill start of the start bit
@@ -500,7 +394,7 @@ task automatic UART_receive(ref logic tx);
         value[i] = tx;
         #(BAUD_TIME_PERIOD);
     end
-    $display("%b /n", value);
+    $display("%b \n", value);
 endtask
 
 endmodule : top_tb
