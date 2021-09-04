@@ -113,13 +113,22 @@ module uart_slave
     
     //master ack/nak buffer
     logic [3:0] masterAck_buffer;
-    // logic check=0;
-    logic reconfigured=0;
+
     //ack for uart
     logic [DATA_WIDTH-1              :0] sAck_buffer;
     logic [$clog2(ACK_TIMEOUT)-1     :0] ack_counter;
     logic [$clog2(RETRANSMIT_TIMES+1)-1:0] reTx_counter;
-    logic [DATA_WIDTH-1              :0] reTx_data;
+
+    //when control is not received: none
+    //when control has been recived & stored: stored
+    //after stored control is executed: exec
+    typedef enum logic [1:0] { 
+        none,
+        stored,
+        exec
+    } stored_;
+
+    stored_ sto_status = none;
     
     typedef enum logic [2:0] {
         ABORT       = 3'b110,
@@ -189,6 +198,7 @@ module uart_slave
             wD_buffer       <= 0;
             rD_temp         <= 0;
             ready           <= 1;
+            sto_status      <= none;
             state           <= INIT;
         end
         else begin
@@ -208,11 +218,12 @@ module uart_slave
                     rD_buffer           <= 0;
                     wD_buffer           <= 0;
                     config_buffer       <= 0;
+                    sto_status          <= none;
                     state               <= IDLE;
                 end
                 IDLE : begin
                     //set counters and txStart outputs to 0
-                    reconfigured    <= 0;
+                    sto_status      <= none;
                     com_status      <= comm;
                     s_txStart       <= 0;
                     g_txStart       <= 0;
@@ -295,7 +306,7 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     //READ 
-                    if ((prev_state == GET_ACK || prev_state == CHECK_ACK) && !reconfigured) begin
+                    if ((prev_state == GET_ACK || prev_state == CHECK_ACK) && sto_status==stored) begin
                         state <= prev_state;
                         com_status <= comm;
                     end
@@ -424,6 +435,7 @@ module uart_slave
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
                         prev_state          <= GET_ACK;
+                        sto_status          <= stored;
                         state               <= RECONFIG;
                     end
                     //if ACK is received
@@ -435,7 +447,7 @@ module uart_slave
                     //wait for ACK 
                     //retransmit after timeout 
                     else begin
-                        if (reTx_counter < RETRANSMIT_TIMES-1) begin
+                        if (reTx_counter < RETRANSMIT_TIMES) begin
                             if (ack_counter < ACK_TIMEOUT) begin
                                 s_txStart           <= 0;
                                 ack_counter         <= ack_counter + 1'b1;
@@ -463,6 +475,7 @@ module uart_slave
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
                         prev_state          <= CHECK_ACK;
+                        sto_status          <= stored;
                         state               <= RECONFIG;
                     end  
                     //if send_rx has sent an acknowledgement 
@@ -478,7 +491,7 @@ module uart_slave
                     end
                     if (config_counter != 0) begin
                         config_counter  <= 0;
-                        reconfigured    <= 1;
+                        sto_status      <= exec;
                         state           <= CONFIG_NEXT;
                     end
                     else state          <= IDLE;
