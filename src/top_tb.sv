@@ -173,24 +173,23 @@ initial begin
     get_data_from_masters();
 
     ////// test external communication ///////////
-    #(CLK_PERIOD*10);
-    change_external_com(); // start sending data ext_com
+    // #(CLK_PERIOD*10);
+    // change_external_com(); // start sending data ext_com
 
-    UART_receive(s_tx); // read data sent by the data_transmitter
+    // UART_receive_by_ext_FPGA(s_tx); // read data sent by the data_transmitter
 
-    #(CLK_PERIOD*5000);
-    // @(posedge clk);
-    // rstN <= 1'b0;
-
-    // @(posedge clk);
-    // rstN <= 1'b1;
-
-    UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
+    // #(CLK_PERIOD*5000);
+    // UART_transmit_by_ext_FPGA(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
     #(CLK_PERIOD*100);
     UART_transmit_by_ext_FPGA(8'b101010, g_rx); // send a new value 
 
     UART_receive_by_ext_FPGA(g_tx); // read the acknowledgement for sent data
+
+    UART_receive_by_ext_FPGA(s_tx);  // get the next (incremented) value
+
+    #(CLK_PERIOD*100);
+    UART_transmit_by_ext_FPGA(UART_ACK, s_rx); // send the ack
 
     #(CLK_PERIOD*1000);
     change_external_com(); // finish ext_com
