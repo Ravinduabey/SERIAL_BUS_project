@@ -208,8 +208,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         clock_       <= clock_ + 1'b1;
                         arbSend      <= 1;
                     end
-                    else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
-                    // else if (clock_ < 10000*CLOCK_DURATION)begin
+                    // else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
+                    else if (clock_ < 10000*CLOCK_DURATION)begin
                         /*
                         Dispay data for n seconds defined by "CLOCK_DURARION" 
                         */
@@ -325,14 +325,14 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========================//
                                         //========= Write ========//
                                         //========================//
-                                        if (i < DATA_WIDTH) begin
+                                        if ((i < DATA_WIDTH) && ready) begin
                                             doneCom             <= 2'b11;
                                             wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
                                             i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
                                         
-                                        else begin
+                                        else if (i == DATA_WIDTH) begin
                                             valid               <= 0;
                                             i                   <= 0;
                                             communicationState  <= over;
@@ -359,13 +359,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========================//
                                         //========= Write ========//
                                         //========================//
-                                        if (i < DATA_WIDTH) begin
+                                        if ((i < DATA_WIDTH) && ready) begin
                                             wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
                                             i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
                                         
-                                        else begin
+                                        else if (i == DATA_WIDTH) begin
                                             valid               <= 0;
                                             i                   <= 0;
                                             communicationState  <= over;
@@ -398,13 +398,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         //========================//
                                         //========= Write ========//
                                         //========================//
-                                        if (i < DATA_WIDTH) begin
+                                        if ((i < DATA_WIDTH) && ready) begin
                                             wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
                                             i                   <= i + 1'b1;
                                             valid               <= 1;
                                         end
                                         
-                                        else begin
+                                        else if (i == DATA_WIDTH) begin
                                             valid               <= 0;
                                             i                   <= 0;
                                             communicationState  <= over;

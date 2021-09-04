@@ -275,16 +275,21 @@ module uart_slave
                             state       <= IDLE;
                         end
                     end
-                    else if (config_counter < CON-1 ) begin
+                    else if (config_counter < CON-2 ) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
 					end
+                    else if (config_counter == CON-2) begin
+                        config_counter   <= config_counter + 1'b1; 
+                        config_buffer    <= config_buffer << 1'b1;
+                        config_buffer[0] <= temp_control;
+                        ready <= 0;
+                    end
                     else if (config_counter == CON-1) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
-
                         ready <= 0;
                     end
                     //if start and slave id sent by master is correct: 
@@ -326,7 +331,8 @@ module uart_slave
                         ready <= 1;
                         if (valid && com_status==comm)  begin
                             wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp;                    
+                            wD_buffer[0]    <= wD_temp; 
+                            wD_counter      <= wD_counter + 1'b1;                   
                             state           <= WRITE;
                         end
                     end 
@@ -399,18 +405,18 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     else if (com_status == comm) begin
-                        if (wD_counter < DATA_WIDTH-2 && valid) begin
+                        if (wD_counter < DATA_WIDTH && valid) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                        else if (wD_counter == DATA_WIDTH-2) begin
+                        else if (wD_counter == DATA_WIDTH) begin
                                 wD_counter      <= wD_counter + 1'b1;
                                 s_byteForTx     <= wD_buffer;
                                 ready           <= 0;
                         
                         end
-                        else if (wD_counter == DATA_WIDTH-1) begin
+                        else if (wD_counter == DATA_WIDTH+1) begin
                             if (s_txReady) begin
                                 s_txStart       <= 1;
                                 state           <= GET_ACK;
@@ -418,7 +424,7 @@ module uart_slave
                         end  
                     end
                     else begin
-                        if (wD_counter == DATA_WIDTH-1) begin
+                        if (wD_counter == DATA_WIDTH+1) begin
                             if (s_txReady) begin
                                 // check <= 1;
                                 s_txStart       <= 1;
