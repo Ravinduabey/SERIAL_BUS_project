@@ -20,18 +20,6 @@ module uart_slave_system
     input logic clk,
     input logic rstN, 
 
-    //debug
-    output logic [DATA_WIDTH-1   :0]  rD_buffer_out,         
-    // output logic [DATA_COUNTER*2 :0]  rD_counter_out,           
-    output logic [DATA_WIDTH-1   :0]  wD_buffer_out,             
-    output logic [DATA_COUNTER   :0]  wD_counter_out,
-    output logic [6         :0] config_buffer_out,
-    output logic [3:0] state_out,
-    
-    output logic [DATA_WIDTH-1:0] g_byteForTx,
-    output logic [DATA_WIDTH-1:0] s_byteForTx,
-
-
     //get data
     input logic g_rx,
     output logic g_tx,
@@ -43,7 +31,7 @@ module uart_slave_system
 );
     //get data uart modules
     logic g_txByteStart;
-    // logic [DATA_WIDTH-1:0] g_byteForTx;
+    logic [DATA_WIDTH-1:0] g_byteForTx;
     logic g_tx_ready;
     logic g_new_byte_start;
     logic g_new_byte_received;
@@ -52,7 +40,7 @@ module uart_slave_system
 
     //send data uart modules
     logic s_txByteStart;
-    // logic [DATA_WIDTH-1:0] s_byteForTx;
+    logic [DATA_WIDTH-1:0] s_byteForTx;
     logic s_tx_ready;
     logic s_new_byte_start;
     logic s_new_byte_received;
@@ -91,13 +79,7 @@ uart_slave #(
     .s_rxStart(s_new_byte_start),
     .s_rxDone(s_new_byte_received),
     .s_byteFromRx(s_byteFromRx),
-    .s_rxReady(s_rx_ready),
-    .rD_buffer_out,
-    // .rD_counter_out,
-    .wD_buffer_out,
-    .wD_counter_out,
-    .config_buffer_out,
-    .state_out
+    .s_rxReady(s_rx_ready)
 );
 
 uart_baudRateGen #(.BAUD_RATE(BAUD_RATE)) baudRateGen(.clk(clk), .rstN(rstN), .baudTick(baudTick));

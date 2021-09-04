@@ -12,14 +12,15 @@ module top import top_details::*;
     parameter UART_WIDTH = 8,
     parameter UART_BAUD_RATE = 19200,
     parameter EXT_COM_INIT_VAL = 5,
-    parameter EXT_DISPLAY_DURATION = 5 // external communication value display duration
+    parameter EXT_DISPLAY_DURATION = 5, // external communication value display duration
+    parameter UART_RETRANSMIT_COUNT = 5
 )
 (
     input logic CLOCK_50,
     input logic [3:0]KEY,
     input logic [17:0]SW,
     output logic [17:0]LEDR,
-    output logic [6:0]LEDG,
+    output logic [3:0]LEDG,
     output logic [6:0]HEX0, HEX1,
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON,
@@ -286,21 +287,14 @@ masterExternal #(
 );
 
 /////// external communication master /////////
-logic [7:0]  rD_buffer_out;          
-// logic [3:0]  rD_counter_out;            
-logic [7:0]  wD_buffer_out;             
-logic [3:0]  wD_counter_out;
-logic [6:0] config_buffer_out;
-logic [3:0] state_out;
-logic [7:0] g_byteForTx;
-logic [7:0] s_byteForTx;
-
 
 uart_slave_system #(
     .BAUD_RATE(UART_BAUD_RATE),
     .SLAVES(SLAVE_COUNT),
     .DATA_WIDTH(UART_WIDTH),   // *********** NOT SURE ASK FROM NUSHA **********
-    .SLAVEID(SLAVE_COUNT) // last slave is the external_com. slave
+    .SLAVEID(SLAVE_COUNT), // last slave is the external_com. slave
+    // .ACK_TIMEOUT  //*******************
+    .RETRANSMIT_TIMES(UART_RETRANSMIT_COUNT)
 ) uart_slave_system(
     // with Master (through interconnect)
     .rD(S_rD[SLAVE_COUNT-1]),                  //serial read_data
@@ -313,15 +307,6 @@ uart_slave_system #(
     //with Top Module
     .clk,
     .rstN, 
-
-    .rD_buffer_out,
-    // .rD_counter_out,
-    .wD_buffer_out,
-    .wD_counter_out,
-    .config_buffer_out,
-    .state_out,
-    .g_byteForTx,
-    .s_byteForTx,
 
     //get
     .g_rx(GPIO[0]),
@@ -822,7 +807,7 @@ assign LEDG[0] = (current_state == master_slave_sel)? 1'b1:1'b0; // to indicate 
 assign LEDG[1] = (current_state == communication_ready)? 1'b1:1'b0; // to indicate master configuration done. Now communication can be started.
 assign LEDG[3] = (current_state == communicating)? 1'b1:1'b0; // master slave communicating
 assign LEDG[2] = (current_state == communication_done)? 1'b1:1'b0; // master slave communication is over
-// assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
+assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
 
 
 
@@ -837,13 +822,5 @@ LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DAT
 
 top_seven_segment segment_0(.in(ext_M_dataOut[3:0]), .show(ext_M_disData), .out(HEX0));
 top_seven_segment segment_1(.in(ext_M_dataOut[7:4]), .show(ext_M_disData), .out(HEX1));
-
-assign LEDG[4] = ext_M_disData;
-assign LEDG[6:5] = ext_M_doneCom;
-
-assign LEDR[5:0]= wD_buffer_out;
-assign LEDR[13:6]= s_byteForTx;
-assign LEDR[17:14] = state_out;
-
 
 endmodule : top

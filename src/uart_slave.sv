@@ -22,12 +22,12 @@ module uart_slave
     input logic rstN,
 
     //debug
-    output logic [DATA_WIDTH-1   :0]  rD_buffer_out,          
-    // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
-    output logic [DATA_WIDTH-1   :0]  wD_buffer_out,             
-    output logic [DATA_COUNTER   :0]  wD_counter_out,
-    output logic [6              :0] config_buffer_out,
-    output logic [3:0] state_out,
+    // output logic [DATA_WIDTH-1   :0]  rD_buffer_out,          
+    // // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
+    // output logic [DATA_WIDTH-1   :0]  wD_buffer_out,             
+    // output logic [DATA_COUNTER   :0]  wD_counter_out,
+    // output logic [6              :0] config_buffer_out,
+    // output logic [3:0] state_out,
      
 
     //==================uart to get data==============//
@@ -505,10 +505,10 @@ module uart_slave
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
-assign rD_buffer_out = rD_buffer;
-// assign rD_counter_out = rD_counter;
-assign wD_buffer_out = wD_buffer;
-assign wD_counter_out = wD_counter;
-assign config_buffer_out = config_buffer;
-assign state_out = state;
+// assign rD_buffer_out = rD_buffer;
+// // assign rD_counter_out = rD_counter;
+// assign wD_buffer_out = wD_buffer;
+// assign wD_counter_out = wD_counter;
+// assign config_buffer_out = config_buffer;
+// assign state_out = state;
 endmodule
