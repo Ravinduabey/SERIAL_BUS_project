@@ -73,7 +73,7 @@ logic [ARBITER_REQUEST_LEN-1:0]         arbiterRequest, tempArbiterRequest; // b
 logic [ADDRESS_WIDTH-1:0]               addressInternal, addresstemp;    // bufers for internal bram address
 logic [ADDRESS_WIDTH-1:0]               addressInternalBurtstBegin, addressInternalBurtstEnd; // buffers to get the start and end address of the slave communication
 logic [$clog2(ARBITER_REQUEST_LEN):0]   arbiterCounnter;  // counter for arbiter request
-logic [ADDRESS_WIDTH:0]       burstLen;   // burst length for burst communication
+logic [ADDRESS_WIDTH:0]                 burstLen;   // burst length for burst communication
 logic [DATA_WIDTH-1:0]                  dataInternal, internalDataOut, tempReadWriteData; /// bufers for internal bram adta
 
 
@@ -361,11 +361,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 arbiterCounnter     <= 3'd0;
                                 control             <= tempControl[18];
                                 tempControl         <= {tempControl[17:0] ,1'b0};
-                                controlCounter      <= controlCounter + 5'd1;
+                                controlCounter      <= controlCounter + 1'b1;
                                 if (splitOnot == 1)begin
                                     communicationState <= splitComContinue;
                                     clock_counter      <= 0;
-                                    // control            <= 1;
                                 end
                                 else begin
                                 communicationState  <= masterCom;
@@ -403,7 +402,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                         i = i + 1'b1;
                                                     end
                                                     else begin
-                                                        tempReadWriteData                <= internalDataOut;
+                                                        tempReadWriteData           <= internalDataOut;
                                                         i                           <= 0; 
                                                         internalComState            <= singleWrite;
                                                     end

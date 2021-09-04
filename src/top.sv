@@ -11,15 +11,16 @@ module top import top_details::*;
     parameter COM_START_DELAY = 0, //gap between 2 masters communication start signal
     parameter UART_WIDTH = 8,
     parameter UART_BAUD_RATE = 19200,
-    parameter EXT_COM_INIT_VAL = 255,
-    parameter EXT_DISPLAY_DURATION = 5 // external communication value display duration
+    parameter EXT_COM_INIT_VAL = 5,
+    parameter EXT_DISPLAY_DURATION = 5, // external communication value display duration
+    parameter UART_RETRANSMIT_COUNT = 5
 )
 (
     input logic CLOCK_50,
     input logic [3:0]KEY,
     input logic [17:0]SW,
     output logic [17:0]LEDR,
-    output logic [6:0]LEDG,
+    output logic [3:0]LEDG,
     output logic [6:0]HEX0, HEX1,
     output logic [7:0]LCD_DATA,
     output logic LCD_RW,LCD_EN,LCD_RS,LCD_BLON,LCD_ON,
@@ -74,8 +75,8 @@ logic [DATA_WIDTH-1:0] M_data[0:INT_MASTER_COUNT-1];
 logic [DATA_WIDTH-1:0] M_data_next[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address[0:INT_MASTER_COUNT-1];
 logic [MASTER_ADDR_WIDTH-1:0] M_address_next[0:INT_MASTER_COUNT-1];
-logic [$clog2(SLAVE_COUNT):0] M_slaveId[0:INT_MASTER_COUNT-1];
-logic [$clog2(SLAVE_COUNT):0] M_slaveId_next[0:INT_MASTER_COUNT-1];
+logic [S_ID_WIDTH-1:0] M_slaveId[0:INT_MASTER_COUNT-1];
+logic [S_ID_WIDTH-1:0] M_slaveId_next[0:INT_MASTER_COUNT-1];
 logic M_start[0:MASTER_COUNT-1];
 logic M_start_next[0:MASTER_COUNT-1];
 logic M_eoc[0:MASTER_COUNT-1];
@@ -253,7 +254,7 @@ bus_interconnect #(
 masterExternal #(
     .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
     .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
-    .CLK_FREQ(50), // internal clock frequency
+    .CLK_FREQ(50_000_000), // internal clock frequency
     .CLOCK_DURATION(EXT_DISPLAY_DURATION), // how long the data should be displayed in seconds
     .NUM_OF_SLAVES(SLAVE_COUNT),
     .SLAVEID(3'b100)
@@ -291,7 +292,9 @@ uart_slave_system #(
     .BAUD_RATE(UART_BAUD_RATE),
     .SLAVES(SLAVE_COUNT),
     .DATA_WIDTH(UART_WIDTH),   // *********** NOT SURE ASK FROM NUSHA **********
-    .SLAVEID(SLAVE_COUNT) // last slave is the external_com. slave
+    .SLAVEID(SLAVE_COUNT), // last slave is the external_com. slave
+    // .ACK_TIMEOUT  //*******************
+    .RETRANSMIT_TIMES(UART_RETRANSMIT_COUNT)
 ) uart_slave_system(
     // with Master (through interconnect)
     .rD(S_rD[SLAVE_COUNT-1]),                  //serial read_data
@@ -588,7 +591,7 @@ always_comb begin
         master_slave_sel: begin
 
             for (integer ii=0;ii<INT_MASTER_COUNT;ii=ii+1) begin 
-                M_slaveId_next[ii] = SW[2*ii+1 -:2];
+                M_slaveId_next[ii] = S_ID_WIDTH'(SW[2*ii+1 -:2]);
             end
 
             if ((SW[3:0] == '0) & (next_state == communication_done)) begin
@@ -819,8 +822,5 @@ LCD_interface #(.MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), .DATA_WIDTH(DAT
 
 top_seven_segment segment_0(.in(ext_M_dataOut[3:0]), .show(ext_M_disData), .out(HEX0));
 top_seven_segment segment_1(.in(ext_M_dataOut[7:4]), .show(ext_M_disData), .out(HEX1));
-
-assign LEDG[4] = ext_M_disData;
-assign LEDG[6:5] = ext_M_doneCom;
 
 endmodule : top

@@ -4,8 +4,9 @@ module uart_slave
     parameter DATA_WIDTH = 32,
     parameter S_ID_WIDTH = $clog2(SLAVES+1), //3
     parameter SLAVEID = 1,
-    parameter ACK_TIMEOUT = 10000,
-    parameter RETRANSMIT_TIMES = 3
+    parameter ACK_TIMEOUT = 1000000,
+    parameter RETRANSMIT_TIMES = 5,
+    parameter DATA_COUNTER = $clog2(DATA_WIDTH)
 )(
 
     // with Master (through interconnect)
@@ -20,6 +21,14 @@ module uart_slave
     input logic clk,
     input logic rstN,
 
+    //debug
+    // output logic [DATA_WIDTH-1   :0]  rD_buffer_out,          
+    // // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
+    // output logic [DATA_WIDTH-1   :0]  wD_buffer_out,             
+    // output logic [DATA_COUNTER   :0]  wD_counter_out,
+    // output logic [6              :0] config_buffer_out,
+    // output logic [3:0] state_out,
+     
 
     //==================uart to get data==============//
     //with uart transmitter_get
@@ -80,7 +89,7 @@ module uart_slave
 
     */
 
-    localparam DATA_COUNTER = $clog2(DATA_WIDTH);
+    // localparam DATA_COUNTER = $clog2(DATA_WIDTH);
 
     //control signal length: start|slaveid|R/W -- 111|SLAVEID|1
     localparam CON          = 3 + S_ID_WIDTH + 1;  
@@ -329,7 +338,7 @@ module uart_slave
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
-                        sto_status          <= stored;                        
+                        // sto_status          <= stored;                        
                         prev_state          <= SEND_ACK;
                         state               <= RECONFIG;
                     end
@@ -347,7 +356,7 @@ module uart_slave
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
-                        sto_status          <= stored;                        
+                        // sto_status          <= stored;                        
                         prev_state          <= READ;
                         state               <= RECONFIG;
                     end
@@ -390,7 +399,7 @@ module uart_slave
                         config_counter      <= 1; 
                         config_buffer       <= config_buffer << 1'b1;
                         config_buffer[0]    <= temp_control;
-                        sto_status          <= stored;                        
+                        // sto_status          <= stored;                        
                         prev_state          <= WRITE;
                         state               <= RECONFIG;
                     end
@@ -502,4 +511,10 @@ module uart_slave
 assign temp_control = control;
 assign wD_temp = wD;
 assign rD = rD_temp;
+// assign rD_buffer_out = rD_buffer;
+// // assign rD_counter_out = rD_counter;
+// assign wD_buffer_out = wD_buffer;
+// assign wD_counter_out = wD_counter;
+// assign config_buffer_out = config_buffer;
+// assign state_out = state;
 endmodule

@@ -17,6 +17,7 @@ localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH);
 
 localparam UART_WIDTH = 8;
 localparam UART_BAUD_RATE = 115200*2;
+localparam UART_RETRANSMIT_COUNT = 5;
 localparam EXT_COM_INIT_VAL = 5;
 localparam EXT_DISPLAY_DURATION = 1; // external communication value display duration
 
@@ -92,7 +93,7 @@ top #(.INT_SLAVE_COUNT(INT_SLAVE_COUNT), .INT_MASTER_COUNT(INT_MASTER_COUNT), .D
     .SLAVE_DEPTHS(SLAVE_DEPTHS), .SLAVE_DELAYS(SLAVE_DELAYS), .MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), 
     .FIRST_START_MASTER(FIRST_START_MASTER), .COM_START_DELAY(COM_START_DELAY),
     .UART_WIDTH(UART_WIDTH), .UART_BAUD_RATE(UART_BAUD_RATE), .EXT_COM_INIT_VAL(EXT_COM_INIT_VAL), 
-    .EXT_DISPLAY_DURATION(EXT_DISPLAY_DURATION) ) dut (.*);
+    .EXT_DISPLAY_DURATION(EXT_DISPLAY_DURATION), .UART_RETRANSMIT_COUNT(UART_RETRANSMIT_COUNT) ) dut (.*);
     
 initial begin
     @(posedge clk);
@@ -203,8 +204,8 @@ end
 
 task automatic master_slave_select(slave_t M1_slave, M2_slave); 
     @(posedge clk);
-    SW[1:0] = logic'(M1_slave); // set the switches
-    SW[3:2] = logic'(M2_slave);
+    SW[1:0] = (M1_slave); // set the switches
+    SW[3:2] = (M2_slave);
 
     @(posedge clk);
     #(CLK_PERIOD*10);
@@ -368,7 +369,7 @@ task automatic change_external_com();
 
 endtask
 
-task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
+task automatic UART_transmit_by_ext_FPGA(logic [UART_WIDTH-1:0]value, ref logic rx);
     @(posedge clk);  //starting delimiter
     rx = 1'b0; 
     #(BAUD_TIME_PERIOD);
@@ -383,7 +384,7 @@ task automatic UART_transmit(logic [UART_WIDTH-1:0]value, ref logic rx);
 
 endtask
 
-task automatic UART_receive(ref logic tx);
+task automatic UART_receive_by_ext_FPGA(ref logic tx);
     logic [UART_WIDTH-1:0]value;
     @(posedge clk);
     wait(~tx); // wait untill start of the start bit
@@ -394,7 +395,7 @@ task automatic UART_receive(ref logic tx);
         value[i] = tx;
         #(BAUD_TIME_PERIOD);
     end
-    $display("%b /n", value);
+    $display("%b \n", value);
 endtask
 
 endmodule : top_tb
