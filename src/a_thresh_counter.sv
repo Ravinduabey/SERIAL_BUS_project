@@ -1,5 +1,7 @@
 /*
-    This module will lookout for delay in slave ready signal. If it's getting delayed than the threshold value, a low priority master will get the chance to use the bus for comm.
+    This module will lookout for delay in slave ready signal. 
+    If it's getting delayed than the threshold value, a low priority 
+    master will get the chance to use the bus for comm.
 */
 module a_thresh_counter #(
     parameter THRESH = 1000 //maximum time a slave gets to ready its data

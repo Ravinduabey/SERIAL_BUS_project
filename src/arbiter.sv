@@ -1,5 +1,6 @@
 /*
-    the top module of the arbiter which connects all the master ports with the central controller
+    the top module of the arbiter which connects all the master ports 
+    with the central controller
 */ 
 module arbiter #(
     parameter NO_MASTERS = 2,
@@ -24,12 +25,6 @@ module arbiter #(
 	input logic ready,
 
   output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state
-	// output logic [M_ID_WIDTH-1:0] addr_select,
-	// output logic [M_ID_WIDTH-1:0] MOSI_data_select,
-	// output logic [M_ID_WIDTH-1:0] valid_select,
-	// output logic [M_ID_WIDTH-1:0] last_select,
-  // output logic [S_ID_WIDTH-1:0] MISO_data_select,
-	// output logic [S_ID_WIDTH-1:0] ready_select
 );
 
   //===============================================//
@@ -77,12 +72,6 @@ a_controller #(
   .cmd(cmd),
   .ready(ready),
   .bus_state(bus_state)
-  // .addr_select(addr_select),
-  // .MOSI_data_select(MOSI_data_select),
-  // .valid_select(valid_select),
-  // .last_select(last_select),
-  // .MISO_data_select(MISO_data_select),
-  // .ready_select(ready_select)
 );
 
 endmodule : arbiter

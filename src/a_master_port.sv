@@ -1,5 +1,8 @@
 /*
-    this intermediate module will connect each master with the controller. inside the arbiter this port will be communicating with controller. only essential commands are send to the controller. rest is taken care by the port
+    this intermediate module will connect each master with the controller. 
+    inside the arbiter this port will be communicating with controller. 
+    only essential commands are send to the controller. 
+    rest is taken care by the port
 */
 module a_master_port # (
   parameter NO_SLAVES = 3,
@@ -169,7 +172,6 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 end
 
 always_ff @( posedge clk ) begin : stateLogicDecoder
-  // $display("master state %s and input_buf %b", state, input_buf);
     unique case (state) 
 
     RST : begin

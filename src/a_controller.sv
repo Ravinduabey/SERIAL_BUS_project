@@ -1,5 +1,6 @@
 /*
-    this module is the central arbiter controller module who controls the bus depending on the requests comes from any number of masters. 
+    this module is the central arbiter controller module who controls 
+    the bus depending on the requests comes from any number of masters. 
 */
 module a_controller #(
     parameter NO_MASTERS = 2,
@@ -27,12 +28,6 @@ module a_controller #(
 	input logic ready,
 
   output logic [S_ID_WIDTH+M_ID_WIDTH-1:0] bus_state = '0
-	// output logic [M_ID_WIDTH-1:0] addr_select,
-	// output logic [M_ID_WIDTH-1:0] MOSI_data_select,
-	// output logic [M_ID_WIDTH-1:0] valid_select,
-	// output logic [M_ID_WIDTH-1:0] last_select,
-  // output logic [S_ID_WIDTH-1:0] MISO_data_select,
-	// output logic [S_ID_WIDTH-1:0] ready_select
 );
 
   //===========================================//
@@ -85,7 +80,8 @@ localparam STOP = 1'b1;
 logic priority_state = NRML;
 logic request;
 
-//cur_master will select the master port with whom the controller communicates at a given time
+//cur_master will select the master port with whom the controller 
+//communicates at a given time
 logic [M_ID_WIDTH-1:0] cur_master = '0;
 logic [M_ID_WIDTH-1:0] next_master, old_master, master_out;
 logic [S_ID_WIDTH-1:0] cur_slave = '0;
@@ -124,20 +120,6 @@ assign cur_com_state = com_state[cur_master];
 //mux
 logic cur_done;
 assign cur_done = done[cur_master];
-
-
-////////////////////////////////
-//   external mux selection   //
-////////////////////////////////
-
-// always_comb begin : muxController
-  // addr_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	// MOSI_data_select  = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	// valid_select      = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-	// last_select       = bus_state [S_ID_WIDTH+M_ID_WIDTH-1:S_ID_WIDTH];
-  // MISO_data_select  = bus_state [S_ID_WIDTH-1:0];
-	// ready_select      = bus_state [S_ID_WIDTH-1:0];
-// end
 
 
 always_comb begin : stateMachine
@@ -189,7 +171,8 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 end
 
 always_ff @( posedge clk ) begin : stateLogicDecoder
-  // $display("controller state %s, CM %b, CS %b, bus %b", state, cur_master, cur_slave, bus_state);
+  // $display("controller state %s, CM %b, CS %b, bus %b",
+  //  state, cur_master, cur_slave, bus_state);
     unique case (state)
 
     RST : begin 
@@ -213,7 +196,6 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     end
 
     ACK : begin
-      // $display("com0 state %b, com state %b", com_state[0], com_state[1]);
       if(cur_com_state == nak) bus_state <= '0;  //nak
       else if (cur_com_state == com) begin //ack
         bus_state <= {cur_master, cur_slave}; 
