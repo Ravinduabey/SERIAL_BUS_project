@@ -10,7 +10,7 @@ module a_write_buffer #(
     output logic dout
     );
 
-   //counter is used to stop the buffer shifting and maintain the master write value
+   //counter is used to stop the buffer shift and maintain the master value
     localparam COUNT = 2;
     
     logic [WIDTH-1:0] buffer;

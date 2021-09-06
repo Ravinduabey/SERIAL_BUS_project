@@ -1,5 +1,6 @@
 /*
-    this module will lookout for any master requests. Depending on the state, controller gets to know for whom the bus should be allocated next. 
+    this module will lookout for any master requests. Depending on the state, 
+    controller gets to know for whom the bus should be allocated next. 
 */
 module a_priority_selector #(
     parameter NO_MASTERS = 2,
