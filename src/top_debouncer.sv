@@ -1,6 +1,7 @@
 module top_debouncer 
 #(
-    parameter TIME_DELAY = 500 //mS
+    parameter TIME_DELAY = 500, //mS
+    parameter CLK_FREQ = 50_000_000
 )
 (
     input logic clk,
@@ -8,9 +9,8 @@ module top_debouncer
     output logic value_out
 );
 
-localparam CLK_FREQ = 50; // MHz
-// localparam MAX_CLK_COUNT = TIME_DELAY * CLK_FREQ * 1000;
- localparam MAX_CLK_COUNT = 12; //**this is just for simulation. comment this line and use the above line ***************
+localparam MAX_CLK_COUNT = (CLK_FREQ / 1000 ) * TIME_DELAY  ;
+//  localparam MAX_CLK_COUNT = 12; //**this is just for simulation. comment this line and use the above line ***************
 localparam COUNTER_WIDTH = $clog2(MAX_CLK_COUNT);
 
 logic [COUNTER_WIDTH-1:0]counter;
