@@ -12,14 +12,22 @@ localparam [UART_WIDTH-1:0]UART_ACK = 8'b11001100;
 
 logic CLOCK_50;
 logic [3:0]KEY;
-wire [5:0]GPIO;
+wire [3:0]GPIO;
 logic [6:0]HEX0,HEX1;
-logic [3:0]LEDG;
+logic [2:0]LEDG;
 
-logic clk,rstN, g_rx;
+logic clk, rstN, startN;
+logic g_rx, g_tx; //get data
+logic s_rx, s_tx; //send data
+
 assign CLOCK_50 = clk;
 assign KEY[0] = rstN;
+assign KEY[1] = startN;
+
 assign GPIO[0] = g_rx;
+assign g_tx = GPIO[1];
+assign GPIO[2] = s_rx;
+assign s_tx = GPIO[3];
 
 initial begin
     clk <=  0;
@@ -41,19 +49,38 @@ initial begin
     @(posedge clk);
     rstN = 1'b1;
 
-    // #(CLK_PERIOD*10);
-    // UART_transmit_by_ext_FPGA(8'b11001100, g_rx);
-
-    wait(LEDG[2:0] == 3'd4);
     #(CLK_PERIOD*10);
+    start_external_com(); 
+    
+    UART_receive_by_ext_FPGA(s_tx); //receive data
+
+    #(CLK_PERIOD*10);
+    UART_transmit_by_ext_FPGA(UART_ACK, s_rx); // send ack
+
+    #(CLK_PERIOD*1000);
+    UART_transmit_by_ext_FPGA(8'b0000_1111, g_rx); // send data
+
+    UART_receive_by_ext_FPGA(g_tx); // receive ack
+
+    #(CLK_PERIOD*1000);
 
     $stop;
 
 end
 
+task automatic start_external_com();
+    #(CLK_PERIOD*10);
+   
+    @(posedge clk);
+    startN = 1'b0; // press the push button
+    #(CLK_PERIOD*10); // hold the push button untill pass some time period
 
+    @(posedge clk);
+    startN = 1'b1; // release the push button
 
+    #(CLK_PERIOD*10); // wait some time before next KEY press / SW change
 
+endtask
 
 task automatic UART_transmit_by_ext_FPGA(logic [UART_WIDTH-1:0]value, ref logic rx);
     @(posedge clk);  //starting delimiter

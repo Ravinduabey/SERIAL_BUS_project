@@ -13,7 +13,8 @@ module top import top_details::*;
     parameter UART_BAUD_RATE = 19200,
     parameter EXT_COM_INIT_VAL = 5,
     parameter EXT_DISPLAY_DURATION = 5, // external communication value display duration
-    parameter UART_RETRANSMIT_COUNT = 5
+    parameter UART_RETRANSMIT_COUNT = 5,
+    parameter ACK_TIMEOUT = 10 // acknowledgement accepting maximum time in milliseconds
 )
 (
     input logic CLOCK_50,
@@ -37,6 +38,8 @@ localparam MASTER_ADDR_WIDTH = $clog2(MASTER_DEPTH);
 localparam S_ID_WIDTH = $clog2(SLAVE_COUNT+1);
 localparam M_ID_WIDTH = $clog2(MASTER_COUNT);
 
+localparam CLK_FREQ = 50_000_000;
+localparam ACK_TIMEOUT_CLK_COUNT = (CLK_FREQ / 1000) * ACK_TIMEOUT;
 
 logic rstN, clk, jump_stateN, jump_next_addr, start_ext_com;
 logic [3:0]KEY_OUT;
@@ -54,7 +57,7 @@ localparam TIME_DELAY = 500; // time delay for debouncing in ms
 genvar ii;
 generate
     for (ii=0;ii<4;ii=ii+1) begin: debouncing
-        top_debouncer #(.TIME_DELAY(TIME_DELAY)) debouncer(
+        top_debouncer #(.TIME_DELAY(TIME_DELAY), .CLK_FREQ(CLK_FREQ)) debouncer(
             .clk(clk),
             .value_in(KEY[ii]),
             .value_out(KEY_OUT[ii])
@@ -288,12 +291,22 @@ masterExternal #(
 
 /////// external communication master /////////
 
+//debug
+logic received_ack;
+
+logic [7:0]  rD_buffer_out;         
+    // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
+logic [7:0]  wD_buffer_out;             
+logic [3:0]  wD_counter_out;
+logic [6:0] config_buffer_out;
+logic [3:0] state_out;
+
 uart_slave_system #(
     .BAUD_RATE(UART_BAUD_RATE),
     .SLAVES(SLAVE_COUNT),
     .DATA_WIDTH(UART_WIDTH),   // *********** NOT SURE ASK FROM NUSHA **********
     .SLAVEID(SLAVE_COUNT), // last slave is the external_com. slave
-    // .ACK_TIMEOUT  //*******************
+    .ACK_TIMEOUT(ACK_TIMEOUT_CLK_COUNT),
     .RETRANSMIT_TIMES(UART_RETRANSMIT_COUNT)
 ) uart_slave_system(
     // with Master (through interconnect)
@@ -313,7 +326,14 @@ uart_slave_system #(
     .g_tx(GPIO[1]),
 
     //debug
-    .received_ack(received_ack),
+    .received_ack,
+
+    .rD_buffer_out,          
+    // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
+    .wD_buffer_out,             
+    .wD_counter_out,
+    .config_buffer_out,
+    .state_out,
 
     //send
     .s_rx(GPIO[2]),
@@ -810,9 +830,15 @@ assign LEDG[0] = (current_state == master_slave_sel)? 1'b1:1'b0; // to indicate 
 assign LEDG[1] = (current_state == communication_ready)? 1'b1:1'b0; // to indicate master configuration done. Now communication can be started.
 assign LEDG[3] = (current_state == communicating)? 1'b1:1'b0; // master slave communicating
 assign LEDG[2] = (current_state == communication_done)? 1'b1:1'b0; // master slave communication is over
-assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
+// assign LEDR[17:0] = SW[17:0]; // each red LED indicate corresponding SW state.
 
-
+assign LEDR[0] = received_ack;
+assign LEDR[17:13] = rD_buffer_out[4:0];          
+    // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
+assign LEDR[12:5] = wD_buffer_out;             
+    // output logic [7:0]  wD_counter_out,
+    // output logic [6:0] config_buffer_out,
+assign LEDR[4:1] = state_out;
 
 //////// LCD control //////////////
 
