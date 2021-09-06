@@ -22,6 +22,8 @@ module uart_slave
     input logic rstN,
 
     //debug
+    output logic received_ack,
+
     // output logic [DATA_WIDTH-1   :0]  rD_buffer_out,          
     // // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
     // output logic [DATA_WIDTH-1   :0]  wD_buffer_out,             
@@ -115,7 +117,7 @@ module uart_slave
     logic [3:0] masterAck_buffer;
 
     //ack for uart
-    logic [DATA_WIDTH-1              :0] sAck_buffer;
+    logic [DATA_WIDTH-1              :0] sAck_buffer = 0;
     logic [$clog2(ACK_TIMEOUT)-1     :0] ack_counter;
     logic [$clog2(RETRANSMIT_TIMES+1)-1:0] reTx_counter;
 
@@ -205,6 +207,7 @@ module uart_slave
             case (state)
                 INIT : begin
                     //initialize all counters, buffers, registers, outputs
+                    received_ack        <= 0;
                     s_txStart           <= 0;
                     g_txStart           <= 0;
                     ack_counter         <= 0;
@@ -235,6 +238,7 @@ module uart_slave
                     wD_counter      <= 0;
                     //start to receive new configuration
                     if (control == 1'b1) begin
+                        prev_state      <= IDLE;
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer[0] <= temp_control;                        
                         state            <= RECONFIG;                   
@@ -274,16 +278,21 @@ module uart_slave
                             state       <= IDLE;
                         end
                     end
-                    else if (config_counter < CON-1 ) begin
+                    else if (config_counter < CON-2 ) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
 					end
+                    else if (config_counter == CON-2) begin
+                        config_counter   <= config_counter + 1'b1; 
+                        config_buffer    <= config_buffer << 1'b1;
+                        config_buffer[0] <= temp_control;
+                        ready <= 0;
+                    end
                     else if (config_counter == CON-1) begin
                         config_counter   <= config_counter + 1'b1; 
                         config_buffer    <= config_buffer << 1'b1;
                         config_buffer[0] <= temp_control;
-
                         ready <= 0;
                     end
                     //if start and slave id sent by master is correct: 
@@ -325,7 +334,8 @@ module uart_slave
                         ready <= 1;
                         if (valid && com_status==comm)  begin
                             wD_buffer       <= wD_buffer << 1;
-                            wD_buffer[0]    <= wD_temp;                    
+                            wD_buffer[0]    <= wD_temp; 
+                            wD_counter      <= wD_counter + 1'b1;                   
                             state           <= WRITE;
                         end
                     end 
@@ -404,18 +414,18 @@ module uart_slave
                         state               <= RECONFIG;
                     end
                     else if (com_status == comm) begin
-                        if (wD_counter < DATA_WIDTH-2 && valid) begin
+                        if (wD_counter < DATA_WIDTH && valid) begin
                             wD_counter      <= wD_counter + 1'b1;
                             wD_buffer       <= wD_buffer << 1;
                             wD_buffer[0]    <= wD_temp;                    //msb first
                         end
-                        else if (wD_counter == DATA_WIDTH-2) begin
+                        else if (wD_counter == DATA_WIDTH) begin
                                 wD_counter      <= wD_counter + 1'b1;
                                 s_byteForTx     <= wD_buffer;
                                 ready           <= 0;
                         
                         end
-                        else if (wD_counter == DATA_WIDTH-1) begin
+                        else if (wD_counter == DATA_WIDTH+1) begin
                             if (s_txReady) begin
                                 s_txStart       <= 1;
                                 state           <= GET_ACK;
@@ -423,7 +433,7 @@ module uart_slave
                         end  
                     end
                     else begin
-                        if (wD_counter == DATA_WIDTH-1) begin
+                        if (wD_counter == DATA_WIDTH+1) begin
                             if (s_txReady) begin
                                 // check <= 1;
                                 s_txStart       <= 1;
@@ -488,6 +498,7 @@ module uart_slave
                     //send 4-bit ACK to master 
                     //during next READ                 
                     if (sAck_buffer == ACK) begin
+                        received_ack        <= 1;
                         masterAck_buffer    <= ACK[7:4];
                     end
                     //if communication failed

@@ -26,7 +26,8 @@ module uart_slave_system
 
     //send data
     input  logic s_rx,
-    output logic s_tx
+    output logic s_tx,
+    output logic received_ack
 
 );
     //get data uart modules
@@ -72,6 +73,8 @@ uart_slave #(
     .g_rxDone(g_new_byte_received),
     .g_byteFromRx(g_byteFromRx),
     .g_rxReady(g_rx_ready),
+    //debug
+    .received_ack(received_ack),
     // send uart
     .s_txStart(s_txByteStart),
     .s_byteForTx(s_byteForTx),
