@@ -24,16 +24,6 @@ module uart_slave_system
     input logic g_rx,
     output logic g_tx,
 
-    //debug
-    output logic received_ack,
-
-    output logic [7:0]  rD_buffer_out,          
-    // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
-    output logic [7:0]  wD_buffer_out,             
-    output logic [3:0]  wD_counter_out,
-    output logic [6:0] config_buffer_out,
-    output logic [3:0] state_out,
-
     //send data
     input  logic s_rx,
     output logic s_tx
@@ -83,15 +73,7 @@ uart_slave #(
     .g_rxDone(g_new_byte_received),
     .g_byteFromRx(g_byteFromRx),
     .g_rxReady(g_rx_ready),
-    //debug
-    .received_ack,
 
-    .rD_buffer_out,          
-    // output logic [DATA_COUNTER*2 :0]  rD_counter_out,            
-    .wD_buffer_out,             
-    .wD_counter_out,
-    .config_buffer_out,
-    .state_out,
     // send uart
     .s_txStart(s_txByteStart),
     .s_byteForTx(s_byteForTx),
