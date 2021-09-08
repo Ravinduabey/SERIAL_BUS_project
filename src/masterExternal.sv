@@ -197,34 +197,46 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //==========================//    
             displayData:
                 begin
-                    if (clock_ == 0)begin
-                        dataOut      <= tempReadWriteData[DATA_WIDTH*0 +:DATA_WIDTH];
-                        clock_       <= clock_ + 1'b1;
-                        doneCom      <= 2'b11;
-                        disData      <= 1;
-                        arbSend      <= 0;
+                    if (~eoc) begin 
+                        if (clock_ == 0)begin
+                            dataOut      <= tempReadWriteData[DATA_WIDTH*0 +:DATA_WIDTH];
+                            clock_       <= clock_ + 1'b1;
+                            doneCom      <= 2'b11;
+                            disData      <= 1;
+                            arbSend      <= 0;
+                        end
+                        else if (clock_ == 1) begin
+                            clock_       <= clock_ + 1'b1;
+                            arbSend      <= 1;
+                        end
+                        // else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
+                        else if (clock_ < 10000*CLOCK_DURATION)begin
+                            /*
+                            Dispay data for n seconds defined by "CLOCK_DURARION" 
+                            */
+                            clock_       <= clock_ + 1'b1;
+                            dataOut      <= tempReadWriteData[DATA_WIDTH-1:0];
+                            disData      <= 1;
+                            arbSend      <= 0;
+                        end
+                        else begin
+                            clock_      <= 1'b0;
+                            dataOut     <= tempReadWriteData[DATA_WIDTH-1:0];
+                            tempReadWriteData <= tempReadWriteData +1'b1;
+                            tempArbiterRequest  <= {3'b111, SLAVEID};
+                            state       <= write_data;
+                            disData     <= 0;
+                        end
                     end
-                    else if (clock_ == 1) begin
-                        clock_       <= clock_ + 1'b1;
-                        arbSend      <= 1;
-                    end
-                    // else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
-                    else if (clock_ < 10000*CLOCK_DURATION)begin
-                        /*
-                        Dispay data for n seconds defined by "CLOCK_DURARION" 
+                    else if (eoc) begin
+                        /*  
+                            end external communication in the case where the top
+                            module requests for the end of communication
                         */
-                        clock_       <= clock_ + 1'b1;
-                        dataOut      <= tempReadWriteData[DATA_WIDTH-1:0];
-                        disData      <= 1;
-                        arbSend      <= 0;
-                    end
-                    else begin
-                        clock_      <= 1'b0;
-                        dataOut     <= tempReadWriteData[DATA_WIDTH-1:0];
-                        tempReadWriteData <= tempReadWriteData +1'b1;
-                        tempArbiterRequest  <= {3'b111, SLAVEID};
-                        state       <= write_data;
-                        disData     <= 0;
+                        state              <= end_com;
+                        communicationState <= idleCom;
+                        doneCom            <= 2'b01;
+                        clock_counter      <= 0;
                     end
                 end
 
@@ -466,6 +478,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         */
                         state               <= end_com;
                         communicationState  <= idleCom;
+                        doneCom            <= 2'b01;
+                        clock_counter      <= 0;
                     end
                 end
 
@@ -839,6 +853,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         state              <= end_com;
                         communicationState <= idleCom;
                         doneCom            <= 2'b01;
+                        clock_counter      <= 0;
                     end
                 end
                 
@@ -847,8 +862,22 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //==========================//
             end_com: 
                 begin
-                    doneCom         <= 1;
-                    dataOut         <= tempReadWriteData[DATA_WIDTH-1:0];    
+                    doneCom         <= 2'b01;
+                    dataOut         <= tempReadWriteData[DATA_WIDTH-1:0];
+                    // send over signal to arbiter to terminate the connection
+                    if (clock_counter < 2'd1) begin
+                        arbSend <= 0;
+                        control <= 1;
+                        clock_counter <= clock_counter + 1'b1;
+                    end
+                    else if (clock_counter < 2'd3) begin
+                        arbSend <= 1;
+                        control <= 0;
+                        clock_counter <= clock_counter + 1'b1;
+                    end
+                    else if (clock_counter == 2'd3) begin
+                        arbSend         <= 0;
+                    end    
                 end   
         endcase
     end
