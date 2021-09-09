@@ -19,7 +19,7 @@ module masterExternal #(
         input   logic                             rstN,     // reset
         input   logic                             start,    // to start the module and initiate write in the next state
         input   logic                             eoc,      // to notify the end of communication  
-		input   logic [DATA_WIDTH-3:0]            data_from_top,
+		input   logic [DATA_WIDTH-1:0]            data_from_top,
 
 	    output  logic [1:0]                       doneCom,  // used to notify the top module the end of external communication
         output  logic [DATA_WIDTH-1:0]            dataOut,  // to send data to the top module to display
@@ -155,7 +155,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                     arbiterRequest              <= {3'b111, SLAVEID};
                     tempArbiterRequest          <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-3:0] <= data_from_top;
+                    tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
                     
                 end
                 else if (~start && eoc) begin
@@ -190,7 +190,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2       <= {3'b111, SLAVEID, 1'b0};
                     arbiterRequest      <= {3'b111, SLAVEID};
                     tempArbiterRequest  <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-3:0] <= data_from_top;
+                    tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
                 end
 
             //==========================//
@@ -844,7 +844,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         */
                         state              <= displayData;
                         communicationState <= idleCom;
-                        tempReadWriteData[DATA_WIDTH-3:0]  <= data_from_top;
+                        tempReadWriteData[DATA_WIDTH-1:0]  <= data_from_top;
                     end
                     else if (~start && eoc) begin
                         /*  
