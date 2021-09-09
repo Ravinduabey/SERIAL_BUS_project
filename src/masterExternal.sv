@@ -1,6 +1,6 @@
 module masterExternal #(
     parameter DATA_WIDTH    = 8,        // datawidth of the sent data
-    parameter logic [DATA_WIDTH-1:0] DATA_FROM_TOP = 8'b00001010,    // initial start data
+    // parameter logic [DATA_WIDTH-1:0] DATA_FROM_TOP = 8'b00001010,    // initial start data
     parameter CLK_FREQ     = 5, // internal clock frequency
     parameter CLOCK_DURATION = 1, // how long the data should be displayed in seconds
     parameter NUM_OF_SLAVES = 4,
@@ -19,7 +19,8 @@ module masterExternal #(
         input   logic                             rstN,     // reset
         input   logic                             start,    // to start the module and initiate write in the next state
         input   logic                             eoc,      // to notify the end of communication  
-		  
+		input   logic [DATA_WIDTH-3:0]            data_from_top,
+
 	    output  logic [1:0]                       doneCom,  // used to notify the top module the end of external communication
         output  logic [DATA_WIDTH-1:0]            dataOut,  // to send data to the top module to display
         output  logic                             disData,   // to notify the top module whether to display data or not 
@@ -119,7 +120,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         splitOnot                         <= 0;
         state                             <= configMaster;
         communicationState                <= idleCom;
-        tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+        tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
         
     end
     else begin : topStates
@@ -134,7 +135,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                     arbiterRequest              <= {3'b111, SLAVEID};
                     tempArbiterRequest          <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+                    tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
                 end
                 else begin
                     state <= configMaster;
@@ -154,7 +155,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                     arbiterRequest              <= {3'b111, SLAVEID};
                     tempArbiterRequest          <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+                    tempReadWriteData[DATA_WIDTH-3:0] <= data_from_top;
                     
                 end
                 else if (~start && eoc) begin
@@ -189,7 +190,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2       <= {3'b111, SLAVEID, 1'b0};
                     arbiterRequest      <= {3'b111, SLAVEID};
                     tempArbiterRequest  <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+                    tempReadWriteData[DATA_WIDTH-3:0] <= data_from_top;
                 end
 
             //==========================//
@@ -843,7 +844,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         */
                         state              <= displayData;
                         communicationState <= idleCom;
-                        tempReadWriteData[DATA_WIDTH-1 :0]  <= DATA_FROM_TOP;
+                        tempReadWriteData[DATA_WIDTH-3:0]  <= data_from_top;
                     end
                     else if (~start && eoc) begin
                         /*  
