@@ -210,8 +210,8 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             clock_       <= clock_ + 1'b1;
                             arbSend      <= 1;
                         end
-                        // else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
-                        else if (clock_ < 10000*CLOCK_DURATION)begin
+                        else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
+                        // else if (clock_ < 10000*CLOCK_DURATION)begin
                             /*
                             Dispay data for n seconds defined by "CLOCK_DURARION" 
                             */
