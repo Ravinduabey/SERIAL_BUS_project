@@ -94,9 +94,8 @@ assign s_tx = GPIO[3]; // send send_data
 top #(.INT_SLAVE_COUNT(INT_SLAVE_COUNT), .INT_MASTER_COUNT(INT_MASTER_COUNT), .DATA_WIDTH(DATA_WIDTH), 
     .SLAVE_DEPTHS(SLAVE_DEPTHS), .SLAVE_DELAYS(SLAVE_DELAYS), .MAX_MASTER_WRITE_DEPTH(MAX_MASTER_WRITE_DEPTH), 
     .FIRST_START_MASTER(FIRST_START_MASTER), .COM_START_DELAY(COM_START_DELAY),
-    .UART_WIDTH(UART_WIDTH), .UART_BAUD_RATE(UART_BAUD_RATE), .EXT_COM_INIT_VAL(EXT_COM_INIT_VAL), 
-    .EXT_DISPLAY_DURATION(EXT_DISPLAY_DURATION), .UART_RETRANSMIT_COUNT(UART_RETRANSMIT_COUNT),
-    .ACK_TIMEOUT(ACK_TIMEOUT)) dut (.*);
+    .UART_WIDTH(UART_WIDTH), .UART_BAUD_RATE(UART_BAUD_RATE), .EXT_DISPLAY_DURATION(EXT_DISPLAY_DURATION), 
+    .UART_RETRANSMIT_COUNT(UART_RETRANSMIT_COUNT), .ACK_TIMEOUT(ACK_TIMEOUT)) dut (.*);
     
 initial begin
     @(posedge clk);
@@ -417,8 +416,13 @@ task automatic get_data_from_masters();
 endtask
 
 task automatic change_external_com();
+     @(posedge clk);
+    SW[UART_WIDTH-1:0] = EXT_COM_INIT_VAL; // set the switches to initial value
+
+    @(posedge clk);
     #(CLK_PERIOD*10);
-   
+    
+    #(CLK_PERIOD*10);  
     @(posedge clk);
     start_ext_com = 1'b0; // press the push button
     #(CLK_PERIOD*10); // hold the push button untill pass some time period
