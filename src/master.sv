@@ -314,6 +314,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
 
                         reqCom:
+                        /*  
+                            send the request to arbiter to inform that the 
+                            master requires to communicate with a slave
+                        */
 
                             if (arbiterCounnter < ARBITER_REQUEST_LEN) begin
                                 arbSend                 <= arbiterRequest[ARBITER_REQUEST_LEN-1];
@@ -343,6 +347,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                         
                         reqAck:
+                        /* 
+                            Send the ackownledgement for the clear signal for the
+                            clear signal sent by the arbiter
+                        */
                             if (arbiterCounnter < ARBITER_REQUEST_LEN+2) begin
                                 arbSend             <= 1'b0;        // second ack
                                 arbiterCounnter     <= arbiterCounnter + 1'b1;
@@ -378,10 +386,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 if (controlCounter < CONTROL_LEN) begin
                                     control             <= tempControl[CONTROL_LEN-1]; 
                                     tempControl         <= {tempControl[CONTROL_LEN-2:0] ,1'b0};
-                                    // tempControl         <= tempControl << 1;
                                     controlCounter      <= controlCounter + 1'b1;
-
-                                    
                                 end  
                                 else if (controlCounter == CONTROL_LEN) begin
                                     controlCounter      <= controlCounter;
@@ -394,8 +399,16 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                     case(internalComState)
 
                                     checkState:
+                                    /*  
+                                        Check the mode of process 
+                                        Read or write
+                                        single or busrt
+                                    */
                                         if (tempRdWr == 1 && (arbCont == 1 || fromArbiter == 2'b11)) begin
                                             if (burstLen == 0) begin
+                                                /*  
+                                                    Single Write Mode
+                                                */
                                                 wr = 0;
                                                 addressInternal  <= addressInternalBurtstBegin;
                                                 if (~valid)begin
@@ -410,6 +423,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 end
                                             end
                                             else begin
+                                                /*  
+                                                    Burst write mode
+                                                */
                                                 addressInternal  <= addressInternalBurtstBegin;
                                                 wr               <= 0;
                                                 if (~valid)begin
@@ -427,17 +443,25 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         end
                                         else if (tempRdWr == 0 && (arbCont == 1 || fromArbiter == 2'b11)) begin
                                             if (burstLen == 0) begin
+                                                /*  
+                                                    Single read mode
+                                                */
                                                 internalComState <= singleRead;
                                                 valid            <= 1;
                                             end
                                             else begin
+                                                /*  
+                                                    Burst read mode
+                                                */
                                                 internalComState <= burstRead;
                                                 valid            <= 1;
                                             end
                                         end
 
                                     singleRead:
-
+                                    /*  
+                                        Procedure for single read                                    
+                                    */
                                             if (i < DATA_WIDTH && ready) begin
                                                 tempReadWriteData[DATA_WIDTH-1-i] <= rD;
                                                 i                            <= i + 1'b1;
@@ -449,36 +473,39 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 i                   <= i + 1'b1;    
                                             end
                                             else if (~ready && i <= DATA_WIDTH) begin
-                                                wr <= 0;
+                                                wr                  <= 0;
                                             end
                                             else if (i > DATA_WIDTH) begin
-                                                i <= 0;
-                                                wr <=0;
-                                                communicationState <= over;
+                                                i                   <= 0;
+                                                wr                  <=0;
+                                                communicationState  <= over;
                                                 clock_counter       <= 1'b0;
                                             end
 
 
                                     burstRead:
+                                    /*  
+                                        Procedure for burst read
+                                    */
                                             if(burstLen > 1 ) begin
                                                 if (i < DATA_WIDTH && ready) begin
                                                     tempReadWriteData[DATA_WIDTH-1-i] <= rD;
                                                     i               <= i + 1'b1;
                                                     wr              <= 0;
-                                                    valid           <= 1;
+                                                    valid           <= 1; //set valid high
                                                 end
                                                 else if (i == DATA_WIDTH || ready) begin
-                                                    tempReadWriteData[i]             <= rD;
+                                                    tempReadWriteData[i]        <= rD;
                                                     dataInternal                <= tempReadWriteData;
                                                     addressInternal             <= addressInternalBurtstBegin;
                                                     addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                     wr                          <= 1;
                                                     i                           <= 0; 
                                                     valid                       <= 0;
-                                                    burstLen                    <= burstLen - 1'b1;   
+                                                    burstLen                    <= burstLen - 1'b1; // reduce the burst length  
                                                 end
                                                 else if (~ready) begin
-                                                    wr <= 0;
+                                                    wr                          <= 0;
                                                 end
                                             end
                                             else if( burstLen == 1 ) begin
@@ -490,7 +517,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     last            <= 1;
                                                 end
                                                 else if (i == DATA_WIDTH || ready ) begin
-                                                    tempReadWriteData[i]             <= rD;
+                                                    tempReadWriteData[i]        <= rD;
                                                     dataInternal                <= tempReadWriteData;
                                                     addressInternal             <= addressInternalBurtstBegin;
                                                     addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
@@ -501,17 +528,20 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                     burstLen            <= burstLen - 1'b1;   
                                                 end
                                                 else if (~ready) begin
-                                                    wr <= 0;
+                                                    wr              <= 0;
                                                 end
                                             end
                                             else begin
                                                 last                <= 0;
-                                                wr <= 0;
-                                                communicationState <= over;
+                                                wr                  <= 0;
+                                                communicationState  <= over;
                                                 clock_counter       <= 1'b0;
                                             end
                                     
                                     singleWrite:
+                                    /*  
+                                        Procedure for single write
+                                    */
                                             if (i < DATA_WIDTH) begin
                                                 wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
                                                 addressInternal     <= addressInternalBurtstBegin;
@@ -529,6 +559,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
                                     
                                     burstWrite:
+                                    /*  
+                                        Procedure for burst Write
+                                    */
                                         if(burstLen > 1) begin
                                             if (i < DATA_WIDTH) begin
                                                 wrD                 <= tempReadWriteData[DATA_WIDTH-1-i];
@@ -574,7 +607,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
 
 
                             else if (fromArbiter == 2'b00)begin: priorityStop
-								// control 		<= 1;
+                            /*  
+                                When the arbiter sends priority stop signal
+                                master will check whether it is possible to 
+                                stop the current communnication or not.
+                            */
                                 communicationState <= masterHold;
                                 arbSend <= 0;       // fisrt hold bit
                                 if (controlCounter < CONTROL_LEN) begin
@@ -631,7 +668,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         end
                                     end
                                     else begin // burst
-                                        if (tempRdWr == 0)begin  // burst read   
+                                        if (tempRdWr == 0) begin  // burst read   
                                             if(burstLen > 1 ) begin
                                                 if (i < DATA_WIDTH && ready) begin
                                                     tempReadWriteData[DATA_WIDTH-1-i] <= rD;
@@ -725,12 +762,22 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
 
                             else if (fromArbiter == 2'b01)begin: splitStop
+                                /*  
+                                    When the arbiter send the split stop signal
+                                */
                                 communicationState <= masterSplit; 
                                 splitOnot          <= 1;                               
                             end
                             
-
+                        //========================//
+                        //=======Master Hold======//
+                        //========================//
                         masterHold:
+                            /*  
+                                When the arbiter sends a priority stop signal
+                                the master will follow the following depending on the postion
+                                in which it was in communication with the slave
+                            */
                             begin
                             control <= 0;
                             if (tempHold < 2'd1) begin
@@ -885,19 +932,27 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                         end
 
+                        //========================//
+                        //=======Master Done======//
+                        //========================//
                         masterDone: begin
+                            /*  
+                                After the master has finished the master hold process 
+                                for priority stop it will inform the arbiter to 
+                                changee the bus allocation
+                            */
                             if (clock_counter < 2'd1 && splitOnot == 0) begin
                                 arbSend            <= 0;
                                 wr                 <= 0;
                                 valid              <= 0;
                                 control            <= 0;
                                 tempControl_2[ADDRESS_WIDTH-1 : 0]    <= addressInternalBurtstBegin;
-                                clock_counter <= clock_counter + 1'b1;
+                                clock_counter      <= clock_counter + 1'b1;
                             end
                             else if (clock_counter < 2'd2 && splitOnot == 0 ) begin
-                                arbSend <= 1;
-                                control <= 1;
-                                clock_counter <= clock_counter + 1'b1;
+                                arbSend             <= 1;
+                                control             <= 1;
+                                clock_counter       <= clock_counter + 1'b1;
                             end
                             else if (clock_counter == 2'd2 && splitOnot == 0 ) begin
                                 communicationState <= idleCom;
@@ -914,9 +969,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 clock_counter <= clock_counter + 1'b1;
                             end
                             else if (clock_counter < 2'd2 && splitOnot == 1 ) begin
-                                arbSend <= 1;
-                                control <= 1;
-                                clock_counter <= clock_counter + 1'b1;
+                                arbSend         <= 1;
+                                control         <= 1;
+                                clock_counter   <= clock_counter + 1'b1;
                             end
                             else if (clock_counter == 2'd2 && splitOnot == 1 ) begin
                                 communicationState <= idleCom;
@@ -925,6 +980,9 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                         end
                         
+                        //========================//
+                        //======Master Split======//
+                        //========================//
                         masterSplit:
                         begin
                             communicationState <= masterDone; 
@@ -934,7 +992,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         //=======================================//
                         //   Split Communication continue state  //
                         //=======================================//
-                        splitComContinue: 
+                        splitComContinue:
+                        /*  
+                            When the bus is reallocated to the master
+                            after a split transaction
+                        */ 
                             if (fromArbiter == 2'b11 || fromArbiter == 2'b10) begin
                                 fromArbiter[1]      <= fromArbiter[0];
                                 fromArbiter[0]      <= arbCont;
@@ -1168,8 +1230,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                         
                         
-
+                        //=========================//
+                        //========== Over =========//
+                        //=========================//
                         over: 
+                        /*  
+                            Notify the arbiter the end of communication
+                        */
                             begin
                                 last            <= 0;
                                 valid           <= 0;
@@ -1200,6 +1267,10 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     state <= done;
                 end
             done: 
+            /*  
+                State in which master allows the top module to read the data
+                stored in its memory
+            */
                 begin
                     doneCom         <= 1;
                     addressInternal <= address;

@@ -1,12 +1,9 @@
 module masterExternal #(
-    parameter DATA_WIDTH    = 8,        // datawidth of the sent data
-    parameter logic [DATA_WIDTH-1:0] DATA_FROM_TOP = 8'b00001010,    // initial start data
-    parameter CLK_FREQ     = 5, // internal clock frequency
+    parameter DATA_WIDTH    = 8,// datawidth of the sent data
+    parameter CLK_FREQ     = 50_000_000, // internal clock frequency
     parameter CLOCK_DURATION = 1, // how long the data should be displayed in seconds
     parameter NUM_OF_SLAVES = 4,
     parameter SLAVEID = 3'b101
-    // parameter SLAVES        = 4,
-    // parameter SLAVE_WIDTH   = $clog2(SLAVES + 1)
 )( 
 
 	    ///////////////////////
@@ -15,26 +12,27 @@ module masterExternal #(
         //===================// 
 	    ///////////////////////
 		  
-        input   logic                             clk,      // clock
-        input   logic                             rstN,     // reset
-        input   logic                             start,    // to start the module and initiate write in the next state
-        input   logic                             eoc,      // to notify the end of communication  
-		  
-	    output  logic [1:0]                       doneCom,  // used to notify the top module the end of external communication
-        output  logic [DATA_WIDTH-1:0]            dataOut,  // to send data to the top module to display
-        output  logic                             disData,   // to notify the top module whether to display data or not 
+        input   logic                     clk,      // clock
+        input   logic                     rstN,     // reset
+        input   logic                     start,    // start the module and initiate write in the next state
+        input   logic                     eoc,      // notify the end of communication  
+		input   logic [DATA_WIDTH-1:0]    data_from_top,
+
+	    output  logic [1:0]               doneCom,  // notify the top module the end of external communication
+        output  logic [DATA_WIDTH-1:0]    dataOut,  // send data to the top module to display
+        output  logic                     disData,   // notify the top module whether to display data or not 
 		  
 	    ///////////////////////
         //===================//
         //    with slave     //
         //===================// 
 	    ///////////////////////
-        input   logic                             rD,       // data in wire from the slave  
-        input   logic                             ready,    // ready wire from the slave
+        input   logic                     rD,       // data in wire from the slave  
+        input   logic                     ready,    // ready wire from the slave
 
-	    output  logic                             control,  // START|SLAVE_ID|r/w 
-        output  logic                             wrD,      // data out wire from master to slave
-        output  logic                             valid,    // valid signal to slave during write
+	    output  logic                     control,  // START|SLAVE_ID|r/w 
+        output  logic                     wrD,      // data out wire from master to slave
+        output  logic                     valid,    // valid signal to slave during write
 		  
 
         ///////////////////////
@@ -42,18 +40,18 @@ module masterExternal #(
         //    with arbiter   //
         //===================// 
 	    ///////////////////////
-        input   logic                             arbCont,  // master to arbiter wire
+        input   logic                    arbCont,   // master to arbiter wire
 
 
-        output  logic                             arbSend  // arbiter to master wire
+        output  logic                    arbSend    // arbiter to master wire
 );
 
 
 
 localparam CONTROL_LEN = 4 + $clog2(NUM_OF_SLAVES+1);
-localparam ARBITER_REQUEST_LEN = 3+$clog2(NUM_OF_SLAVES+1); // get the length of the arbiter request
-localparam ACK = 4'b1100;
-localparam NAK = 4'b1010;
+localparam ARBITER_REQUEST_LEN = 3+$clog2(NUM_OF_SLAVES+1); // length of the arbiter request
+localparam ACK = 4'b1100;   // Define Acknowldegement
+localparam NAK = 4'b1010;   // Define Nak
 
 
 logic                       splitOnot;
@@ -63,11 +61,11 @@ logic [1:0]                 fromArbiter;
 logic [CONTROL_LEN:0]       tempControl,tempControl_2;
 logic [DATA_WIDTH+3:0]      tempReadWriteData = 0;
 logic [3:0]                 tempDataAck;
-logic [$clog2(DATA_WIDTH+4)-1:0]                  i;
+logic [$clog2(DATA_WIDTH+4)-1:0]              i;
 logic [$clog2(CONTROL_LEN):0]                 controlCounter;
-logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]     clock_;
-logic [ARBITER_REQUEST_LEN-1:0]                 arbiterRequest, tempArbiterRequest;
-logic [$clog2(ARBITER_REQUEST_LEN):0]           arbiterCounnter;
+logic [$clog2(CLK_FREQ*CLOCK_DURATION)-1:0]   clock_;
+logic [ARBITER_REQUEST_LEN-1:0]               arbiterRequest, tempArbiterRequest;
+logic [$clog2(ARBITER_REQUEST_LEN):0]         arbiterCounnter;
 
 // define states for the top module
 typedef enum logic [2:0]{
@@ -119,7 +117,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         splitOnot                         <= 0;
         state                             <= configMaster;
         communicationState                <= idleCom;
-        tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+        tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
         
     end
     else begin : topStates
@@ -134,7 +132,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                     arbiterRequest              <= {3'b111, SLAVEID};
                     tempArbiterRequest          <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+                    tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
                 end
                 else begin
                     state <= configMaster;
@@ -154,7 +152,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2               <= {3'b111, SLAVEID, 1'b1};
                     arbiterRequest              <= {3'b111, SLAVEID};
                     tempArbiterRequest          <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+                    tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
                     
                 end
                 else if (~start && eoc) begin
@@ -189,7 +187,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempControl_2       <= {3'b111, SLAVEID, 1'b0};
                     arbiterRequest      <= {3'b111, SLAVEID};
                     tempArbiterRequest  <= {3'b111, SLAVEID};
-                    tempReadWriteData[DATA_WIDTH-1:0] <= DATA_FROM_TOP;
+                    tempReadWriteData[DATA_WIDTH-1:0] <= data_from_top;
                 end
 
             //==========================//
@@ -209,8 +207,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             clock_       <= clock_ + 1'b1;
                             arbSend      <= 1;
                         end
-                        // else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
-                        else if (clock_ < 10000*CLOCK_DURATION)begin
+                        else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
                             /*
                             Dispay data for n seconds defined by "CLOCK_DURARION" 
                             */
@@ -843,7 +840,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         */
                         state              <= displayData;
                         communicationState <= idleCom;
-                        tempReadWriteData[DATA_WIDTH-1 :0]  <= DATA_FROM_TOP;
+                        tempReadWriteData[DATA_WIDTH-1:0]  <= data_from_top;
                     end
                     else if (~start && eoc) begin
                         /*  
