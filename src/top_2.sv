@@ -11,6 +11,7 @@ module top import top_details::*;
     parameter COM_START_DELAY = 0, //gap between 2 masters communication start signal
     parameter UART_WIDTH = 8,
     parameter UART_BAUD_RATE = 19200,
+    parameter EXT_COM_INIT_VAL = 5,
     parameter EXT_DISPLAY_DURATION = 5, // external communication value display duration
     parameter UART_RETRANSMIT_COUNT = 5,
     parameter ACK_TIMEOUT = 10 // acknowledgement accepting maximum time in milliseconds
@@ -41,14 +42,12 @@ localparam CLK_FREQ = 50_000_000;
 localparam ACK_TIMEOUT_CLK_COUNT = (CLK_FREQ / 1000) * ACK_TIMEOUT;
 
 logic rstN, clk, jump_stateN, jump_next_addr, start_ext_com;
-logic [UART_WIDTH-1:0]ext_com_init_val;
 logic [3:0]KEY_OUT;
 
 assign rstN = KEY_OUT[0];
 assign jump_stateN = KEY_OUT[1];
 assign jump_next_addr = KEY_OUT[2];
 assign start_ext_com = KEY_OUT[3];
-assign ext_com_init_val = {'0,SW[5:0]}; // initial value 0-63
 
 assign clk = CLOCK_50;
 
@@ -257,6 +256,7 @@ bus_interconnect #(
 /////// external communication master /////////
 masterExternal #(
     .DATA_WIDTH(UART_WIDTH),        // datawidth of the sent data
+    .DATA_FROM_TOP(EXT_COM_INIT_VAL),    // initial start data
     .CLK_FREQ(50_000_000), // internal clock frequency
     .CLOCK_DURATION(EXT_DISPLAY_DURATION), // how long the data should be displayed in seconds
     .NUM_OF_SLAVES(SLAVE_COUNT),
@@ -269,7 +269,6 @@ masterExternal #(
         .rstN,     // reset
         .start(M_start[MASTER_COUNT-1]),    // to start the module and initiate write in the next state
         .eoc(M_eoc[MASTER_COUNT-1]),      // to notify the end of communication
-        .data_from_top(ext_com_init_val), // first tx data to external fpga
 		  
 	    .doneCom(ext_M_doneCom),  // used to notify the top module the end of external communication
         .dataOut(ext_M_dataOut),  // to send data to the top module to display
