@@ -143,6 +143,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
         i                   <= 0;
         control             <= 0;
         wrD                 <= 0;
+        wr                  <= 0;
         valid               <= 0;
         last                <= 0;
         doneCom             <= 0;
@@ -189,6 +190,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     i                   <= 0;
                     control             <= 0;
                     wrD                 <= 0;
+                    wr                  <= 0;
                     valid               <= 0;
                     last                <= 0;
                     doneCom             <= 0;
@@ -217,6 +219,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     else begin
                         addressInternalBurtstEnd    <= address;
                         state                       <= startEndConfig;
+                        wr                          <= 0;
                     end
                 end
                 else begin                   
@@ -250,6 +253,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             addressInternal             <= addresstemp;
                             dataInternal                <= data;
                             clock_counter               <= clock_counter + 2'd1;
+                            wr                          <= 1;
                             if (clock_counter < 2'd1) begin
                                 wr                          <= 1;
                                 clock_counter               <= clock_counter + 2'd1;
@@ -271,6 +275,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 if (start) begin
                     /* IF start; start communication */
                     state                              <= startCom;
+                    wr                                 <= 0;
                     if(burstLen == 0)begin  // check whether internal communication has a burst or not
                         tempControl[ADDRESS_WIDTH]     <= 0;                   
                         tempControl_2[ADDRESS_WIDTH]   <= 0;
@@ -295,7 +300,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //=========startCom=========// 
             //==========================//
             startCom:
-                if(doneCom == 1'b0) begin : start_internal_communication
+                if(doneCom == 1'b0 && slaveId != 0) begin : start_internal_communication
                     state               <= startCom;
                     fromArbiter[1]      <= fromArbiter[0];
                     fromArbiter[0]      <= arbCont;
@@ -404,7 +409,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         Read or write
                                         single or busrt
                                     */
-                                        if (tempRdWr == 1 && (arbCont == 1 || fromArbiter == 2'b11)) begin
+                                        if (tempRdWr == 1) begin
                                             if (burstLen == 0) begin
                                                 /*  
                                                     Single Write Mode
@@ -433,7 +438,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                         i = i + 1'b1;
                                                     end
                                                     else begin
-                                                        tempReadWriteData                <= internalDataOut;
+                                                        tempReadWriteData           <= internalDataOut;
                                                         addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
                                                         i                           <= 0; 
                                                         internalComState            <= burstWrite;
@@ -441,7 +446,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 end
                                             end
                                         end
-                                        else if (tempRdWr == 0 && (arbCont == 1 || fromArbiter == 2'b11)) begin
+                                        else if (tempRdWr == 0) begin
                                             if (burstLen == 0) begin
                                                 /*  
                                                     Single read mode
@@ -1200,7 +1205,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 i                           <= 0;
                                                 burstLen                    <= burstLen - 1'b1;
                                                 addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                tempReadWriteData                <= internalDataOut;
+                                                tempReadWriteData           <= internalDataOut;
                                                 valid                       <= 0;
                                                 communicationState          <= masterDone;
                                             end
@@ -1218,7 +1223,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                                 wrD                         <= tempReadWriteData[DATA_WIDTH-1-i];
                                                 burstLen                    <= burstLen - 1'b1;
                                                 addressInternalBurtstBegin  <= addressInternalBurtstBegin + 1'b1;
-                                                tempReadWriteData                <= internalDataOut;
+                                                tempReadWriteData           <= internalDataOut;
                                                 valid                       <= 1;
                                                 last                        <= 1;
                                                 communicationState          <= over;
@@ -1265,6 +1270,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //==========================//
                 else begin
                     state <= done;
+                    communicationState  <= over; 
                 end
             done: 
             /*  
