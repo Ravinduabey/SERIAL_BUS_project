@@ -9,7 +9,7 @@ localparam INT_SLAVE_COUNT=3;  // number of slaves
 localparam INT_MASTER_COUNT=2;  // number of masters
 localparam DATA_WIDTH = 16;   // width of a data word in slave & master
 localparam int SLAVE_DEPTHS[0:INT_SLAVE_COUNT-1] = '{4096,4096,2048}; // give each slave's depth
-localparam int SLAVE_DELAYS[INT_SLAVE_COUNT] = '{0,0,2000};
+localparam int SLAVE_DELAYS[INT_SLAVE_COUNT] = '{0,0,1500};
 localparam MAX_MASTER_WRITE_DEPTH = 16;  // maximum number of addresses of a master that can be externally written
 
 localparam MASTER_DEPTH = SLAVE_DEPTHS[0]; // master should be able to write or read all the slave address locations without loss
@@ -41,15 +41,15 @@ typedef enum logic{
 } operation_t;
 
 //////// set the following parameters first before run the simulation ////////
-localparam logic [1:0] masters_slave[0:1] = '{slave_1, slave_2};
-localparam logic master_RW[0:1] = '{write,write};
+localparam logic [1:0] masters_slave[0:1] = '{slave_2, slave_1};
+localparam logic master_RW[0:1] = '{read,write};
 localparam logic external_write[0:1] = '{1'b1, 1'b1};
-localparam int   external_write_count[0:1] = '{3,3};
-localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{2,2};
-localparam logic [MASTER_ADDR_WIDTH-1:0] slave_end_address[0:1] = '{2,2};
+localparam int   external_write_count[0:1] = '{1,1};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_start_address[0:1] = '{1,1};
+localparam logic [MASTER_ADDR_WIDTH-1:0] slave_end_address[0:1] = '{4,4};
 localparam logic [MASTER_ADDR_WIDTH-1:0] master_read_addr[0:9] = '{0,1,2,3,4,5,6,7,8,9}; // read the masters' memory after communication
 localparam FIRST_START_MASTER = master_0; // this master will start communication first
-localparam COM_START_DELAY = 0; //gap between 2 masters communication start signal
+localparam COM_START_DELAY = 100; //gap between 2 masters communication start signal
 
 localparam BAUD_TIME_PERIOD = 10**9 / UART_BAUD_RATE;
 localparam [UART_WIDTH-1:0]UART_ACK = 8'b11001100;
@@ -161,7 +161,7 @@ initial begin
 
         ///////// after the end of above state automatically goes to master configuration state //////////
         
-        wait(communication_ready);  // wait untill configuration is done 
+        wait(communication_ready);  // wait until configuration is done 
 
         #(CLK_PERIOD*10);
         @(posedge clk);
@@ -178,10 +178,16 @@ initial begin
 
 
 
-
+/*
     ////// test external communication ///////////
     #(CLK_PERIOD*10);
     change_external_com(); // start sending data ext_com
+
+    // UART_receive(s_tx); // read data sent by the data_transmitter
+
+    // #(CLK_PERIOD*5000);
+    // @(posedge clk);
+    // rstN <= 1'b0;
 
     UART_receive_by_ext_FPGA(s_tx); // read data sent by the data_transmitter
 
@@ -195,15 +201,15 @@ initial begin
 
 
 
-    #(CLK_PERIOD*100);
-    UART_transmit_by_ext_FPGA(8'b101010, g_rx); // send a new value 
+    // @(posedge clk);
+    // rstN <= 1'b1;
 
-    UART_receive_by_ext_FPGA(g_tx); // read the acknowledgement for sent data
+    // UART_transmit(UART_ACK, s_rx); // send ACK to acknowlege the data receipt
 
-    UART_receive_by_ext_FPGA(s_tx);  // get the next (incremented) value
+    // #(CLK_PERIOD*10000);
+    // UART_transmit(8'b10, g_rx); // send a new value 
 
-    #(CLK_PERIOD*100);
-    UART_transmit_by_ext_FPGA(UART_ACK, s_rx); // send the ack
+    // UART_receive(g_tx); // read the acknowledgement for sent data
 
 
     ////////////////////////////////////////////////////
@@ -256,7 +262,7 @@ initial begin
     #(CLK_PERIOD*1000);
     // change_external_com(); // finish ext_com
     // #(CLK_PERIOD*500);
-
+*/
     $stop;
 end
 
