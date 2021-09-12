@@ -162,7 +162,7 @@ generate
             //    with slave     //
             .rD(M_rD[jj]),         
             .ready(M_ready[jj]),
-            .control(M_control[jj]),           // START|SLAVE_ID|r/w|B|address| 
+            .control(M_control[jj]), // START|SLAVE_ID|r/w|B|address| 
             .wrD(M_wrD[jj]),
             .valid(M_valid[jj]),
             .last(M_last[jj]),
@@ -188,10 +188,10 @@ generate
             .rD(S_rD[jj]),                  //serial read_data
             .ready(S_ready[jj]),               //default HIGh
 
-            .control(S_control[jj]),              //serial control setup info  start|slaveid|R/W|B|start_address -- 111|SLAVEID|1|1|WIDTH
-            .wD(S_wD[jj]),                   //serial write_data
-            .valid(S_valid[jj]),                //default LOW
-            .last(S_last[jj]),                 //default LOW
+            .control(S_control[jj]), //serial control setup info
+            .wD(S_wD[jj]),          //serial write_data
+            .valid(S_valid[jj]),    //default LOW
+            .last(S_last[jj]),      //default LOW
 
             //with Top Module
             .clk,
@@ -295,18 +295,18 @@ masterExternal #(
 uart_slave_system #(
     .BAUD_RATE(UART_BAUD_RATE),
     .SLAVES(SLAVE_COUNT),
-    .DATA_WIDTH(UART_WIDTH),   // *********** NOT SURE ASK FROM NUSHA **********
+    .DATA_WIDTH(UART_WIDTH),
     .SLAVEID(SLAVE_COUNT), // last slave is the external_com. slave
     .ACK_TIMEOUT(ACK_TIMEOUT_CLK_COUNT),
     .RETRANSMIT_TIMES(UART_RETRANSMIT_COUNT)
 ) uart_slave_system(
     // with Master (through interconnect)
-    .rD(S_rD[SLAVE_COUNT-1]),                  //serial read_data
-    .ready(S_ready[SLAVE_COUNT-1]),               //default HIGH
+    .rD(S_rD[SLAVE_COUNT-1]),              //serial read_data
+    .ready(S_ready[SLAVE_COUNT-1]),        //default HIGH
 
-    .control(S_control[SLAVE_COUNT-1]),              //serial control setup info  
-    .wD(S_wD[SLAVE_COUNT-1]),                   //serial write_data
-    .valid(S_valid[SLAVE_COUNT-1]),                //default LOW
+    .control(S_control[SLAVE_COUNT-1]),    //serial control setup info  
+    .wD(S_wD[SLAVE_COUNT-1]),              //serial write_data
+    .valid(S_valid[SLAVE_COUNT-1]),        //default LOW
 
     //with Top Module
     .clk,
@@ -382,9 +382,6 @@ always_ff @(posedge clk or negedge rstN) begin
         
         current_com_start_delay_count <= next_com_start_delay_count;
         both_masters_com_started <= both_masters_com_started_next;
-
-
-
     end
 end
 
@@ -415,7 +412,7 @@ always_comb begin
     case (current_state)
         master_slave_sel: begin
             if (!jump_stateN) begin
-                if (SW[3:0] == '0) begin  // if no slave is selected to both master no communication happens
+                if (SW[3:0] == '0) begin  // if no slave is selected to both master -> no communication
                     next_state = communication_done;
                 end
                 else begin
@@ -426,13 +423,7 @@ always_comb begin
 
         read_write_sel: begin
             if(!jump_stateN) begin
-                // if(SW[1:0] == 2'b00) begin
-                //     next_state = slave_start_addr_sel_M1;
-                // end
-                // else begin
-                //     next_state = external_write_sel;
-                // end
-                next_state = external_write_sel;  // always check whether need to externally write to master or not 
+                next_state = external_write_sel;  
             end
         end
 
@@ -444,7 +435,7 @@ always_comb begin
                     2'b10: next_state = external_write_M2;
                     2'b11: next_state = external_write_M1_2;
 
-                    default: next_state = slave_start_addr_sel_M1;  // not required as all cases are included
+                    default: next_state = slave_start_addr_sel_M1; //useful if error happens
 
                 endcase
             end
@@ -501,7 +492,8 @@ always_comb begin
                         if (M_inEx[current_config_master] == 1'b0) begin
                             next_config_state = config_last;
                         end
-                        else if ((data_bank_wr_count[current_config_master]==0) | (data_bank_wr_count[current_config_master]==1'b1) ) begin // only 1 external write
+                        // if only 1 external write
+                        else if ((data_bank_wr_count[current_config_master]==0) | (data_bank_wr_count[current_config_master]==1'b1) ) begin 
                             next_config_state = config_last;
                         end
                         else begin
@@ -533,7 +525,7 @@ always_comb begin
                     next_state = communication_ready;
                 end
 
-                default: next_config_state = config_start; // **************** not sure ***************************
+                default: next_config_state = config_start; 
             endcase
 
         end
@@ -663,22 +655,22 @@ always_comb begin
          
         slave_end_addr_sel_M1: begin
             // calculate the last address
-            if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0]) >= SLAVE_DEPTHS[M_slaveId[0]-1]) begin
+            if (SW[MASTER_ADDR_WIDTH-1:0] >= SLAVE_DEPTHS[M_slaveId[0]-1]) begin
                 slave_last_addr_next[0] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[0]-1'b1]); // if given length is too large select untill the last address of the slave
             end
             else begin
-                slave_last_addr_next[0] = SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[0];
+                slave_last_addr_next[0] = SW[MASTER_ADDR_WIDTH-1:0];
             end
             
         end 
 
         slave_end_addr_sel_M2: begin
             // calculate the last address
-            if ((SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1]) >= SLAVE_DEPTHS[M_slaveId[1]-1]) begin
+            if (SW[MASTER_ADDR_WIDTH-1:0] >= SLAVE_DEPTHS[M_slaveId[1]-1]) begin
                 slave_last_addr_next[1] = MASTER_ADDR_WIDTH'(SLAVE_DEPTHS[M_slaveId[1]-1'b1]); // if given length is too large select untill the last address of the slave
             end
             else begin
-                slave_last_addr_next[1] = SW[MASTER_ADDR_WIDTH-1:0]+slave_first_addr[1];
+                slave_last_addr_next[1] = SW[MASTER_ADDR_WIDTH-1:0];
             end
             // setup for config_master_start
             if (!jump_stateN) begin
