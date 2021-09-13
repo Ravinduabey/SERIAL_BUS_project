@@ -207,7 +207,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             clock_       <= clock_ + 1'b1;
                             arbSend      <= 1;
                         end
-                        else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin
+                        else if (clock_ < 5*100)begin
                             /*
                             Dispay data for n seconds defined by "CLOCK_DURARION" 
                             */
@@ -652,12 +652,12 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                         arbSend <= 1;
                                     end 
 
-                                    if (controlCounter < CONTROL_LEN) begin
+                                    if (controlCounter < CONTROL_LEN + 1) begin
                                         control             <= tempControl[CONTROL_LEN-1];
                                         tempControl         <= {tempControl[CONTROL_LEN-2:0] ,1'b0};
                                         controlCounter      <= controlCounter + 1'b1;                                    
                                     end  
-                                    else if (controlCounter == CONTROL_LEN) begin
+                                    else if (controlCounter == CONTROL_LEN + 1) begin
                                         controlCounter      <= controlCounter;
                                         control             <= 0;
                                         if (!arbCont) begin
