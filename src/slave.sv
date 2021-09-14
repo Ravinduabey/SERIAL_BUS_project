@@ -38,17 +38,17 @@ module slave #(
 
     //data out fifo buffer for READ  RAM -->|_|_|_|_|_..._|--> |rD_temp|
     //rD reads as readData
-    logic [DATA_WIDTH-1   :0]  rD_buffer;             
-    logic [DATA_WIDTH-1   :0]  temp_rD_buffer;             
-    logic [DATA_COUNTER   :0]  rD_counter;            
-    logic                      rD_temp;
-    logic                      read;
+    logic [DATA_WIDTH-1 :0]  rD_buffer;             
+    logic [DATA_WIDTH-1 :0]  temp_rD_buffer;             
+    logic [DATA_COUNTER :0]  rD_counter;            
+    logic                    rD_temp;
+    logic                    read;
 
     //data_in fifo buffer for WRITE  |wD_temp| -->|_|_|_|_|_..._|--> RAM 
     //wD reads as writeData              
-    logic [DATA_WIDTH-1   :0]  wD_buffer;             
-    logic [DATA_COUNTER   :0]  wD_counter;
-    logic                      wD_temp;
+    logic [DATA_WIDTH-1 :0]  wD_buffer;             
+    logic [DATA_COUNTER :0]  wD_counter;
+    logic                    wD_temp;
 
     // Declare RAM 
 	logic [DATA_WIDTH-1:0] ram [ADDR_DEPTH-1:0];
@@ -110,14 +110,14 @@ module slave #(
     // end
     initial begin
         if (SLAVEID == 2'd1) 
-        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
-//		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+        // $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
         else if (SLAVEID == 2'd2) 
-        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
-//		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+        // $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
         else if (SLAVEID == 2'd3) 
-        $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
-//		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+        // $readmemh("D:\\ACA\\SEM7_TRONIC_ACA\\17 - Advance Digital Systems\\2020\\assignment_1\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+		  $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
     end
     // initial begin
     //     if (SLAVEID == 2'd1) 
@@ -149,7 +149,7 @@ module slave #(
                     //initialize all counters, buffers, registers, outputs
                     address             <= 0;
                     temp_address        <= 0;
-                    read                <= 0;
+                    read                <= 1;
                     con_counter         <= 0;
                     config_counter      <= 0;
                     rD_counter          <= 0;
@@ -196,6 +196,7 @@ module slave #(
                     end
                 end                
                 IDLE : begin
+                    read            <= 1;
                     ready           <= 1;
                     con_counter     <= 0;
                     config_counter  <= 0;
@@ -211,6 +212,7 @@ module slave #(
                     end
                 end
                 CONFIG : begin
+                    ready <= 0;
                     if (config_counter < CON) begin
                         config_counter   <= config_counter + 1'b1;                                        
                         config_buffer    <= config_buffer << 1'b1;
@@ -253,12 +255,12 @@ module slave #(
                                     if (read) begin
                                         temp_address    <= address;
                                         rD_temp         <= rD_buffer[DATA_WIDTH-1];
-                                        state           <= READ;
                                         read            <= 0;  
                                     end
                                     else begin 
                                         rD_buffer  <= temp_rD_buffer;  
                                         read       <= 1;
+                                        state      <= READ;
                                     end                             
                                 end
                                 else if (delay_counter < DELAY) delay_counter <= delay_counter + 1'b1;
@@ -319,12 +321,12 @@ module slave #(
                                         // rD_buffer           <= ram[address];
                                         if (read) begin
                                             temp_address       <= address;
-                                            state              <= IDLE;
                                             read               <= 0;
                                         end
                                         else begin
                                             rD_buffer         <= temp_rD_buffer;
                                             read              <= 1;
+                                            state             <= IDLE;
                                         end
                                     end
                                     else delay_counter <= delay_counter + 1'b1;                                
@@ -344,11 +346,11 @@ module slave #(
                                         if (read) begin
                                         // rD_buffer           <= ram[address];
                                             temp_address        <= address;
-                                            state               <= IDLE;
                                             read                <= 0;
                                         end
                                         else begin
                                             rD_buffer           <= temp_rD_buffer;
+                                            state               <= IDLE;
                                             read                <= 1'b1;
                                         end
                                     end
@@ -379,12 +381,12 @@ module slave #(
                         // rD_buffer   <= ram[address];
                         if (read) begin
                             temp_address    <= address;
-                            state           <= READB;
                             read            <= 0;
                         end
                         else begin
                             rD_buffer       <= temp_rD_buffer;
                             read            <= 1'b1;
+                            state           <= READB;
                         end     
                     end
                 end
