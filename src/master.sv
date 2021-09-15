@@ -178,7 +178,47 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     tempRdWr                    <= rdWr;
                     dataInternal                <= data;
                     addressInternal             <= addresstemp;
+                    if (inEx) begin 
+                    /*  
+                        Top module write data into the master from external
+                        inputs
+                    */
+                        if (tempBurst == 1) begin
+                            /*  
+                                Top module writes multiple data into master
+                            */
+                            if (clock_counter < 2'd1) begin
+                                dataInternal                <= data;
+                                addressInternal             <= addresstemp;
+                                wr                          <= 0;
+                                clock_counter               <= clock_counter + 2'd1;
+                            end
+
+                            else begin
+                                addresstemp                 <= addresstemp + 1'b1;
+                                wr                          <= 1;
+                                clock_counter               <= 2'd0;
+                            end
+                        end
+                        else begin
+                            /*   
+                                Top module writes only a signle data to master
+                            */
+                            if (clock_counter < 2'd1) begin
+                                addressInternal             <= addresstemp;
+                                dataInternal                <= data;
+                                clock_counter               <= clock_counter + 1'b1;
+                                // wr                          <= 1;
+                                wr                          <= 0;
+                                clock_counter               <= clock_counter + 2'd1;
+                            end
+                            else begin
+                                wr                          <= 1;
+                                clock_counter               <= '0;
+                            end
+                        end
                     
+                    end
                 end
                 else if (~start && eoc ) begin
                     state <= done;
@@ -209,12 +249,22 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
             //==========================//
             startConfig:
                 if (start) begin
+                    state                       <= startEndConfig;
+
                     if (inEx) begin
-                        state                       <= startEndConfig;
-                        addressInternalBurtstEnd    <= address;
-                        wr                          <= 1;
-                        dataInternal                <= data;
-                        addressInternal             <= addresstemp;
+                        if (tempBurst == 1) begin
+                            state                       <= startEndConfig;
+                            addressInternalBurtstEnd    <= address;
+                            wr                          <= 0;
+                            dataInternal                <= data;
+                            addressInternal             <= addresstemp;
+                            addresstemp                 <= addresstemp + 1'b1; //check /////////////////
+                        end
+                        else begin
+                            state                       <= startEndConfig;
+                            addressInternalBurtstEnd    <= address;
+                            wr                          <= 0;
+                        end
                     end
                     else begin
                         addressInternalBurtstEnd    <= address;
@@ -236,31 +286,31 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 dataInternal                <= data;
                                 addressInternal             <= addresstemp;
                             if (clock_counter < 2'd1) begin
-                                wr                          <= 1;
-                                addresstemp                 <= addresstemp + 1'b1;
+                                wr                          <= 0;
                                 clock_counter               <= clock_counter + 2'd1;
                             end
 
                             else begin
-                                wr                          <= 0;
-                                clock_counter               <= 2'd0;
+                                addresstemp                 <= addresstemp + 1'b1;
+                                wr                          <= 1;
+                                clock_counter               <= '0;
                             end
                         end
                         else begin
                             /*   
                                 Top module writes only a signle data to master
                             */
-                            addressInternal             <= addresstemp;
-                            dataInternal                <= data;
-                            clock_counter               <= clock_counter + 2'd1;
-                            wr                          <= 1;
                             if (clock_counter < 2'd1) begin
-                                wr                          <= 1;
-                                clock_counter               <= clock_counter + 2'd1;
+                                addressInternal             <= addresstemp;
+                                dataInternal                <= data;
+                                // clock_counter               <= clock_counter + 2'd1;
+                                // wr                          <= 1;/
+                                wr                          <= 0;
+                                clock_counter               <= clock_counter + 1'b1;
                             end
                             else begin
-                                wr                          <= 0;
-                                clock_counter               <= 2'd0;
+                                wr                          <= 1;
+                                clock_counter               <= '0;
                             end
                         end
                             
@@ -287,7 +337,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                 end
                 else begin
                     state            <= startEndConfig;
-                    wr               <= 0;
+                    wr               <= 1;
                     if (addressInternalBurtstEnd == addressInternalBurtstBegin) begin
                     burstLen         <= 0;
                     end
