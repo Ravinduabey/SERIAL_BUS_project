@@ -325,6 +325,8 @@ main_state_t current_state, next_state;
 
 config_sub_state_t current_config_state, next_config_state;
 
+user_data_sub_state_t current_user_data_state, next_user_data_state;
+
 always_ff @(posedge clk or negedge rstN) begin
     if (!rstN) begin
         current_state <= master_slave_sel;
@@ -340,6 +342,9 @@ always_ff @(posedge clk or negedge rstN) begin
 
         slave_first_addr <= '{default:'0};  
         slave_last_addr  <= '{default:'0};
+
+        //////////// get user data related variables
+        current_user_data_state <= user_slave_sel;
 
         //////////// config_sub_states related logic /////////
         current_config_state        <= config_start;
@@ -368,6 +373,9 @@ always_ff @(posedge clk or negedge rstN) begin
 
         slave_first_addr <= slave_first_addr_next;
         slave_last_addr  <= slave_last_addr_next;
+
+        //////////// get user data related variables
+        current_user_data_state <= next_user_data_state;
 
 
         //////////// config_sub_states related logic /////////
@@ -410,8 +418,45 @@ end
 always_comb begin
     next_state = current_state;
     next_config_state = current_config_state;
+    next_user_data_state = current_user_data_state;
 
     case (current_state)
+        get_user_data: begin
+            case (current_user_data_state)
+                user_slave_sel: begin
+                    
+                end
+
+        end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /////////////////////////////////////////////////
         master_slave_sel: begin
             if (!jump_stateN) begin
                 if (SW[3:0] == '0) begin  // if no slave is selected to both master no communication happens
