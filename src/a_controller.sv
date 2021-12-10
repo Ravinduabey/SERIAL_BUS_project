@@ -2,7 +2,7 @@
     this module is the central arbiter controller module who controls 
     the bus depending on the requests comes from any number of masters. 
 */
-module a_controller #(
+module a_controller import a_definitions::*; #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
     parameter THRESH = 1000,
@@ -18,9 +18,11 @@ module a_controller #(
   //==========// 
 
   input logic [S_ID_WIDTH-1:0] id [0:NO_MASTERS-1],
-  input logic [1:0] com_state [0:NO_MASTERS-1],
+  // input logic [1:0] com_state [0:NO_MASTERS-1],
+  input mst_cmd_t com_state [0:NO_MASTERS-1],
   input logic done [0:NO_MASTERS-1],
-  output logic [1:0] cmd [0:NO_MASTERS-1],
+  // output logic [1:0] cmd [0:NO_MASTERS-1],
+  output ctrl_cmd_t cmd[0:NO_MASTERS-1],
   
   //================================//
   //    external bus multiplexers   //
@@ -33,18 +35,19 @@ module a_controller #(
   //===========================================//
   //commands given to the selected master port //
   //===========================================// 
-localparam WAIT = 2'b00;
-localparam STOP_S = 2'b01;
-localparam STOP_P = 2'b10;
-localparam CLEAR = 2'b11;
+// localparam WAIT = 2'b00;
+// localparam STOP_S = 2'b01;
+// localparam STOP_P = 2'b10;
+// localparam CLEAR = 2'b11;
+
 
   //==========================================================//
   //com state commands received from the selected master port //
   //==========================================================// 
-localparam end_com = 2'b00;
-localparam nak = 2'b01;
-localparam wait_ack = 2'b10;
-localparam com = 2'b11;
+// localparam end_com = 2'b00;
+// localparam nak = 2'b01;
+// localparam wait_ack = 2'b10;
+// localparam com = 2'b11;
 
 typedef enum logic [2:0] {
     RST,
@@ -107,9 +110,10 @@ a_priority_selector #(
   ////////////////////////////////
 
 //demux
-logic [1:0] cur_cmd;
+//logic [1:0] cur_cmd;
+ctrl_cmd_t cur_cmd;
 always_comb begin 
-    cmd = '{NO_MASTERS{'0}};
+    cmd = '{NO_MASTERS{WAIT}};
     cmd[cur_master] = cur_cmd; 
 end
 
@@ -135,13 +139,13 @@ always_comb begin : stateMachine
     ALLOC: next_state = ACK;
 
     ACK: begin
-      if (cur_com_state == nak) next_state = OVER;
-      else if (cur_com_state == com) next_state = COM;
+      if (cur_com_state == NAK) next_state = OVER;
+      else if (cur_com_state == COM_) next_state = COM;
       else next_state <= ACK;
     end
 
     COM: begin 
-      if(cur_com_state == end_com) next_state = OVER;
+      if(cur_com_state == END_COM) next_state = OVER;
       else if (intr && !intr_route) next_state = DONE;
       else next_state = COM; 
 	  end
@@ -196,15 +200,15 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     end
 
     ACK : begin
-      if(cur_com_state == nak) bus_state <= '0;  //nak
-      else if (cur_com_state == com) begin //ack
+      if(cur_com_state == NAK) bus_state <= '0;  //nak
+      else if (cur_com_state == COM_) begin //ack
         bus_state <= {cur_master, cur_slave}; 
         priority_state = STOP; 
       end
     end
 
     COM : begin
-      if(cur_com_state == end_com) bus_state <= '0;
+      if(cur_com_state == END_COM) bus_state <= '0;
       else if(request && !intr && (cur_master != master_out)) begin //interrupt
           next_master <= master_out;
           next_slave <= slave_out;

@@ -4,7 +4,7 @@
     only essential commands are send to the controller. 
     rest is taken care by the port
 */
-module a_master_port # (
+module a_master_port import a_definitions::*; # (
   parameter NO_SLAVES = 3,
   parameter S_ID_WIDTH = $clog2(NO_SLAVES+1)
 )
@@ -21,26 +21,28 @@ module a_master_port # (
   //===================//
   //   with controller //
   //===================// 
-    input logic [1:0] cmd,
+    // input logic [1:0] cmd,
+    input ctrl_cmd_t cmd,
     output logic [S_ID_WIDTH-1:0] id,
-    output logic [1:0] com_state,
+    // output logic [1:0] com_state,
+    output mst_cmd_t com_state,
     output logic done
 );
 
   //=========================================//
   //   commands received from the controller //
-  //=========================================// 
-localparam CLEAR = 2'b11;
-localparam STOP_S = 2'b01;
-localparam STOP_P = 2'b10;
+//   //=========================================// 
+// localparam CLEAR = 2'b11;
+// localparam STOP_S = 2'b01;
+// localparam STOP_P = 2'b10;
 
   //=============================================//
   //   com state commands send to the controller //
   //=============================================// 
-localparam end_com = 2'b00;
-localparam nak = 2'b01;
-localparam wait_ack = 2'b10;
-localparam com = 2'b11;
+// localparam end_com = 2'b00;
+// localparam nak = 2'b01;
+// localparam wait_ack = 2'b10;
+// localparam com = 2'b11;
 
 typedef enum logic [2:0] {
     RST,
@@ -56,8 +58,8 @@ state_t state = START;
 state_t next_state;
 
 logic [S_ID_WIDTH:0] input_buf; //master in shift buffer
-logic request;
-logic old = '0;
+logic request, request_next;
+logic old = '0, old_next;
 
 ///////////////////////////////
 /// master write module      //
@@ -76,10 +78,12 @@ master_write(
 );
 
 
-always_comb begin : stateMachine
+always_comb begin : stateMachine 
 
     write_val = '0;
     write = '0;
+    next_state = state;
+
     unique case(state)
 
     RST: begin
@@ -118,8 +122,8 @@ always_comb begin : stateMachine
     end
 
     ACK: begin
-      if (com_state == nak) next_state = START; 
-      else if (com_state == com) begin
+      if (com_state == NAK) next_state = START; 
+      else if (com_state == COM_) begin
         next_state = COM; 
         //send 111
         write_val = 3'b111;
@@ -140,7 +144,7 @@ always_comb begin : stateMachine
         write = '1;
         next_state = DONE;
       end
-      else if (com_state == end_com) begin
+      else if (com_state == END_COM) begin
         //send 000
         write = '1;
         next_state = START; 
@@ -172,8 +176,11 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 end
 
 always_ff @( posedge clk ) begin : stateLogicDecoder
-    unique case (state) 
 
+    next_id = id;
+    next_request = request;
+
+    unique case (state) 
     RST : begin
       request <= '0;
       id <= '0;
@@ -197,13 +204,13 @@ always_ff @( posedge clk ) begin : stateLogicDecoder
     ACK : begin
       done <= '0;
       old <= '0;
-      if (input_buf[2:0] == 3'b110) com_state <= nak; //nak
-      else if (input_buf[2:0] == 3'b101) com_state <= com; //ack
-      else com_state <= wait_ack; //waiting
+      if (input_buf[2:0] == 3'b110) com_state <= NAK; //nak
+      else if (input_buf[2:0] == 3'b101) com_state <= COM_; //ack
+      else com_state <= WAIT_ACK; //waiting
     end
 
     COM : begin
-      if (input_buf[1:0] == 2'b01) com_state <= end_com; //over
+      if (input_buf[1:0] == 2'b01) com_state <= END_COM; //over
       else if (cmd==STOP_S) old <= 1; //stop[split]
 	 end
 
