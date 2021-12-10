@@ -58,8 +58,8 @@ state_t state = START;
 state_t next_state;
 
 logic [S_ID_WIDTH:0] input_buf; //master in shift buffer
-logic request, request_next;
-logic old = '0, old_next;
+logic request;
+logic old = '0;
 
 ///////////////////////////////
 /// master write module      //
@@ -176,9 +176,6 @@ always_ff @(posedge clk or negedge rstN) begin : stateShifter
 end
 
 always_ff @( posedge clk ) begin : stateLogicDecoder
-
-    next_id = id;
-    next_request = request;
 
     unique case (state) 
     RST : begin
