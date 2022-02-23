@@ -2,7 +2,7 @@
     the top module of the arbiter which connects all the master ports 
     with the central controller
 */ 
-module arbiter #(
+module arbiter import a_definitions::*; #(
     parameter NO_MASTERS = 2,
     parameter NO_SLAVES = 3,
     parameter THRESH = 10000000, 
@@ -31,27 +31,27 @@ module arbiter #(
   //    wires between master ports and controller  //
   //===============================================// 
   logic [S_ID_WIDTH-1:0] id [0:NO_MASTERS-1];
-  logic [1:0] com_state [0:NO_MASTERS-1];
+  mst_cmd_t com_state [0:NO_MASTERS-1];
   logic done [0:NO_MASTERS-1];
-  logic [1:0] cmd [0:NO_MASTERS-1];
+  ctrl_cmd_t cmd [0:NO_MASTERS-1];
 
   //=============================//
   //    master ports generator   //
   //=============================// 
-  genvar i;
+  genvar ii;
   generate
-    for (i = '0; i< NO_MASTERS; i = i+1) begin : master
+    for (ii = '0; ii< NO_MASTERS; ii = ii+1) begin : master
     a_master_port #(
       .NO_SLAVES(NO_SLAVES)
       ) master_interconnector (
       .clk(clk),
       .rstN(rstN),
-      .port_in(port_in[i]),
-      .port_out(port_out[i]),
-      .cmd(cmd[i]),
-      .id(id[i]),
-      .com_state(com_state[i]),
-      .done(done[i])
+      .port_in(port_in[ii]),
+      .port_out(port_out[ii]),
+      .cmd(cmd[ii]),
+      .id(id[ii]),
+      .com_state(com_state[ii]),
+      .done(done[ii])
     );
     end
 endgenerate

@@ -23,6 +23,7 @@ charactor_t line_1_next[0:15];
 charactor_t line_2_next[0:15];
 logic LCD_first_time_show, LCD_first_time_show_next;
 logic [17:0]current_SW,current_SW_2, next_SW;
+main_state_t current_state_2; // to store the previous state
 
 typedef enum logic {
     waiting = 1'b0,
@@ -40,6 +41,7 @@ always_ff @(posedge clk) begin
         LCD_first_time_show <= 1'b0;
         current_SW <= '0;
         current_SW_2 <='0;
+        current_state_2 <= master_slave_sel; // initial state
     end
     else begin
         line_1 <= line_1_next;
@@ -49,6 +51,7 @@ always_ff @(posedge clk) begin
         LCD_first_time_show <= LCD_first_time_show_next;
         current_SW <= next_SW;
         current_SW_2 <= current_SW; // shifting
+        current_state_2 <= current_state;
     end
 end
 
@@ -141,7 +144,7 @@ always_comb begin
         waiting: begin
             new_data_next = 1'b0;
 
-            if (current_state != next_state) begin
+            if (current_state != current_state_2) begin  // when go to the next state
                 next_new_data_state = new_data_signal_sending;
             end 
             else if (current_SW != current_SW_2) begin
