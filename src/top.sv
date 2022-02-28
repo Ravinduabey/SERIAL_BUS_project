@@ -313,12 +313,12 @@ uart_slave_system #(
     .rstN, 
 
     //get
-    .g_rx(GPIO[0]),
-    .g_tx(GPIO[1]),
+    .g_rx(GPIO[0]), //rx
+    .g_tx(GPIO[1]), //ack
 
     //send
-    .s_rx(GPIO[2]),
-    .s_tx(GPIO[3])
+    .s_rx(GPIO[2]), //ack
+    .s_tx(GPIO[3]) //tx
 
 );
 
