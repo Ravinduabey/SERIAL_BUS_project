@@ -19,6 +19,8 @@ module masterBram #(
 	initial begin
 		$readmemh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\m_mem.txt", ram);
 		$writememh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\m_mem.txt", ram);
+		// $readmemh("C:\\intelFPGA_lite\\SERIAL_BUS_project\\src\\m_mem.txt",ram);
+		// $writememh("C:\\intelFPGA_lite\\SERIAL_BUS_project\\src\\m_mem.txt",ram);
 //		$readmemh("masterMem.hex", ram);
 //		$writememh("masterMem.hex", ram);
 	end

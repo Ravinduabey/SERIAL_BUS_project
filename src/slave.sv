@@ -110,15 +110,15 @@ module slave #(
     // end
     initial begin
         if (SLAVEID == 2'd1) 
-        $readmemh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
+//        $readmemh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
 		//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
 	//	$readmemh("C:\\intelFPGA_lite\\SERIAL_BUS_project\\src\\s_slave-mem-1.txt",ram);
         else if (SLAVEID == 2'd2) 
-        $readmemh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
+//        $readmemh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
 		//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
 		//$readmemh("C:\\intelFPGA_lite\\SERIAL_BUS_project\\src\\s_slave-mem-2.txt",ram);
         else if (SLAVEID == 2'd3) 
-        $readmemh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
+//        $readmemh("C:\\Users\\Ravindu\\Documents\\Github\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
 		//   $readmemh("D:\\ads-bus\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
 		//$readmemh("C:\\intelFPGA_lite\\SERIAL_BUS_project\\src\\s_slave-mem-3.txt",ram);
     end
