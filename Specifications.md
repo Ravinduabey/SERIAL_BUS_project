@@ -7,7 +7,7 @@
 - Arbitration : Centralized
 - Bus Width - Address : 12 bits
 - Bus Width - Data : 16
-- btis
+- bits
   > Further, **priority-based** as well as **delay-based split transaction** is implemented in this protocol.
 
 It is possible to increase the number of masters and slaves by changing the parameters in the [top.sv file](/src/top.sv)
