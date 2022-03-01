@@ -29,7 +29,7 @@ To know how to use this repo to setup the protocol refer to [hows.md](hows.md)
 ---
 
 ### Source files - [src files](src/)
-### Testbench files - [testbenche files](tesbenches/)
+### Testbench files - [testbenche files](testbenches/)
 
 
 
