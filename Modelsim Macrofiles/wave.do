@@ -17,10 +17,18 @@ add wave -noupdate -group Top /top_tb/dut/current_config_state
 add wave -noupdate -group Top /top_tb/dut/M_dataOut
 add wave -noupdate -group Top /top_tb/dut/M_start
 add wave -noupdate -group Top /top_tb/dut/M_address
+add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/bus_state
+add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/control_mux
+add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/last_mux
+add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/rD_mux
+add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/ready_mux
+add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/valid_mux
+add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/wD_mux
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/slaveId}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/arbSend}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/arbiterRequest}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/arbiterCounnter}
+add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/state}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/internalComState}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/communicationState}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/tempRdWr}
@@ -132,4 +140,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {1648720327 ps} {1655172615 ps}
+WaveRestoreZoom {9820327 ps} {16272615 ps}
