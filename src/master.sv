@@ -1022,7 +1022,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             end
                             else if (clock_counter < 2'd2 && splitOnot == 0 ) begin
                                 arbSend             <= 1;
-                                control             <= 1;
+                                control             <= 1;       // 100 priority stop
                                 clock_counter       <= clock_counter + 1'b1;
                             end
                             else if (clock_counter == 2'd2 && splitOnot == 0 ) begin
@@ -1035,7 +1035,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 arbSend            <= 0;
                                 wr                 <= 0;
                                 valid              <= 0;
-                                control            <= 1;
+                                control            <= 1;    // 110 split stop
                                 tempControl_2[ADDRESS_WIDTH-1 : 0]    <= addressInternalBurtstBegin;
                                 clock_counter <= clock_counter + 1'b1;
                             end
