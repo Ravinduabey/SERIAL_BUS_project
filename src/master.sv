@@ -190,13 +190,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                             if (clock_counter < 2'd1) begin
                                 dataInternal                <= data;
                                 addressInternal             <= addresstemp;
-                                wr                          <= 0;
+                                wr                          <= 1;
                                 clock_counter               <= clock_counter + 2'd1;
                             end
 
                             else begin
                                 addresstemp                 <= addresstemp + 1'b1;
-                                wr                          <= 1;
+                                wr                          <= 0;
                                 clock_counter               <= 2'd0;
                             end
                         end
@@ -209,11 +209,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 dataInternal                <= data;
                                 clock_counter               <= clock_counter + 1'b1;
                                 // wr                          <= 1;
-                                wr                          <= 0;
+                                wr                          <= 1;
                                 clock_counter               <= clock_counter + 2'd1;
                             end
                             else begin
-                                wr                          <= 1;
+                                wr                          <= 0;
                                 clock_counter               <= '0;
                             end
                         end
@@ -255,7 +255,7 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                         if (tempBurst == 1) begin
                             state                       <= startEndConfig;
                             addressInternalBurtstEnd    <= address;
-                            wr                          <= 0;
+                            wr                          <= 1;
                             dataInternal                <= data;
                             addressInternal             <= addresstemp;
                             addresstemp                 <= addresstemp + 1'b1; //check /////////////////
@@ -286,13 +286,13 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 dataInternal                <= data;
                                 addressInternal             <= addresstemp;
                             if (clock_counter < 2'd1) begin
-                                wr                          <= 0;
+                                wr                          <= 1;
                                 clock_counter               <= clock_counter + 2'd1;
                             end
 
                             else begin
                                 addresstemp                 <= addresstemp + 1'b1;
-                                wr                          <= 1;
+                                wr                          <= 0;
                                 clock_counter               <= '0;
                             end
                         end
@@ -305,11 +305,11 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                                 dataInternal                <= data;
                                 // clock_counter               <= clock_counter + 2'd1;
                                 // wr                          <= 1;/
-                                wr                          <= 0;
+                                wr                          <= 1;
                                 clock_counter               <= clock_counter + 1'b1;
                             end
                             else begin
-                                wr                          <= 1;
+                                wr                          <= 0;
                                 clock_counter               <= '0;
                             end
                         end
@@ -336,13 +336,29 @@ always_ff @( posedge clk or negedge rstN) begin : topModule
                     end
                 end
                 else begin
-                    state            <= startEndConfig;
-                    wr               <= 1;
+                    state                       <= startEndConfig;
+                    // wr                          <= 1;
                     if (addressInternalBurtstEnd == addressInternalBurtstBegin) begin
-                    burstLen         <= 0;
+                        burstLen         <= 0;
                     end
                     else begin
-                    burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin + 1'b1;
+                        burstLen         <= addressInternalBurtstEnd - addressInternalBurtstBegin + 1'b1;
+                    end
+                    if (inEx) begin
+                        if (tempBurst == 1) begin
+                            if (clock_counter < 2'd1) begin
+                                addressInternal             <= addresstemp;
+                                dataInternal                <= data;
+                                // clock_counter               <= clock_counter + 2'd1;
+                                // wr                          <= 1;/
+                                wr                          <= 1;
+                                clock_counter               <= clock_counter + 1'b1;
+                            end
+                            else begin
+                                wr                          <= 0;
+                                clock_counter               <= '0;
+                            end
+                        end
                     end
                 end
 

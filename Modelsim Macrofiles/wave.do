@@ -10,6 +10,11 @@ add wave -noupdate -expand -group Top_tb /top_tb/g_rx
 add wave -noupdate -expand -group Top_tb /top_tb/g_tx
 add wave -noupdate -expand -group Top_tb /top_tb/s_rx
 add wave -noupdate -expand -group Top_tb /top_tb/s_tx
+add wave -noupdate -expand -group Top_tb {/top_tb/dut/MASTER[1]/master/data}
+add wave -noupdate {/top_tb/dut/MASTER[1]/master/state}
+add wave -noupdate {/top_tb/dut/MASTER[1]/master/inEx}
+add wave -noupdate {/top_tb/dut/MASTER[1]/master/wr}
+add wave -noupdate {/top_tb/dut/MASTER[1]/master/start}
 add wave -noupdate -group Top /top_tb/dut/jump_stateN
 add wave -noupdate -group Top /top_tb/dut/jump_next_addr
 add wave -noupdate -group Top /top_tb/dut/current_state
@@ -24,6 +29,10 @@ add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/rD
 add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/ready_mux
 add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/valid_mux
 add wave -noupdate -expand -group interconnector /top_tb/dut/bus_interconnect/wD_mux
+add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/inEx}
+add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/data}
+add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/start}
+add wave -noupdate -expand -group M0 -label wr_bram {/top_tb/dut/MASTER[0]/master/wr}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/slaveId}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/arbSend}
 add wave -noupdate -expand -group M0 {/top_tb/dut/MASTER[0]/master/arbiterRequest}
@@ -124,9 +133,9 @@ add wave -noupdate -group ext_slave -radix unsigned /top_tb/dut/uart_slave_syste
 add wave -noupdate -group ext_slave /top_tb/dut/uart_slave_system/uart_slave/g_byteForTx
 add wave -noupdate -group ext_slave /top_tb/dut/uart_slave_system/uart_slave/g_byteFromRx
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {5650713149 ps} 0} {{Cursor 2} {9182249722 ps} 0} {{Cursor 3} {1649887024 ps} 0}
+WaveRestoreCursors {{Cursor 1} {5650713149 ps} 0} {{Cursor 2} {9182249722 ps} 0} {{Cursor 3} {10000 ps} 0}
 quietly wave cursor active 3
-configure wave -namecolwidth 346
+configure wave -namecolwidth 276
 configure wave -valuecolwidth 152
 configure wave -justifyvalue left
 configure wave -signalnamewidth 0
@@ -140,4 +149,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ns
 update
-WaveRestoreZoom {9820327 ps} {16272615 ps}
+WaveRestoreZoom {0 ps} {161728 ps}
