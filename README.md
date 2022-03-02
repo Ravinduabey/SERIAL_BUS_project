@@ -9,7 +9,7 @@ top-level design that can carry out a specific set of tasks, including data tran
 ---
 ## About 
  This repository include the design and the source files of custom serial bus protocol. This protocol uses a centralized bus arbiter to support both internal and external communication.
-![Summary/Report](https://drive.google.com/file/d/1Ae9ZKDQpOnNPpjQCkPjXMxBfoUUAVbBN/view?usp=sharing)
+[Summary/Report](https://drive.google.com/file/d/1Ae9ZKDQpOnNPpjQCkPjXMxBfoUUAVbBN/view?usp=sharing)
 ---
 ## Specifications
 
