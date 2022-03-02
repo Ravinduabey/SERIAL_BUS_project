@@ -32,6 +32,6 @@ To know how to use this repo to setup the protocol refer to [hows.md](hows.md)
 ### Testbench files - [testbench files](testbenches/)
 
 ## Report
-<iframe src="https://drive.google.com/file/d/1eFWtKxUWkx_KeGuPHDO2lDRdNPYl1dxH/preview" width="640" height="480" allow="autoplay"></iframe>
+The report of this protocol can be found in [Serial Bus Protocol Design](https://github.com/Ravinduabey/SERIAL_BUS_project/blob/main/Serial%20Bus%20Protocol%20Design.pdf)
 
 
