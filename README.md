@@ -9,7 +9,7 @@ top-level design that can carry out a specific set of tasks, including data tran
 ---
 ## About 
  This repository include the design and the source files of custom serial bus protocol. This protocol uses a centralized bus arbiter to support both internal and external communication.
-
+![Summary/Report](https://drive.google.com/file/d/1Ae9ZKDQpOnNPpjQCkPjXMxBfoUUAVbBN/view?usp=sharing)
 ---
 ## Specifications
 
@@ -29,7 +29,7 @@ To know how to use this repo to setup the protocol refer to [hows.md](hows.md)
 ---
 
 ### Source files - [src files](src/)
-### Testbench files - [testbenche files](testbenches/)
+### Testbench files - [testbench files](testbenches/)
 
 
 
