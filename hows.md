@@ -40,3 +40,14 @@ follows.
 * To initialize the external communication, first set the initial value (from 0 to 63) using SW[5:0] switches. 
 * Press BP[3] button to start external communication. Then the initialized value will be displayed on the seven segment display for 5 seconds and after increment by one, the value will be sent to the next FPGA board.
 * When a value from a external FPGA is received by this FPGA board, that value will be displayed on the seven segment for 5 seconds, then increment by one and sends to the other FPGA board via UART protocol.
+
+---
+## Before compile
+
+* Set the absolute path of the "**m_mem.txt**" in [masterBram.sv](src/masterBram.sv) and "**s_slave-mem-1.txt, s_slave-mem-2.txt, s_slave-mem-1.txt**" in [slave.sv](src/slave.sv) files. 
+### For simulation:
+* Use `localparam MAX_CLK_COUNT = 12; //for simulation use this line` (line 13) and comment out `localparam MAX_CLK_COUNT = (CLK_FREQ / 1000 ) * TIME_DELAY  ; // for synthesis use this line` (line 12) in [top_debouncer.sv](src/top_debouncer.sv).
+* Use `else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin` (line 210) and comment out `else if (clock_ < 10000*CLOCK_DURATION)begin` (line 211) in [masterExternal](src/masterExternal.sv).
+### For synthesis:
+* Comment out `localparam MAX_CLK_COUNT = 12; //for simulation use this line` (line 13) and use `localparam MAX_CLK_COUNT = (CLK_FREQ / 1000 ) * TIME_DELAY  ; // for synthesis use this line` (line 12) in [top_debouncer.sv](src/top_debouncer.sv).
+* Comment out `else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin` (line 210) and use `else if (clock_ < 10000*CLOCK_DURATION)begin` (line 211) in [masterExternal](src/masterExternal.sv).
