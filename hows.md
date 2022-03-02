@@ -44,10 +44,10 @@ follows.
 ---
 ## Before compile
 
-* Set the absolute path of the "**m_mem.txt**" in [masterBram.sv](src/masterBram.sv) and "**s_slave-mem-1.txt, s_slave-mem-2.txt, s_slave-mem-1.txt**" in [slave.sv](src/slave.sv) files. 
-### For simulation:
+* Set the absolute path of the "**m_mem.txt**" (line 20,21) in [masterBram.sv](src/masterBram.sv) and "**s_slave-mem-1.txt, s_slave-mem-2.txt, s_slave-mem-1.txt**" (line 113,117,121) in [slave.sv](src/slave.sv) files. 
+#### For simulation:
 * Use `localparam MAX_CLK_COUNT = 12; //for simulation use this line` (line 13) and comment out `localparam MAX_CLK_COUNT = (CLK_FREQ / 1000 ) * TIME_DELAY  ; // for synthesis use this line` (line 12) in [top_debouncer.sv](src/top_debouncer.sv).
 * Use `else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin` (line 210) and comment out `else if (clock_ < 10000*CLOCK_DURATION)begin` (line 211) in [masterExternal](src/masterExternal.sv).
-### For synthesis:
+#### For synthesis:
 * Comment out `localparam MAX_CLK_COUNT = 12; //for simulation use this line` (line 13) and use `localparam MAX_CLK_COUNT = (CLK_FREQ / 1000 ) * TIME_DELAY  ; // for synthesis use this line` (line 12) in [top_debouncer.sv](src/top_debouncer.sv).
 * Comment out `else if (clock_ < CLK_FREQ*CLOCK_DURATION)begin` (line 210) and use `else if (clock_ < 10000*CLOCK_DURATION)begin` (line 211) in [masterExternal](src/masterExternal.sv).
